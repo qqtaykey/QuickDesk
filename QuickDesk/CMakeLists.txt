@@ -58,6 +58,7 @@ qt_add_executable(QuickDesk
     ${ALL_SOURCES}
     ${ALL_HEADERS}
     ${CORE_SOURCES}
+    qml.qrc
 )
 
 qt_add_qml_module(QuickDesk

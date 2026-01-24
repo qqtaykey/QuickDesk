@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/">
+        <file>qml/component/FluentIconGlyph.qml</file>
+        <file>res/font/SegoeFluentIcons.ttf</file>
+    </qresource>
+</RCC>

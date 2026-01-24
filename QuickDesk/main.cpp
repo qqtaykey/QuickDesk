@@ -1,11 +1,12 @@
 // Copyright 2026 QuickDesk Authors
 // QuickDesk Qt Application Entry Point
 
+#include <QDebug>
+#include <QFontDatabase>
 #include <QGuiApplication>
+#include <QIcon>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
-#include <QIcon>
-#include <QDebug>
 
 #include "core/localconfigcenter.h"
 #include "core/userdatacenter.h"
@@ -49,7 +50,8 @@ int main(int argc, char *argv[])
         "ClientManager is accessed through MainController");
 
     QQmlApplicationEngine engine;
-    
+    QFontDatabase::addApplicationFont(":/res/font/SegoeFluentIcons.ttf");
+
     // Handle QML creation failures
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreationFailed,
         &app, []() { 
