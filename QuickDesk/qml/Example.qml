@@ -86,7 +86,7 @@ Item {
             // Header
             Item {
                 Layout.fillWidth: true
-                Layout.preferredHeight: 120
+                Layout.preferredHeight: 160
                 
                 Rectangle {
                     anchors.fill: parent
@@ -97,7 +97,7 @@ Item {
                     
                     ColumnLayout {
                         anchors.centerIn: parent
-                        spacing: Theme.spacingSmall
+                        spacing: Theme.spacingMedium
                         
                         Text {
                             text: "Fluent Design 组件库"
@@ -114,6 +114,68 @@ Item {
                             font.pixelSize: Theme.fontSizeMedium
                             color: Qt.rgba(1, 1, 1, 0.8)
                             Layout.alignment: Qt.AlignHCenter
+                        }
+                        
+                        // Theme Switcher
+                        Row {
+                            spacing: Theme.spacingSmall
+                            Layout.alignment: Qt.AlignHCenter
+                            Layout.topMargin: Theme.spacingMedium
+                            
+                            Text {
+                                text: "主题: "
+                                font.family: Theme.fontFamily
+                                font.pixelSize: Theme.fontSizeSmall
+                                color: Theme.textOnPrimary
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                            
+                            Repeater {
+                                model: [
+                                    { name: "Fluent Dark", type: Theme.ThemeType.FluentDark },
+                                    { name: "Fluent Light", type: Theme.ThemeType.FluentLight },
+                                    { name: "Nord", type: Theme.ThemeType.NordDark },
+                                    { name: "Dracula", type: Theme.ThemeType.DraculaDark },
+                                    { name: "Monokai", type: Theme.ThemeType.MonokaiDark },
+                                    { name: "Solarized", type: Theme.ThemeType.SolarizedLight }
+                                ]
+                                
+                                Rectangle {
+                                    width: 90
+                                    height: 28
+                                    radius: Theme.radiusSmall
+                                    color: Theme.currentTheme === modelData.type ? 
+                                           Qt.rgba(1, 1, 1, 0.3) : Qt.rgba(0, 0, 0, 0.2)
+                                    border.width: Theme.currentTheme === modelData.type ? 2 : 1
+                                    border.color: Qt.rgba(1, 1, 1, Theme.currentTheme === modelData.type ? 0.6 : 0.3)
+                                    
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: modelData.name
+                                        font.family: Theme.fontFamily
+                                        font.pixelSize: Theme.fontSizeSmall
+                                        font.weight: Theme.currentTheme === modelData.type ? Font.DemiBold : Font.Normal
+                                        color: Theme.textOnPrimary
+                                    }
+                                    
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: {
+                                            Theme.currentTheme = modelData.type
+                                            globalToast.show("已切换到 " + modelData.name + " 主题", QDToast.Type.Success)
+                                        }
+                                    }
+                                    
+                                    Behavior on color {
+                                        ColorAnimation { duration: 150 }
+                                    }
+                                    
+                                    Behavior on border.color {
+                                        ColorAnimation { duration: 150 }
+                                    }
+                                }
+                            }
                         }
                     }
                 }

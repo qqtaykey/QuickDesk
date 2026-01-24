@@ -1,6 +1,48 @@
 # Fluent Design 组件库
 
-QuickDesk 的 Modern Fluent Design 风格 UI 组件库。
+QuickDesk 的 Modern Fluent Design 风格 UI 组件库，支持多主题切换。
+
+## 主题系统
+
+### 内置主题
+
+| 主题名称 | 类型 | 说明 |
+|---------|------|------|
+| **Fluent Dark** | 深色 | 默认深色主题，蓝色强调（微软标准） |
+| **Fluent Light** | 浅色 | 浅色主题，蓝色强调 |
+| **Nord** | 深色 | Nord 配色方案，青色强调 |
+| **Dracula** | 深色 | Dracula 配色方案，紫色强调 |
+| **Monokai** | 深色 | Monokai 配色方案，绿色强调 |
+| **Solarized Light** | 浅色 | Solarized 配色方案，橙色强调 |
+
+### 切换主题
+
+```qml
+// 在 QML 中切换主题
+Theme.currentTheme = Theme.ThemeType.DraculaDark
+
+// 可用的主题类型
+Theme.ThemeType.FluentDark        // 默认
+Theme.ThemeType.FluentLight
+Theme.ThemeType.NordDark
+Theme.ThemeType.DraculaDark
+Theme.ThemeType.MonokaiDark
+Theme.ThemeType.SolarizedLight
+```
+
+### 获取当前主题名称
+
+```qml
+Text {
+    text: "当前主题: " + Theme.currentThemeName
+}
+```
+
+### 主题切换动画
+
+所有颜色属性都有 250ms 的平滑过渡动画，主题切换时整个界面颜色会平滑变化。
+
+---
 
 ## 组件列表
 
@@ -8,7 +50,7 @@ QuickDesk 的 Modern Fluent Design 风格 UI 组件库。
 
 | 组件 | 文件 | 说明 |
 |------|------|------|
-| **Theme** | Theme.qml | 主题配置（Singleton） |
+| **Theme** | Theme.qml | 主题管理器（Singleton，支持6种主题） |
 | **FluentIconGlyph** | FluentIconGlyph.qml | 图标定义（Singleton） |
 
 ### 按钮与输入
@@ -49,85 +91,50 @@ QuickDesk 的 Modern Fluent Design 风格 UI 组件库。
 import "component"
 ```
 
-### 2. 使用组件
+### 2. 使用主题
+
+所有组件都会自动使用 Theme 中定义的颜色，支持主题切换：
 
 ```qml
-// 按钮
+Rectangle {
+    color: Theme.background  // 自动跟随主题变化
+}
+
+Text {
+    color: Theme.text
+    font.family: Theme.fontFamily
+}
+
 QDButton {
-    text: "确定"
+    // 按钮会自动使用当前主题的颜色
+    text: "按钮"
     buttonType: QDButton.Type.Primary
-    iconText: FluentIconGlyph.checkMarkGlyph
-    onClicked: console.log("点击")
 }
+```
 
-// 输入框
-QDTextField {
-    placeholderText: "请输入..."
-    prefixIcon: FluentIconGlyph.searchGlyph
-}
+### 3. 创建主题切换器
 
-// 复选框
-QDCheckBox {
-    text: "同意协议"
-    checked: true
-}
-
-// 开关
-QDSwitch {
-    text: "开启通知"
-    checked: true
-}
-
-// 滑块
-QDSlider {
-    from: 0
-    to: 100
-    value: 50
-    showValue: true
-}
-
-// 下拉框
-QDComboBox {
-    model: ["选项1", "选项2", "选项3"]
-}
-
-// 卡片
-QDCard {
-    width: 300
-    height: 200
-    hoverable: true
-    clickable: true
-    onClicked: console.log("点击卡片")
-}
-
-// 进度条
-QDProgressBar {
-    value: 0.5
-    indeterminate: false
-}
-
-// Toast
-QDToast {
-    id: toast
-}
-// 使用: toast.show("消息", QDToast.Type.Success)
-
-// 对话框
-QDDialog {
-    id: dialog
-    title: "标题"
-}
-// 使用: dialog.show()
-
-// 徽章
-QDBadge {
-    count: 5
-    badgeType: QDBadge.Type.Error
-}
-
-// 分割线
-QDDivider {
-    Layout.fillWidth: true
+```qml
+Row {
+    spacing: 8
+    
+    Repeater {
+        model: [
+            { name: "Dark", type: Theme.ThemeType.FluentDark },
+            { name: "Light", type: Theme.ThemeType.FluentLight },
+            { name: "Nord", type: Theme.ThemeType.NordDark },
+            { name: "Dracula", type: Theme.ThemeType.DraculaDark },
+            { name: "Monokai", type: Theme.ThemeType.MonokaiDark },
+            { name: "Solarized", type: Theme.ThemeType.SolarizedLight }
+        ]
+        
+        QDButton {
+            text: modelData.name
+            buttonType: Theme.currentTheme === modelData.type ? 
+                       QDButton.Type.Primary : QDButton.Type.Secondary
+            onClicked: Theme.currentTheme = modelData.type
+        }
+    }
 }
 ```
 
@@ -146,11 +153,11 @@ QDDivider {
 | `enabled` | bool | true | 是否可用 |
 
 **buttonType 枚举值：**
-- `QDButton.Type.Primary` - 主要按钮（蓝色）
-- `QDButton.Type.Secondary` - 次要按钮（灰色）
-- `QDButton.Type.Danger` - 危险按钮（红色）
-- `QDButton.Type.Success` - 成功按钮（绿色）
-- `QDButton.Type.Ghost` - 幽灵按钮（透明）
+- `QDButton.Type.Primary` - 主要按钮
+- `QDButton.Type.Secondary` - 次要按钮
+- `QDButton.Type.Danger` - 危险按钮
+- `QDButton.Type.Success` - 成功按钮
+- `QDButton.Type.Ghost` - 幽灵按钮
 
 ### QDTextField
 
@@ -292,24 +299,65 @@ QDDivider {
 
 ## 主题配置
 
-所有颜色和尺寸在 `Theme.qml` 中定义：
-
-### 颜色
+### 主题 API
 
 ```qml
-Theme.background      // #1E1E1E - 背景色
-Theme.surface         // #252525 - 表面色
-Theme.primary         // #0078D4 - 主色（蓝色）
-Theme.accent          // #60A5FA - 强调色
-Theme.text            // #FFFFFF - 主文本
-Theme.textSecondary   // #B4B4B4 - 次要文本
-Theme.success         // #10B981 - 成功色
-Theme.error           // #EF4444 - 错误色
-Theme.warning         // #F59E0B - 警告色
-Theme.info            // #3B82F6 - 信息色
+// 切换主题
+Theme.currentTheme = Theme.ThemeType.NordDark
+
+// 获取当前主题名称
+Theme.currentThemeName  // "Nord Dark"
+
+// 访问主题颜色（所有颜色都会随主题变化）
+Theme.background
+Theme.surface
+Theme.primary
+Theme.accent
+Theme.text
+Theme.textSecondary
+Theme.success
+Theme.error
+Theme.warning
+Theme.info
 ```
 
-### 尺寸
+### 主题颜色列表
+
+每个主题包含以下颜色：
+
+```qml
+background          // 背景色
+surface             // 表面色（卡片、输入框等）
+surfaceVariant      // 次级表面色
+surfaceHover        // 表面悬停色
+primary             // 主色
+primaryHover        // 主色悬停
+primaryPressed      // 主色按下
+primaryDisabled     // 主色禁用
+accent              // 强调色
+accentLight         // 浅强调色
+border              // 边框色
+borderHover         // 边框悬停
+borderFocus         // 边框聚焦
+text                // 主文本色
+textSecondary       // 次要文本色
+textDisabled        // 禁用文本色
+textOnPrimary       // 主色上的文本色
+success             // 成功色
+successHover        // 成功悬停
+error               // 错误色
+errorHover          // 错误悬停
+warning             // 警告色
+warningHover        // 警告悬停
+info                // 信息色
+infoHover           // 信息悬停
+shadowLight         // 浅阴影
+shadowMedium        // 中阴影
+shadowDark          // 深阴影
+overlay             // 遮罩层
+```
+
+### 尺寸（不随主题变化）
 
 ```qml
 Theme.radiusSmall     // 4px
@@ -322,7 +370,7 @@ Theme.spacingXLarge   // 24px
 Theme.spacingXXLarge  // 32px
 ```
 
-### 动画
+### 动画（不随主题变化）
 
 ```qml
 Theme.animationDurationFast    // 150ms
@@ -332,11 +380,44 @@ Theme.animationDurationSlow    // 350ms
 
 ---
 
+## 自定义主题
+
+如果需要添加自定义主题，可以修改 `Theme.qml`：
+
+```qml
+// 1. 在 ThemeType 枚举中添加新主题
+enum ThemeType {
+    FluentDark,
+    FluentLight,
+    // ... 其他主题
+    CustomTheme  // 新增
+}
+
+// 2. 添加主题配置对象
+readonly property var customTheme: ({
+    name: "Custom Theme",
+    background: "#...",
+    surface: "#...",
+    // ... 其他颜色
+})
+
+// 3. 在 _currentThemeConfig 中添加 case
+readonly property var _currentThemeConfig: {
+    switch(currentTheme) {
+        // ... 其他 case
+        case Theme.ThemeType.CustomTheme: return customTheme
+        default: return fluentDark
+    }
+}
+```
+
+---
+
 ## 文件结构
 
 ```
 qml/component/
-├── Theme.qml            # 主题配置
+├── Theme.qml            # 主题管理器（支持6种主题）
 ├── FluentIconGlyph.qml  # 图标定义
 ├── QDButton.qml         # 按钮
 ├── QDTextField.qml      # 输入框
