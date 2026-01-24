@@ -25,13 +25,13 @@ int main(int argc, char *argv[])
     infra::ApplicationContext::instance().init();
     infra::Log::instance().init(infra::ApplicationContext::instance().logPath());
     LOG_INFO("start app {}, log level:{} ********", infra::ApplicationContext::instance().applicationName().toStdString(), SPDLOG_ACTIVE_LEVEL);
+    infra::ApplicationContext::instance().setApplicationVersion(APP_VERSION_STR);
     LOG_INFO("current version:{}", infra::ApplicationContext::instance().applicationVersion().toStdString());
 
     // QML FileDialog需要这个
     // 放在ApplicationContext::init后面设置，否则OrganizationName会包含在QStandardPaths::AppLocalDataLocation目录中
     app.setOrganizationName("QuickCoder");
     app.setApplicationName("QuickDesk");
-    app.setApplicationVersion("0.1.0");
 
     qInfo() << "QuickDesk starting...";
     qInfo() << "Qt version:" << qVersion();

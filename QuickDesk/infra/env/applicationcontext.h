@@ -14,6 +14,7 @@ public:
     QString applicationDirPath() const;
     QString applicationFilePath() const;
     QString applicationVersion() const;
+    void setApplicationVersion(const QString& version);
     QString lastRunApplicationVersion() const;
     void setLastRunApplicationVersion(const QString& version);
     // 本地运行过最大的app版本（不包含当前运行的版本）

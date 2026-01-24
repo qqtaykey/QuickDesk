@@ -53,6 +53,11 @@ QString ApplicationContext::applicationVersion() const
     return QCoreApplication::applicationVersion();
 }
 
+void ApplicationContext::setApplicationVersion(const QString& version)
+{
+    QCoreApplication::setApplicationVersion(version);
+}
+
 QString ApplicationContext::lastRunApplicationVersion() const
 {
     return m_lastApplicationVersion;
