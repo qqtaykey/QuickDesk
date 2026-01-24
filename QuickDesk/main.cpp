@@ -7,6 +7,7 @@
 #include <QIcon>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
+#include <QtQuickControls2/QQuickStyle>
 
 #include "core/localconfigcenter.h"
 #include "core/userdatacenter.h"
@@ -34,6 +35,9 @@ int main(int argc, char *argv[])
     app.setOrganizationName("QuickCoder");
     app.setApplicationName("QuickDesk");
 
+    // 设置 Qt Quick Controls 使用 Basic 样式（允许完全自定义）
+    QQuickStyle::setStyle("Basic");
+    
     qInfo() << "QuickDesk starting...";
     qInfo() << "Qt version:" << qVersion();
 
@@ -54,16 +58,16 @@ int main(int argc, char *argv[])
 
     // Handle QML creation failures
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreationFailed,
-        &app, []() { 
+        &app, []() {
             qCritical() << "QML object creation failed!";
-            QCoreApplication::exit(-1); 
+            QCoreApplication::exit(-1);
         },
         Qt::QueuedConnection);
-    
+
     // Load main QML
     engine.loadFromModule("QuickDesk", "Main");
 
     qInfo() << "QuickDesk started successfully";
-    
+
     return app.exec();
 }

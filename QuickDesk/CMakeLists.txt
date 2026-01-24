@@ -66,6 +66,25 @@ qt_add_qml_module(QuickDesk
     VERSION 1.0
     QML_FILES 
         Main.qml
+        qml/Example.qml
+        qml/component/Theme.qml
+        qml/component/FluentIconGlyph.qml
+        qml/component/QDButton.qml
+        qml/component/QDTextField.qml
+        qml/component/QDCheckBox.qml
+        qml/component/QDCard.qml
+        qml/component/QDToast.qml
+        qml/component/QDDialog.qml
+        qml/component/QDSwitch.qml
+        qml/component/QDSlider.qml
+        qml/component/QDProgressBar.qml
+        qml/component/QDComboBox.qml
+        qml/component/QDDivider.qml
+        qml/component/QDBadge.qml
+        qml/component/QDToolTip.qml
+    RESOURCES
+        res/font/SegoeFluentIcons.ttf
+        qml/component/qmldir
 )
 
 # Include directories
@@ -83,6 +102,7 @@ set_target_properties(QuickDesk PROPERTIES
 target_link_libraries(QuickDesk
     PRIVATE 
     Qt6::Quick 
+    Qt6::QuickControls2
     Qt6::Core
     base
     infra

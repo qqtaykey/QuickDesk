@@ -1,0 +1,18 @@
+module component
+
+singleton Theme 1.0 Theme.qml
+singleton FluentIconGlyph 1.0 FluentIconGlyph.qml
+
+QDButton 1.0 QDButton.qml
+QDTextField 1.0 QDTextField.qml
+QDCheckBox 1.0 QDCheckBox.qml
+QDCard 1.0 QDCard.qml
+QDToast 1.0 QDToast.qml
+QDDialog 1.0 QDDialog.qml
+QDSwitch 1.0 QDSwitch.qml
+QDSlider 1.0 QDSlider.qml
+QDProgressBar 1.0 QDProgressBar.qml
+QDComboBox 1.0 QDComboBox.qml
+QDDivider 1.0 QDDivider.qml
+QDBadge 1.0 QDBadge.qml
+QDToolTip 1.0 QDToolTip.qml

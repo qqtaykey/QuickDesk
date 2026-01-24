@@ -4,12 +4,16 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import QuickDesk 1.0
 
+import "qml"
+
 ApplicationWindow {
     id: root
     width: 900
     height: 600
     visible: true
     title: "QuickDesk - 远程桌面"
+
+    Example {}
 
     // Main controller
     MainController {
