@@ -2,7 +2,7 @@
 
 #include "HostManager.h"
 #include "NativeMessaging.h"
-#include <QDebug>
+#include "infra/log/log.h"
 #include <QJsonArray>
 
 namespace quickdesk {
@@ -60,7 +60,7 @@ void HostManager::connectToServer(const QString& serverUrl)
     // Only serverUrl is needed - Host will auto-generate deviceId and accessCode
     message["signalingServerUrl"] = serverUrl;
 
-    qInfo() << "Sending connect message to host, serverUrl:" << serverUrl;
+    LOG_INFO("Sending connect message to host, serverUrl: {}", serverUrl.toStdString());
     m_messaging->sendMessage(message);
 }
 
@@ -196,7 +196,7 @@ void HostManager::onMessageReceived(const QJsonObject& message)
 {
     QString type = message["type"].toString();
     
-    qDebug() << "Host received message:" << type;
+    LOG_DEBUG("Host received message: {}", type.toStdString());
 
     if (type == "helloResponse") {
         handleHelloResponse(message);
@@ -225,7 +225,7 @@ void HostManager::onMessageReceived(const QJsonObject& message)
     } else if (type == "disconnectResponse") {
         handleDisconnectResponse(message);
     } else {
-        qWarning() << "Unknown message type from host:" << type;
+        LOG_WARN("Unknown message type from host: {}", type.toStdString());
     }
 }
 
@@ -237,20 +237,20 @@ void HostManager::onMessagingError(const QString& error)
 void HostManager::handleHelloResponse(const QJsonObject& message)
 {
     QString version = message["version"].toString();
-    qInfo() << "Host hello response, version:" << version;
+    LOG_INFO("Host hello response, version: {}", version.toStdString());
     emit helloResponseReceived(version);
 }
 
 void HostManager::handleConnectResponse(const QJsonObject& message)
 {
     Q_UNUSED(message);
-    qInfo() << "Host connect response received";
+    LOG_INFO("Host connect response received");
 }
 
 void HostManager::handleNatPolicyChanged(const QJsonObject& message)
 {
     Q_UNUSED(message);
-    qInfo() << "Host NAT policy changed";
+    LOG_INFO("Host NAT policy changed");
 }
 
 void HostManager::handleHostReady(const QJsonObject& message)
@@ -275,7 +275,7 @@ void HostManager::handleTemporaryPasswordChanged(const QJsonObject& message)
     if (!newPassword.isEmpty()) {
         m_accessCode = newPassword;
         
-        qInfo() << "Temporary password changed to:" << m_accessCode;
+        LOG_INFO("Temporary password changed to: {}", m_accessCode.toStdString());
         
         emit accessCodeChanged();
         emit temporaryPasswordChanged(m_accessCode);
@@ -306,7 +306,7 @@ void HostManager::handleClientConnected(const QJsonObject& message)
 
     m_clients[clientId] = session;
 
-    qInfo() << "Client connected:" << clientId << session.username;
+    LOG_INFO("Client connected: {} {}", clientId.toStdString(), session.username.toStdString());
 
     emit clientCountChanged();
     emit clientListChanged();
@@ -325,7 +325,7 @@ void HostManager::handleClientDisconnected(const QJsonObject& message)
 
     m_clients.remove(clientId);
 
-    qInfo() << "Client disconnected:" << clientId << clientUsername << reason;
+    LOG_INFO("Client disconnected: {} {} {}", clientId.toStdString(), clientUsername.toStdString(), reason.toStdString());
 
     emit clientCountChanged();
     emit clientListChanged();
@@ -340,7 +340,7 @@ void HostManager::handleAuthorizationRequest(const QJsonObject& message)
     QString username = clientInfo["username"].toString();
     QString ip = clientInfo["ip"].toString();
 
-    qInfo() << "Authorization request from:" << username << ip;
+    LOG_INFO("Authorization request from: {} {}", username.toStdString(), ip.toStdString());
 
     emit authorizationRequested(connectionId, username, ip);
 }
@@ -372,7 +372,7 @@ void HostManager::handleError(const QJsonObject& message)
     QString code = message["code"].toString();
     QString errorMsg = message["message"].toString();
     
-    qWarning() << "Host error:" << code << errorMsg;
+    LOG_WARN("Host error: {} {}", code.toStdString(), errorMsg.toStdString());
     emit errorOccurred(code, errorMsg);
 }
 
@@ -423,7 +423,7 @@ void HostManager::handleSignalingStateChanged(const QJsonObject& message)
 void HostManager::handleDisconnectResponse(const QJsonObject& message)
 {
     Q_UNUSED(message);
-    qInfo() << "Host disconnect response received";
+    LOG_INFO("Host disconnect response received");
 }
 
 QString HostManager::signalingState() const
@@ -452,7 +452,7 @@ void HostManager::handleRefreshTempPasswordResponse(const QJsonObject& message)
     
     if (success) {
         QString newPassword = message["newPassword"].toString();
-        qInfo() << "Temporary password refreshed:" << newPassword;
+        LOG_INFO("Temporary password refreshed: {}", newPassword.toStdString());
         
         m_accessCode = newPassword;
         emit accessCodeChanged();
@@ -461,7 +461,7 @@ void HostManager::handleRefreshTempPasswordResponse(const QJsonObject& message)
     } else {
         QString errorCode = message["error"].toString();
         QString errorMessage = message["errorMessage"].toString();
-        qWarning() << "Failed to refresh password:" << errorCode << errorMessage;
+        LOG_WARN("Failed to refresh password: {} {}", errorCode.toStdString(), errorMessage.toStdString());
         emit refreshTempPasswordResult(false, errorCode, errorMessage);
     }
 }

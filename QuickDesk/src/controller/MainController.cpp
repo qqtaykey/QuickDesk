@@ -4,7 +4,7 @@
 #include "../manager/ProcessManager.h"
 #include "../manager/NativeMessaging.h"
 #include "infra/env/applicationcontext.h"
-#include <QDebug>
+#include "infra/log/log.h"
 #include <QTimer>
 #include <QClipboard>
 #include <QGuiApplication>
@@ -61,12 +61,12 @@ MainController::~MainController()
 
 void MainController::initialize()
 {
-    qInfo() << "MainController::initialize()";
+    LOG_INFO("MainController::initialize()");
     updateInitStatus("正在初始化...");
 
     // Auto-detect executable paths
     if (!m_processManager->autoDetectPaths()) {
-        qWarning() << "Could not auto-detect all executable paths";
+        LOG_WARN("Could not auto-detect all executable paths");
     }
 
     // Set log directory from ApplicationContext
@@ -95,7 +95,7 @@ void MainController::initialize()
 
 void MainController::shutdown()
 {
-    qInfo() << "MainController::shutdown()";
+    LOG_INFO("MainController::shutdown()");
     
     m_hostManager->disconnectFromServer();
     m_clientManager->disconnectAll();
@@ -109,7 +109,7 @@ void MainController::shutdown()
 void MainController::startHosting(const QString& serverUrl)
 {
     QString url = serverUrl.isEmpty() ? getDefaultServerUrl() : serverUrl;
-    qInfo() << "Starting hosting on:" << url;
+    LOG_INFO("Starting hosting on: {}", url.toStdString());
     m_lastServerUrl = url;
     m_hostWasHosting = true;
     m_hostManager->connectToServer(url);
@@ -126,7 +126,7 @@ QString MainController::connectToRemoteHost(const QString& deviceId,
                                             const QString& serverUrl)
 {
     QString url = serverUrl.isEmpty() ? getDefaultServerUrl() : serverUrl;
-    qInfo() << "Connecting to remote host:" << deviceId << "on" << url;
+    LOG_INFO("Connecting to remote host: {} on {}", deviceId.toStdString(), url.toStdString());
     return m_clientManager->connectToHost(deviceId, accessCode, url);
 }
 
@@ -145,7 +145,7 @@ void MainController::copyToClipboard(const QString& text)
     QClipboard* clipboard = QGuiApplication::clipboard();
     if (clipboard) {
         clipboard->setText(text);
-        qInfo() << "Copied to clipboard:" << text;
+        LOG_INFO("Copied to clipboard: {}", text.toStdString());
     }
 }
 
@@ -155,7 +155,7 @@ void MainController::copyDeviceInfo()
     QString accessCode = m_hostManager->accessCode();
     
     if (deviceId.isEmpty() && accessCode.isEmpty()) {
-        qWarning() << "No device info to copy";
+        LOG_WARN("No device info to copy");
         return;
     }
     
@@ -286,7 +286,7 @@ QString MainController::clientProcessStatus() const
 
 void MainController::onHostProcessStarted()
 {
-    qInfo() << "Host process started";
+    LOG_INFO("Host process started");
     
     // Reset retry count on successful start
     m_processManager->resetHostRetryCount();
@@ -301,7 +301,7 @@ void MainController::onHostProcessStarted()
         
         // Auto-reconnect to signaling server if we were hosting before
         if (m_hostWasHosting && !m_lastServerUrl.isEmpty()) {
-            qInfo() << "Auto-reconnecting to signaling server after Host restart";
+            LOG_INFO("Auto-reconnecting to signaling server after Host restart");
             QTimer::singleShot(500, this, [this]() {
                 m_hostManager->connectToServer(m_lastServerUrl);
             });
@@ -311,7 +311,7 @@ void MainController::onHostProcessStarted()
 
 void MainController::onHostProcessStopped(int exitCode)
 {
-    qInfo() << "Host process stopped with exit code:" << exitCode;
+    LOG_INFO("Host process stopped with exit code: {}", exitCode);
     m_hostManager->setMessaging(nullptr);
     // Clear UI state (will be restored after restart)
     m_deviceId.clear();
@@ -322,13 +322,13 @@ void MainController::onHostProcessStopped(int exitCode)
 
 void MainController::onHostProcessError(const QString& error)
 {
-    qWarning() << "Host process error:" << error;
+    LOG_WARN("Host process error: {}", error.toStdString());
     emit initializationFailed(QString("Host error: %1").arg(error));
 }
 
 void MainController::onHostProcessRestarting(int retryCount, int maxRetries)
 {
-    qInfo() << "Host process restarting, attempt" << retryCount << "of" << maxRetries;
+    LOG_INFO("Host process restarting, attempt {} of {}", retryCount, maxRetries);
     updateInitStatus(QString("Host 进程重启中 (%1/%2)...").arg(retryCount).arg(maxRetries));
     emit hostProcessRestarting(retryCount, maxRetries);
 }
@@ -340,7 +340,7 @@ void MainController::onHostStatusChanged()
 
 void MainController::onClientProcessStarted()
 {
-    qInfo() << "Client process started";
+    LOG_INFO("Client process started");
     
     // Reset retry count on successful start
     m_processManager->resetClientRetryCount();
@@ -357,19 +357,19 @@ void MainController::onClientProcessStarted()
 
 void MainController::onClientProcessStopped(int exitCode)
 {
-    qInfo() << "Client process stopped with exit code:" << exitCode;
+    LOG_INFO("Client process stopped with exit code: {}", exitCode);
     m_clientManager->setMessaging(nullptr);
 }
 
 void MainController::onClientProcessError(const QString& error)
 {
-    qWarning() << "Client process error:" << error;
+    LOG_WARN("Client process error: {}", error.toStdString());
     emit initializationFailed(QString("Client error: %1").arg(error));
 }
 
 void MainController::onClientProcessRestarting(int retryCount, int maxRetries)
 {
-    qInfo() << "Client process restarting, attempt" << retryCount << "of" << maxRetries;
+    LOG_INFO("Client process restarting, attempt {} of {}", retryCount, maxRetries);
     emit clientProcessRestarting(retryCount, maxRetries);
 }
 
@@ -380,7 +380,7 @@ void MainController::onClientStatusChanged()
 
 void MainController::onHostReady(const QString& deviceId, const QString& accessCode)
 {
-    qInfo() << "Host ready - Device ID:" << deviceId << "Access Code:" << accessCode;
+    LOG_INFO("Host ready - Device ID: {} Access Code: {}", deviceId.toStdString(), accessCode.toStdString());
     m_deviceId = deviceId;
     m_accessCode = accessCode;
     emit deviceIdChanged();

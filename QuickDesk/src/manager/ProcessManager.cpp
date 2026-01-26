@@ -2,10 +2,10 @@
 
 #include "ProcessManager.h"
 #include "NativeMessaging.h"
+#include "infra/log/log.h"
 #include <QCoreApplication>
 #include <QDir>
 #include <QFileInfo>
-#include <QDebug>
 
 namespace quickdesk {
 
@@ -38,7 +38,7 @@ ProcessManager::~ProcessManager()
 bool ProcessManager::startHostProcess()
 {
     if (isHostRunning()) {
-        qWarning() << "Host process is already running";
+        LOG_WARN("Host process is already running");
         return true;
     }
 
@@ -63,7 +63,7 @@ bool ProcessManager::startHostProcess()
     
     setHostStatus("running");
     emit hostProcessStarted();
-    qInfo() << "Host process started, PID:" << m_hostProcess->processId();
+    LOG_INFO("Host process started, PID: {}", m_hostProcess->processId());
     
     return true;
 }
@@ -71,7 +71,7 @@ bool ProcessManager::startHostProcess()
 bool ProcessManager::startClientProcess()
 {
     if (isClientRunning()) {
-        qWarning() << "Client process is already running";
+        LOG_WARN("Client process is already running");
         return true;
     }
 
@@ -96,7 +96,7 @@ bool ProcessManager::startClientProcess()
     
     setClientStatus("running");
     emit clientProcessStarted();
-    qInfo() << "Client process started, PID:" << m_clientProcess->processId();
+    LOG_INFO("Client process started, PID: {}", m_clientProcess->processId());
     
     return true;
 }
@@ -107,22 +107,22 @@ void ProcessManager::stopHostProcess()
     m_hostStoppingIntentionally = true;
     
     if (m_hostProcess && m_hostProcess->state() != QProcess::NotRunning) {
-        qInfo() << "begin stop host process...";
+        LOG_INFO("begin stop host process...");
         m_hostProcess->closeWriteChannel(); // Close stdin to trigger graceful exit
         bool finished = m_hostProcess->waitForFinished(10000);
         if (!finished) {
-            qWarning() << "Host process did not exit gracefully, terminating...";
+            LOG_WARN("Host process did not exit gracefully, terminating...");
             m_hostProcess->terminate();
             finished = m_hostProcess->waitForFinished(5000);
         }
         if (!finished) {
-            qWarning() << "Host process did not terminate, killing...";
+            LOG_WARN("Host process did not terminate, killing...");
             m_hostProcess->kill();
             finished = m_hostProcess->waitForFinished(5000);
         }
-        qInfo() << "end stop host process...";
+        LOG_INFO("end stop host process...");
         if (!finished && m_hostProcess->state() != QProcess::NotRunning) {
-            qWarning() << "Host process still running, skipping destroy";
+            LOG_WARN("Host process still running, skipping destroy");
             return;
         }
     }
@@ -138,22 +138,22 @@ void ProcessManager::stopClientProcess()
     m_clientStoppingIntentionally = true;
     
     if (m_clientProcess && m_clientProcess->state() != QProcess::NotRunning) {
-        qInfo() << "begin stop client process...";
+        LOG_INFO("begin stop client process...");
         m_clientProcess->closeWriteChannel();
         bool finished = m_clientProcess->waitForFinished(3000);
         if (!finished) {
-            qWarning() << "Client process did not exit gracefully, terminating...";
+            LOG_WARN("Client process did not exit gracefully, terminating...");
             m_clientProcess->terminate();
             finished = m_clientProcess->waitForFinished(3000);
         }
         if (!finished) {
-            qWarning() << "Client process did not terminate, killing...";
+            LOG_WARN("Client process did not terminate, killing...");
             m_clientProcess->kill();
             finished = m_clientProcess->waitForFinished(3000);
         }
-        qInfo() << "end stop client process...";
+        LOG_INFO("end stop client process...");
         if (!finished && m_clientProcess->state() != QProcess::NotRunning) {
-            qWarning() << "Client process still running, skipping destroy";
+            LOG_WARN("Client process still running, skipping destroy");
             return;
         }
     }
@@ -226,12 +226,12 @@ bool ProcessManager::autoDetectPaths()
 
     if (!hostPath.isEmpty()) {
         m_hostExePath = hostPath;
-        qInfo() << "Auto-detected host executable:" << hostPath;
+        LOG_INFO("Auto-detected host executable: {}", hostPath.toStdString());
     }
 
     if (!clientPath.isEmpty()) {
         m_clientExePath = clientPath;
-        qInfo() << "Auto-detected client executable:" << clientPath;
+        LOG_INFO("Auto-detected client executable: {}", clientPath.toStdString());
     }
 
     return !hostPath.isEmpty() && !clientPath.isEmpty();
@@ -285,8 +285,9 @@ void ProcessManager::resetClientRetryCount()
 
 void ProcessManager::onHostProcessFinished(int exitCode, QProcess::ExitStatus status)
 {
-    qInfo() << "Host process finished with exit code:" << exitCode 
-            << "status:" << (status == QProcess::NormalExit ? "NormalExit" : "CrashExit");
+    LOG_INFO("Host process finished with exit code: {} status: {}", 
+             exitCode, 
+             (status == QProcess::NormalExit ? "NormalExit" : "CrashExit"));
     
     // Emit signal BEFORE destroying messaging so listeners can disconnect first
     emit hostProcessStopped(exitCode);
@@ -299,20 +300,20 @@ void ProcessManager::onHostProcessFinished(int exitCode, QProcess::ExitStatus st
         // User requested stop, don't restart
         m_hostStoppingIntentionally = false;
         setHostStatus("stopped");
-        qInfo() << "Host stopped intentionally, not restarting";
+        LOG_INFO("Host stopped intentionally, not restarting");
         return;
     }
     
     if (!m_hostAutoRestart) {
         setHostStatus("stopped");
-        qInfo() << "Host auto-restart disabled";
+        LOG_INFO("Host auto-restart disabled");
         return;
     }
     
     if (!isAbnormalExit) {
         // Normal exit with code 0, don't restart
         setHostStatus("stopped");
-        qInfo() << "Host exited normally, not restarting";
+        LOG_INFO("Host exited normally, not restarting");
         return;
     }
     
@@ -320,7 +321,7 @@ void ProcessManager::onHostProcessFinished(int exitCode, QProcess::ExitStatus st
     if (m_hostRestartCount >= MAX_RESTART_ATTEMPTS) {
         setHostStatus("failed");
         QString error = QString("Host process crashed %1 times, giving up").arg(MAX_RESTART_ATTEMPTS);
-        qWarning() << error;
+        LOG_WARN("{}", error.toStdString());
         emit hostProcessError(error);
         return;
     }
@@ -329,8 +330,8 @@ void ProcessManager::onHostProcessFinished(int exitCode, QProcess::ExitStatus st
     int delay = calculateRestartDelay(m_hostRestartCount);
     
     setHostStatus(QString("restarting:%1").arg(m_hostRestartCount));
-    qInfo() << "Host crashed, restarting in" << delay << "ms (attempt" 
-            << m_hostRestartCount << "of" << MAX_RESTART_ATTEMPTS << ")";
+    LOG_INFO("Host crashed, restarting in {} ms (attempt {} of {})", 
+             delay, m_hostRestartCount, MAX_RESTART_ATTEMPTS);
     
     emit hostProcessRestarting(m_hostRestartCount, MAX_RESTART_ATTEMPTS);
     m_hostRestartTimer.start(delay);
@@ -338,8 +339,9 @@ void ProcessManager::onHostProcessFinished(int exitCode, QProcess::ExitStatus st
 
 void ProcessManager::onClientProcessFinished(int exitCode, QProcess::ExitStatus status)
 {
-    qInfo() << "Client process finished with exit code:" << exitCode 
-            << "status:" << (status == QProcess::NormalExit ? "NormalExit" : "CrashExit");
+    LOG_INFO("Client process finished with exit code: {} status: {}", 
+             exitCode,
+             (status == QProcess::NormalExit ? "NormalExit" : "CrashExit"));
     
     // Emit signal BEFORE destroying messaging so listeners can disconnect first
     emit clientProcessStopped(exitCode);
@@ -352,20 +354,20 @@ void ProcessManager::onClientProcessFinished(int exitCode, QProcess::ExitStatus 
         // User requested stop, don't restart
         m_clientStoppingIntentionally = false;
         setClientStatus("stopped");
-        qInfo() << "Client stopped intentionally, not restarting";
+        LOG_INFO("Client stopped intentionally, not restarting");
         return;
     }
     
     if (!m_clientAutoRestart) {
         setClientStatus("stopped");
-        qInfo() << "Client auto-restart disabled";
+        LOG_INFO("Client auto-restart disabled");
         return;
     }
     
     if (!isAbnormalExit) {
         // Normal exit with code 0, don't restart
         setClientStatus("stopped");
-        qInfo() << "Client exited normally, not restarting";
+        LOG_INFO("Client exited normally, not restarting");
         return;
     }
     
@@ -373,7 +375,7 @@ void ProcessManager::onClientProcessFinished(int exitCode, QProcess::ExitStatus 
     if (m_clientRestartCount >= MAX_RESTART_ATTEMPTS) {
         setClientStatus("failed");
         QString error = QString("Client process crashed %1 times, giving up").arg(MAX_RESTART_ATTEMPTS);
-        qWarning() << error;
+        LOG_WARN("{}", error.toStdString());
         emit clientProcessError(error);
         return;
     }
@@ -382,8 +384,8 @@ void ProcessManager::onClientProcessFinished(int exitCode, QProcess::ExitStatus 
     int delay = calculateRestartDelay(m_clientRestartCount);
     
     setClientStatus(QString("restarting:%1").arg(m_clientRestartCount));
-    qInfo() << "Client crashed, restarting in" << delay << "ms (attempt" 
-            << m_clientRestartCount << "of" << MAX_RESTART_ATTEMPTS << ")";
+    LOG_INFO("Client crashed, restarting in {} ms (attempt {} of {})",
+             delay, m_clientRestartCount, MAX_RESTART_ATTEMPTS);
     
     emit clientProcessRestarting(m_clientRestartCount, MAX_RESTART_ATTEMPTS);
     m_clientRestartTimer.start(delay);
@@ -391,7 +393,7 @@ void ProcessManager::onClientProcessFinished(int exitCode, QProcess::ExitStatus 
 
 void ProcessManager::onHostRestartTimer()
 {
-    qInfo() << "Attempting to restart Host process...";
+    LOG_INFO("Attempting to restart Host process...");
     if (!startHostProcess()) {
         // Failed to start, increment count and try again
         if (m_hostRestartCount < MAX_RESTART_ATTEMPTS) {
@@ -409,7 +411,7 @@ void ProcessManager::onHostRestartTimer()
 
 void ProcessManager::onClientRestartTimer()
 {
-    qInfo() << "Attempting to restart Client process...";
+    LOG_INFO("Attempting to restart Client process...");
     if (!startClientProcess()) {
         // Failed to start, increment count and try again
         if (m_clientRestartCount < MAX_RESTART_ATTEMPTS) {
@@ -431,7 +433,7 @@ bool ProcessManager::startProcess(QProcess* process, const QString& exePath,
     QFileInfo fileInfo(exePath);
     if (!fileInfo.exists() || !fileInfo.isExecutable()) {
         QString error = QString("%1 executable not found: %2").arg(processName, exePath);
-        qWarning() << error;
+        LOG_WARN("{}", error.toStdString());
         if (processName == "Host") {
             emit hostProcessError(error);
         } else {
@@ -443,7 +445,7 @@ bool ProcessManager::startProcess(QProcess* process, const QString& exePath,
     connect(process, &QProcess::readyReadStandardError, this, [process, processName]() {
         QByteArray err = process->readAllStandardError();
         if (!err.isEmpty()) {
-            qInfo() << "[" << processName << " stderr]" << err;
+            LOG_INFO("[ {}  stderr] {}", processName.toStdString(), err.toStdString());
         }
     });
 
@@ -466,7 +468,7 @@ bool ProcessManager::startProcess(QProcess* process, const QString& exePath,
     if (!process->waitForStarted(5000)) {
         QString error = QString("Failed to start %1 process: %2")
                         .arg(processName, process->errorString());
-        qWarning() << error;
+        LOG_WARN("{}", error.toStdString());
         if (processName == "Host") {
             emit hostProcessError(error);
         } else {

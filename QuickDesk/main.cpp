@@ -1,7 +1,6 @@
 // Copyright 2026 QuickDesk Authors
 // QuickDesk Qt Application Entry Point
 
-#include <QDebug>
 #include <QFontDatabase>
 #include <QGuiApplication>
 #include <QIcon>
@@ -38,8 +37,8 @@ int main(int argc, char *argv[])
     // 设置 Qt Quick Controls 使用 Basic 样式（允许完全自定义）
     QQuickStyle::setStyle("Basic");
     
-    qInfo() << "QuickDesk starting...";
-    qInfo() << "Qt version:" << qVersion();
+    LOG_INFO("QuickDesk starting...");
+    LOG_INFO("Qt version: {}", qVersion());
 
     core::LocalConfigCenter::instance().init();
     core::UserDataCenter::instance().init();
@@ -59,7 +58,7 @@ int main(int argc, char *argv[])
     // Handle QML creation failures
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreationFailed,
         &app, []() {
-            qCritical() << "QML object creation failed!";
+            LOG_CRITICAL("QML object creation failed!");
             QCoreApplication::exit(-1);
         },
         Qt::QueuedConnection);
@@ -67,7 +66,7 @@ int main(int argc, char *argv[])
     // Load main QML
     engine.loadFromModule("QuickDesk", "Main");
 
-    qInfo() << "QuickDesk started successfully";
+    LOG_INFO("QuickDesk started successfully");
 
     return app.exec();
 }

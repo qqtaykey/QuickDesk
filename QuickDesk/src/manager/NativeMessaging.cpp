@@ -3,7 +3,6 @@
 #include "NativeMessaging.h"
 #include <QJsonDocument>
 #include <QDataStream>
-#include <QDebug>
 
 namespace quickdesk {
 

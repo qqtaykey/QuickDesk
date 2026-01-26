@@ -1,8 +1,8 @@
 // Copyright 2026 QuickDesk Authors
 
 #include "ServerManager.h"
+#include "infra/log/log.h"
 #include <QCoreApplication>
-#include <QDebug>
 
 namespace quickdesk {
 
@@ -23,7 +23,7 @@ void ServerManager::setServerUrl(const QString& url)
         m_serverUrl = url;
         saveSettings();
         emit serverUrlChanged();
-        qInfo() << "Server URL changed to:" << url;
+        LOG_INFO("Server URL changed to: {}", url.toStdString());
     }
 }
 
@@ -39,7 +39,7 @@ void ServerManager::loadSettings()
     
     m_serverUrl = settings.value("server/url", "ws://localhost:8000").toString();
     
-    qInfo() << "Loaded server URL:" << m_serverUrl;
+    LOG_INFO("Loaded server URL: {}", m_serverUrl.toStdString());
 }
 
 void ServerManager::saveSettings()

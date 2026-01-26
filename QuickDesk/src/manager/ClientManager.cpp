@@ -2,7 +2,7 @@
 
 #include "ClientManager.h"
 #include "NativeMessaging.h"
-#include <QDebug>
+#include "infra/log/log.h"
 #include <QUuid>
 #include <QJsonArray>
 
@@ -66,7 +66,7 @@ QString ClientManager::connectToHost(const QString& deviceId,
     message["accessCode"] = accessCode;
     message["serverUrl"] = serverUrl;
 
-    qInfo() << "Connecting to host:" << deviceId << "connectionId:" << connectionId;
+    LOG_INFO("Connecting to host: {} connectionId: {}", deviceId.toStdString(), connectionId.toStdString());
     m_messaging->sendMessage(message);
 
     emit connectionCountChanged();
@@ -232,7 +232,7 @@ void ClientManager::onMessageReceived(const QJsonObject& message)
 {
     QString type = message["type"].toString();
     
-    qDebug() << "Client received message:" << type;
+    LOG_DEBUG("Client received message: {}", type.toStdString());
 
     if (type == "helloResponse") {
         handleHelloResponse(message);
@@ -261,7 +261,7 @@ void ClientManager::onMessageReceived(const QJsonObject& message)
     } else if (type == "disconnectAllResponse") {
         handleDisconnectAllResponse(message);
     } else {
-        qWarning() << "Unknown message type from client:" << type;
+        LOG_WARN("Unknown message type from client: {}", type.toStdString());
     }
 }
 
@@ -278,7 +278,7 @@ QString ClientManager::generateConnectionId()
 void ClientManager::handleHelloResponse(const QJsonObject& message)
 {
     QString version = message["version"].toString();
-    qInfo() << "Client hello response, version:" << version;
+    LOG_INFO("Client hello response, version: {}", version.toStdString());
     emit helloResponseReceived(version);
 }
 
@@ -287,7 +287,7 @@ void ClientManager::handleConnectToHostResponse(const QJsonObject& message)
     QString connectionId = message["connectionId"].toString();
 
     if (connectionId.isEmpty()) {
-        qWarning() << "connectToHostResponse missing connectionId";
+        LOG_WARN("connectToHostResponse missing connectionId");
         return;
     }
 
@@ -329,7 +329,7 @@ void ClientManager::handleConnectionStateChanged(const QJsonObject& message)
         }
     }
 
-    qInfo() << "Connection" << connectionId << "state changed to:" << state;
+    LOG_INFO("Connection {} state changed to: {}", connectionId.toStdString(), state.toStdString());
     emit connectionStateChanged(connectionId, state, hostInfo);
     emit connectionListChanged();
 }
@@ -377,7 +377,7 @@ void ClientManager::handleError(const QJsonObject& message)
     QString code = message["code"].toString();
     QString errorMsg = message["message"].toString();
     
-    qWarning() << "Client error:" << connectionId << code << errorMsg;
+    LOG_WARN("Client error: {} {} {}", connectionId.toStdString(), code.toStdString(), errorMsg.toStdString());
     emit errorOccurred(connectionId, code, errorMsg);
 }
 
@@ -419,7 +419,7 @@ void ClientManager::handleHostConnected(const QJsonObject& message)
 {
     QString connectionId = message["connectionId"].toString();
     
-    qInfo() << "Host connected:" << connectionId;
+    LOG_INFO("Host connected: {}", connectionId.toStdString());
     
     if (m_connections.contains(connectionId)) {
         m_connections[connectionId].state = "connected";
@@ -432,7 +432,7 @@ void ClientManager::handleHostDisconnected(const QJsonObject& message)
 {
     QString connectionId = message["connectionId"].toString();
     
-    qInfo() << "Host disconnected:" << connectionId;
+    LOG_INFO("Host disconnected: {}", connectionId.toStdString());
     
     if (m_connections.contains(connectionId)) {
         m_connections[connectionId].state = "disconnected";
@@ -460,7 +460,7 @@ void ClientManager::handleHostConnectionFailed(const QJsonObject& message)
     QString connectionId = message["connectionId"].toString();
     int errorCode = message["errorCode"].toInt();
     
-    qWarning() << "Host connection failed:" << connectionId << "error code:" << errorCode;
+    LOG_WARN("Host connection failed: {} error code: {}", connectionId.toStdString(), errorCode);
     
     // Update connection state
     if (m_connections.contains(connectionId)) {
@@ -500,14 +500,14 @@ void ClientManager::handleDisconnectFromHostResponse(const QJsonObject& message)
 {
     QString connectionId = message["connectionId"].toString();
     if (!connectionId.isEmpty()) {
-        qInfo() << "Disconnect response received for connection:" << connectionId;
+        LOG_INFO("Disconnect response received for connection: {}", connectionId.toStdString());
     }
 }
 
 void ClientManager::handleDisconnectAllResponse(const QJsonObject& message)
 {
     Q_UNUSED(message);
-    qInfo() << "Disconnect all response received";
+    LOG_INFO("Disconnect all response received");
 }
 
 void ClientManager::sendMouseEvent(const QString& connectionId, const QString& eventType,
