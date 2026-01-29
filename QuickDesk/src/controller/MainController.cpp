@@ -133,33 +133,6 @@ void MainController::shutdown()
     emit initializedChanged();
 }
 
-void MainController::startHosting(const QString& serverUrl)
-{
-    QString url = serverUrl.isEmpty() ? getDefaultServerUrl() : serverUrl;
-    LOG_INFO("Starting hosting on: {}", url.toStdString());
-    m_lastServerUrl = url;
-    m_hostWasHosting = true;
-    
-    // Check if we should use saved access code (never refresh mode)
-    int interval = core::LocalConfigCenter::instance().accessCodeRefreshInterval();
-    QString savedAccessCode = core::LocalConfigCenter::instance().savedAccessCode();
-    
-    if (interval == -1 && !savedAccessCode.isEmpty()) {
-        // Pass saved access code to host
-        LOG_INFO("Using saved access code for 'never refresh' mode");
-        m_hostManager->connectToServer(url, savedAccessCode);
-    } else {
-        // Normal connection (host will generate new access code)
-        m_hostManager->connectToServer(url, QString());
-    }
-}
-
-void MainController::stopHosting()
-{
-    m_hostWasHosting = false;
-    m_hostManager->disconnectFromServer();
-}
-
 QString MainController::connectToRemoteHost(const QString& deviceId,
                                             const QString& accessCode,
                                             const QString& serverUrl)
@@ -364,25 +337,27 @@ void MainController::onHostProcessStarted()
     // Set up Native Messaging
     m_hostManager->setMessaging(m_processManager->hostMessaging());
     
-    // Send hello to verify communication
+    // Send hello to verify communication and connect to signaling server
     QTimer::singleShot(500, this, [this]() {
         m_hostManager->sendHello();
         checkInitialized();
         
-        // Auto-reconnect to signaling server if we were hosting before
-        if (m_hostWasHosting && !m_lastServerUrl.isEmpty()) {
-            LOG_INFO("Auto-reconnecting to signaling server after Host restart");
-            QTimer::singleShot(500, this, [this]() {
-                // Check if we should use saved access code (never refresh mode)
-                QString savedAccessCode;
-                int interval = core::LocalConfigCenter::instance().accessCodeRefreshInterval();
-                if (interval == -1) {
-                    savedAccessCode = core::LocalConfigCenter::instance().savedAccessCode();
+        // Auto-connect to signaling server
+        QTimer::singleShot(1000, this, [this]() {
+            // Check if we should use saved access code (never refresh mode)
+            QString savedAccessCode;
+            int interval = core::LocalConfigCenter::instance().accessCodeRefreshInterval();
+            if (interval == -1) {
+                savedAccessCode = core::LocalConfigCenter::instance().savedAccessCode();
+                if (!savedAccessCode.isEmpty()) {
+                    LOG_INFO("Using saved access code for 'never refresh' mode: {}", savedAccessCode.toStdString());
                 }
+            }
 
-                m_hostManager->connectToServer(m_lastServerUrl, savedAccessCode);
-            });
-        }
+            QString serverUrl = getDefaultServerUrl();
+            LOG_INFO("Auto-connecting to signaling server: {}", serverUrl.toStdString());
+            m_hostManager->connectToServer(serverUrl, savedAccessCode);
+        });
     });
 }
 
@@ -493,14 +468,11 @@ void MainController::checkInitialized()
 {
     // Check if both processes are running
     if (m_processManager->isHostRunning() && m_processManager->isClientRunning()) {
-        m_isInitialized = true;
-        updateInitStatus("已就绪");
-        emit initializedChanged();
-        
-        // Auto-start hosting (connect to signaling server)
-        QTimer::singleShot(1000, this, [this]() {
-            startHosting();
-        });
+        if (!m_isInitialized) {
+            m_isInitialized = true;
+            updateInitStatus("已就绪");
+            emit initializedChanged();
+        }
     }
 }
 

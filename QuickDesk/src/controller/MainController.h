@@ -63,16 +63,6 @@ public:
     Q_INVOKABLE void shutdown();
 
     /**
-     * @brief Connect host to signaling server
-     */
-    Q_INVOKABLE void startHosting(const QString& serverUrl = QString());
-
-    /**
-     * @brief Disconnect host from signaling server
-     */
-    Q_INVOKABLE void stopHosting();
-
-    /**
      * @brief Connect to a remote host
      * @return Connection ID
      */
@@ -171,8 +161,6 @@ private:
     QString m_initStatus = "未初始化";
     QString m_deviceId;
     QString m_accessCode;
-    QString m_lastServerUrl;  // For auto-reconnect after Host restart
-    bool m_hostWasHosting = false;  // Was Host connected before restart
     
     // Access code auto-refresh timer
     QTimer m_accessCodeRefreshTimer;

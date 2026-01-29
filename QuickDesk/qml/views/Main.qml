@@ -386,30 +386,21 @@ ApplicationWindow {
                                     spacing: 8
                                     
                                     Button {
-                                        text: "保存"
+                                        text: "保存并重启Host"
                                         font.pixelSize: 11
                                         enabled: serverUrlInput.text.length > 0 &&
                                                  serverUrlInput.text !== (mainController.serverManager ? mainController.serverManager.serverUrl : "")
                                         onClicked: {
-                                            // Use property assignment instead of method call
+                                            // Save server URL
                                             mainController.serverManager.serverUrl = serverUrlInput.text
-                                            toast.show("服务器地址已保存")
-                                        }
-                                    }
-                                    
-                                    Button {
-                                        text: "重连"
-                                        font.pixelSize: 11
-                                        enabled: mainController.isInitialized &&
-                                                 mainController.signalingState !== "connecting"
-                                        onClicked: {
-                                            // Save first if changed
-                                            if (serverUrlInput.text !== mainController.serverManager.serverUrl) {
-                                                mainController.serverManager.serverUrl = serverUrlInput.text
-                                            }
-                                            // Stop and restart hosting
-                                            mainController.stopHosting()
-                                            mainController.startHosting(serverUrlInput.text)
+                                            toast.show("服务器地址已保存，正在重启Host进程...")
+                                            
+                                            // Restart host process to reconnect with new server URL
+                                            // The disconnect and restart logic is handled by ProcessManager
+                                            mainController.shutdown()
+                                            Qt.callLater(function() {
+                                                mainController.initialize()
+                                            })
                                         }
                                     }
                                     
