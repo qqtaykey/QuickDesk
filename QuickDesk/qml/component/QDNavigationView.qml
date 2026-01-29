@@ -16,6 +16,7 @@ Item {
     property alias header: headerContent.data
     property alias footer: footerContent.data
     property alias content: contentArea.data
+    property bool showFooter: true  // Control footer and separator visibility
     
     // ============ Signals ============
     
@@ -168,6 +169,7 @@ Item {
                 
                 // Separator before footer
                 Rectangle {
+                    visible: control.showFooter
                     Layout.fillWidth: true
                     Layout.preferredHeight: 1
                     color: Theme.border
@@ -176,6 +178,7 @@ Item {
                 // Footer Area
                 Item {
                     id: footerContent
+                    visible: control.showFooter
                     Layout.fillWidth: true
                     Layout.preferredHeight: 35
                 }

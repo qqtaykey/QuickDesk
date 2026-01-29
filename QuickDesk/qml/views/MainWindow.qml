@@ -100,51 +100,96 @@ ApplicationWindow {
         }
     }
     
-    // Main content with navigation
-    QDNavigationView {
-        id: navigationView
+    // Main layout with navigation and status bar
+    ColumnLayout {
         anchors.fill: parent
+        spacing: 0
         
-        isExpanded: true
-        collapsedWidth: 48
-        expandedWidth: 200
-        
-        menuItems: [
-            { icon: FluentIconGlyph.remoteGlyph, text: qsTr("Remote Control") },
-            { icon: FluentIconGlyph.settingsGlyph, text: qsTr("Settings") }
-        ]
-        
-        header: Item {
-            width: parent.width
-            height: 72
+        // Navigation and content area
+        QDNavigationView {
+            id: navigationView
+            Layout.fillWidth: true
+            Layout.fillHeight: true
             
-            Column {
-                anchors.centerIn: parent
-                spacing: Theme.spacingXSmall
+            isExpanded: true
+            collapsedWidth: 48
+            expandedWidth: 200
+            showFooter: false  // Hide footer and separator
+            
+            menuItems: [
+                { icon: FluentIconGlyph.remoteGlyph, text: qsTr("Remote Control") },
+                { icon: FluentIconGlyph.settingsGlyph, text: qsTr("Settings") }
+            ]
+            
+            header: Item {
+                width: parent.width
+                height: 72
                 
-                Text {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    text: "QuickDesk"
-                    font.pixelSize: Theme.fontSizeLarge
-                    font.weight: Font.Bold
-                    color: Theme.text
+                Column {
+                    anchors.centerIn: parent
+                    spacing: Theme.spacingXSmall
+                    
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: "QuickDesk"
+                        font.pixelSize: Theme.fontSizeLarge
+                        font.weight: Font.Bold
+                        color: Theme.text
+                    }
+                    
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: "v" + APP_VERSION
+                        font.pixelSize: Theme.fontSizeSmall
+                        color: Theme.textSecondary
+                    }
+                }
+            }
+            
+            footer: Item {
+                // Empty footer - component will auto-hide separator and footer area
+            }
+            
+            content: StackLayout {
+                anchors.fill: parent
+                currentIndex: navigationView.currentIndex
+                
+                // Remote Control Page
+                RemoteControlPage {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    mainController: root.mainController
+                    onConnectRequested: function(deviceId, password) {
+                        console.log("Connect requested:", deviceId)
+                        var connId = root.mainController.connectToRemoteHost(deviceId, password)
+                        if (connId) {
+                            // Create remote window after a short delay to allow connection to establish
+                            Qt.callLater(function() {
+                                root.showRemoteWindow(connId, deviceId)
+                            })
+                        }
+                    }
                 }
                 
-                Text {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    text: "v" + APP_VERSION
-                    font.pixelSize: Theme.fontSizeSmall
-                    color: Theme.textSecondary
+                // Settings Page
+                SettingsPage {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    mainController: root.mainController
                 }
             }
         }
         
-        footer: Rectangle {
-            anchors.fill: parent
-            color: Theme.surfaceVariant
+        // Status Bar - spans entire window width including navigation pane
+        QDStatusBar {
+            id: statusBar
+            Layout.fillWidth: true
+            leftText: ""
+            message: ""
+            rightText: ""
             
+            // Host and Client status indicators
             Row {
-                anchors.centerIn: parent
                 spacing: Theme.spacingLarge
                 
                 // Host Status (show server status if running, otherwise show process status)
@@ -262,50 +307,6 @@ ApplicationWindow {
                         anchors.verticalCenter: parent.verticalCenter
                     }
                 }
-            }
-        }
-        
-        content: ColumnLayout {
-            anchors.fill: parent
-            spacing: 0
-            
-            StackLayout {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                currentIndex: navigationView.currentIndex
-                
-                // Remote Control Page
-                RemoteControlPage {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    mainController: root.mainController
-                    onConnectRequested: function(deviceId, password) {
-                        console.log("Connect requested:", deviceId)
-                        var connId = root.mainController.connectToRemoteHost(deviceId, password)
-                        if (connId) {
-                            // Create remote window after a short delay to allow connection to establish
-                            Qt.callLater(function() {
-                                root.showRemoteWindow(connId, deviceId)
-                            })
-                        }
-                    }
-                }
-                
-                // Settings Page
-                SettingsPage {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    mainController: root.mainController
-                }
-            }
-            
-            // Status Bar
-            QDStatusBar {
-                id: statusBar
-                Layout.fillWidth: true
-                leftText: ""
-                message: ""
-                rightText: ""
             }
         }
     }
