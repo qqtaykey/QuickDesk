@@ -17,7 +17,7 @@ ApplicationWindow {
     minimumHeight: 600
     maximumHeight: 600
     visible: true
-    title: qsTr("QuickDesk - New UI")
+    title: qsTr("QuickDesk")
     
     // 关闭窗口时退出程序
     onClosing: function(close) {

@@ -6,6 +6,29 @@ import Qt5Compat.GraphicalEffects
 Controls.ComboBox {
     id: control
     
+    // ============ Custom Properties ============
+    
+    // Get current selected value based on valueRole (valueRole is already a built-in property)
+    readonly property var selectedValue: {
+        if (valueRole && model) {
+            if (currentIndex >= 0 && currentIndex < count) {
+                return model.get(currentIndex)[valueRole]
+            }
+        }
+        return ""
+    }
+    
+    // Helper function to find index by value
+    function indexOfValue(value) {
+        if (!valueRole || !model) return -1
+        for (let i = 0; i < count; i++) {
+            if (model.get(i)[valueRole] === value) {
+                return i
+            }
+        }
+        return -1
+    }
+    
     // ============ Size & Style ============
     
     implicitWidth: 200

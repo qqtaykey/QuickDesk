@@ -55,6 +55,18 @@ set(CORE_SOURCES
 )
 source_group(core FILES ${CORE_SOURCES})
 
+set(VIEWMODEL_SOURCES
+    src/viewmodel/configviewmodel.h
+    src/viewmodel/configviewmodel.cpp
+)
+source_group(viewmodel FILES ${VIEWMODEL_SOURCES})
+
+set(LANGUAGE_SOURCES
+    src/language/languagemanage.h
+    src/language/languagemanage.cpp
+)
+source_group(language FILES ${LANGUAGE_SOURCES})
+
 set(ALL_SOURCES
     main.cpp
     ${MANAGER_SOURCES}
@@ -74,6 +86,8 @@ qt_add_executable(QuickDesk
     ${ALL_SOURCES}
     ${ALL_HEADERS}
     ${CORE_SOURCES}
+    ${VIEWMODEL_SOURCES}
+    ${LANGUAGE_SOURCES}
     qml.qrc
 )
 

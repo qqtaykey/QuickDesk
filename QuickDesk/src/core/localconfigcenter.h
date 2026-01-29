@@ -26,7 +26,9 @@ public:
 
     bool init();
 
-    LCC_FUNCTION_DEC_BOOL(groupWindowVerticalScreen, GroupWindowVerticalScreen, true);    
+    LCC_FUNCTION_DEC_BOOL(groupWindowVerticalScreen, GroupWindowVerticalScreen, true);
+    LCC_FUNCTION_DEC_INT(darkTheme, DarkTheme, 1);  // 0=Light, 1=Dark, 2=Auto
+    LCC_FUNCTION_DEC_STRING(language, Language, "Auto");
 
 private:
     AppConfigDataBase* m_configDatabase = nullptr;

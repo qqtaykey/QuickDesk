@@ -22,6 +22,8 @@
 #include "component/VideoFrameProvider.h"
 #include "component/KeycodeMapper.h"
 #include "component/CursorImageProvider.h"
+#include "viewmodel/configviewmodel.h"
+#include "language/languagemanage.h"
 
 int main(int argc, char *argv[])
 {
@@ -47,8 +49,10 @@ int main(int argc, char *argv[])
 
     core::LocalConfigCenter::instance().init();
     core::UserDataCenter::instance().init();
+    LanguageManage::instance().init();
 
     // Register C++ types for QML
+    qmlRegisterType<ConfigViewModel>("QuickDesk", 1, 0, "ConfigViewModel");
     qmlRegisterType<quickdesk::MainController>("QuickDesk", 1, 0, "MainController");
     qmlRegisterUncreatableType<quickdesk::ServerManager>("QuickDesk", 1, 0, "ServerManager",
         "ServerManager is accessed through MainController");
@@ -64,6 +68,12 @@ int main(int argc, char *argv[])
     qmlRegisterSingletonType<quickdesk::KeycodeMapper>("QuickDesk", 1, 0, "KeycodeMapper",
         [](QQmlEngine*, QJSEngine*) -> QObject* {
             return quickdesk::KeycodeMapper::instance();
+        });
+    
+    // Register LanguageManage as singleton
+    qmlRegisterSingletonType<LanguageManage>("QuickDesk", 1, 0, "LanguageManage",
+        [](QQmlEngine*, QJSEngine*) -> QObject* {
+            return &LanguageManage::instance();
         });
 
     QQmlApplicationEngine engine;

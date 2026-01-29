@@ -2,12 +2,32 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import "../component"
+import QuickDesk 1.0
 
 Item {
     id: root
     
     // Controller reference passed from MainWindow
     property var mainController
+    
+    // Config ViewModel
+    ConfigViewModel {
+        id: configViewModel
+    }
+    
+    // Theme apply function
+    function applyTheme(themeIndex) {
+        if (themeIndex === 0) {
+            // Light
+            Theme.currentTheme = Theme.ThemeType.FluentLight
+        } else if (themeIndex === 1) {
+            // Dark
+            Theme.currentTheme = Theme.ThemeType.FluentDark
+        } else {
+            // Auto - detect system theme (默认使用Dark)
+            Theme.currentTheme = Theme.ThemeType.FluentDark
+        }
+    }
     
     Rectangle {
         anchors.fill: parent
@@ -88,7 +108,7 @@ Item {
                     width: parent.width - Theme.spacingXLarge * 2
                     title: qsTr("Application")
                     iconSource: FluentIconGlyph.settingsGlyph
-                    expanded: false
+                    expanded: true
                     
                     Column {
                         width: parent.width
@@ -99,17 +119,57 @@ Item {
                             width: parent.width
                             spacing: Theme.spacingMedium
                             
-                            Text {
-                                text: qsTr("Language")
-                                font.pixelSize: Theme.fontSizeMedium
-                                color: Theme.text
+                            Column {
                                 width: parent.width - langCombo.width - parent.spacing
+                                spacing: Theme.spacingXSmall
+                                
+                                Text {
+                                    text: qsTr("Language")
+                                    font.pixelSize: Theme.fontSizeMedium
+                                    color: Theme.text
+                                }
+                                
+                                Text {
+                                    id: restartTipText
+                                    text: qsTr("(Effective after restart)")
+                                    font.pixelSize: Theme.fontSizeSmall
+                                    color: Theme.textSecondary
+                                    visible: false
+                                }
                             }
                             
                             QDComboBox {
                                 id: langCombo
-                                model: ["English", "简体中文"]
-                                currentIndex: 0
+                                model: ListModel {
+                                    id: languageModel
+                                }
+                                textRole: "text"
+                                valueRole: "value"
+                                
+                                Component.onCompleted: {
+                                    let languages = LanguageManage.getSupportLanguages()
+                                    for (let i = 0; i < languages.length; ++i) {
+                                        languageModel.append({
+                                            "text": LanguageManage.getLanguageName(languages[i]), 
+                                            "value": languages[i]
+                                        })
+                                    }
+                                    currentIndex = indexOfValue(LanguageManage.getCurrentLanguage())
+                                }
+                                
+                                onActivated: {
+                                    LanguageManage.setCurrentLanguage(selectedValue)
+                                    restartTipText.visible = true
+                                }
+                                
+                                function indexOfValue(value) {
+                                    for (let i = 0; i < languageModel.count; i++) {
+                                        if (languageModel.get(i).value === value) {
+                                            return i
+                                        }
+                                    }
+                                    return 0
+                                }
                             }
                         }
                         
@@ -129,8 +189,17 @@ Item {
                             
                             QDComboBox {
                                 id: themeCombo
-                                model: [qsTr("Light"), qsTr("Dark"), qsTr("Auto")]
-                                currentIndex: 1
+                                model: [qsTr("Light"), qsTr("Dark")]
+                                currentIndex: configViewModel.darkTheme
+                                
+                                onActivated: {
+                                    configViewModel.darkTheme = currentIndex
+                                    applyTheme(currentIndex)
+                                }
+                                
+                                Component.onCompleted: {
+                                    applyTheme(configViewModel.darkTheme)
+                                }
                             }
                         }
                     }
