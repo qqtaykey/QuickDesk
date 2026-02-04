@@ -59,8 +59,5 @@
         <file>qml/quickdeskcomponent/FloatingToolButton.qml</file>
         <file>qml/quickdeskcomponent/ConnectionListPanel.qml</file>
         <file>qml/quickdeskcomponent/RemoteDeviceSelector.qml</file>
-        <file>res/font/SegoeFluentIcons.ttf</file>
-        <file>res/i18n/en_US.qm</file>
-        <file>res/i18n/zh_CN.qm</file>
     </qresource>
 </RCC>

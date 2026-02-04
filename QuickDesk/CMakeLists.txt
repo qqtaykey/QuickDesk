@@ -89,6 +89,30 @@ set(ALL_HEADERS
     ${COMPONENT_HEADERS}
 )
 
+# plantform file
+if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    # Define VERSION macros for .rc file
+    add_compile_definitions(
+        VERSION_MAJOR=${PROJECT_VERSION_MAJOR}
+        VERSION_MINOR=${PROJECT_VERSION_MINOR}
+        VERSION_PATCH=${PROJECT_VERSION_PATCH}
+        VERSION_RC_STR="${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}"
+    )
+    set(QC_PLANTFORM_SOURCES
+        "${CMAKE_CURRENT_SOURCE_DIR}/res/QuickDesk.rc"
+    )
+endif()
+if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    # 设置 macOS 最低部署版本，确保在新系统编译的应用可以在旧系统运行
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "12.0" CACHE STRING "Minimum OS X deployment version" FORCE)
+    message(STATUS "[${PROJECT_NAME}] macOS deployment target: ${CMAKE_OSX_DEPLOYMENT_TARGET}")
+    
+    # Step 1. add icns to source file, for MACOSX_PACKAGE_LOCATION copy
+    set(QC_PLANTFORM_SOURCES
+        "${CMAKE_CURRENT_SOURCE_DIR}/res/QuickDesk.icns"
+    )
+endif()
+
 qt_standard_project_setup(REQUIRES 6.5)
 
 qt_add_executable(QuickDesk
@@ -97,7 +121,9 @@ qt_add_executable(QuickDesk
     ${CORE_SOURCES}
     ${VIEWMODEL_SOURCES}
     ${LANGUAGE_SOURCES}
+    ${QC_PLANTFORM_SOURCES}
     qml.qrc
+    res/res.qrc
 )
 
 qt_add_qml_module(QuickDesk
@@ -178,6 +204,27 @@ set_target_properties(QuickDesk PROPERTIES
     MACOSX_BUNDLE TRUE
     WIN32_EXECUTABLE TRUE
 )
+
+# macOS bundle 配置
+if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    # Step 2. use MACOSX_PACKAGE_LOCATION copy icns to Resources
+    set_source_files_properties(
+        ${CMAKE_CURRENT_SOURCE_DIR}/res/QuickDesk.icns
+        PROPERTIES MACOSX_PACKAGE_LOCATION Resources
+    )
+
+    # use MACOSX_BUNDLE_INFO_PLIST custom plist, not use MACOSX_BUNDLE_BUNDLE_NAME etc..
+    set(INFO_PLIST_TEMPLATE_FILE "${CMAKE_CURRENT_SOURCE_DIR}/res/Info_Mac.plist.in")
+    set(INFO_PLIST_FILE "${CMAKE_CURRENT_SOURCE_DIR}/res/Info_Mac.plist")
+    file(READ "${INFO_PLIST_TEMPLATE_FILE}" plist_contents)
+    string(REPLACE "\${BUNDLE_VERSION}" "${PROJECT_VERSION}" plist_contents ${plist_contents})
+    file(WRITE ${INFO_PLIST_FILE} ${plist_contents})
+    set_target_properties(QuickDesk PROPERTIES
+        MACOSX_BUNDLE_INFO_PLIST "${INFO_PLIST_FILE}"
+        # "" disable code sign
+        XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY ""
+    )
+endif()
 
 target_link_libraries(QuickDesk
     PRIVATE 

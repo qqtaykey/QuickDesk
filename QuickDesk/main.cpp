@@ -29,6 +29,9 @@
 int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
+    
+    // 设置应用图标
+    app.setWindowIcon(QIcon(":/QuickDesk.ico"));
 
     // infra
     infra::ApplicationContext::instance().init();
@@ -93,7 +96,7 @@ int main(int argc, char *argv[])
     // Expose version to QML
     engine.rootContext()->setContextProperty("APP_VERSION", APP_VERSION_STR);
     
-    QFontDatabase::addApplicationFont(":/res/font/SegoeFluentIcons.ttf");
+    QFontDatabase::addApplicationFont(":/font/SegoeFluentIcons.ttf");
 
     // Handle QML creation failures
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreationFailed,

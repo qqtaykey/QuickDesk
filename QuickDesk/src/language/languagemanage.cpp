@@ -9,7 +9,7 @@
 
 #include "core/localconfigcenter.h"
 
-static QString kLanguagePath = ":/res/i18n/";
+static QString kLanguagePath = ":/i18n/";
 
 LanguageManage::LanguageManage(QObject* parent)
     : QObject(parent)
