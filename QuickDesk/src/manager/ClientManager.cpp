@@ -70,6 +70,16 @@ QString ClientManager::connectToHost(const QString& deviceId,
     message["deviceId"] = deviceId;
     message["accessCode"] = accessCode;
     message["serverUrl"] = serverUrl;
+    
+    // Include ICE configuration if provided (using standard Chrome Remoting format)
+    if (!m_iceServers.isEmpty()) {
+        QJsonObject iceConfig;
+        iceConfig["iceServers"] = m_iceServers;
+        message["iceConfig"] = iceConfig;
+        LOG_INFO("Client: Sending ICE config with {} server(s)", m_iceServers.size());
+    } else {
+        LOG_INFO("Client: No custom ICE servers configured, client will use defaults");
+    }
 
     LOG_INFO("Connecting to host: {} connectionId: {}", deviceId.toStdString(), connectionId.toStdString());
     m_messaging->sendMessage(message);
@@ -778,6 +788,17 @@ bool ClientManager::saveFrameToFile(const QString& connectionId,
     }
     
     return success;
+}
+
+void ClientManager::setIceServers(const QJsonArray& iceServers)
+{
+    m_iceServers = iceServers;
+    LOG_INFO("Client: ICE servers configuration updated: {} server(s)", m_iceServers.size());
+}
+
+QJsonArray ClientManager::getIceServers() const
+{
+    return m_iceServers;
 }
 
 } // namespace quickdesk

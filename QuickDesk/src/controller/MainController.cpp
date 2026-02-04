@@ -383,7 +383,8 @@ void MainController::onHostProcessStarted()
     // Set ICE servers from TurnServerManager
     QJsonArray effectiveServers = m_turnServerManager->getEffectiveServers();
     m_hostManager->setIceServers(effectiveServers);
-    LOG_INFO("Set ICE servers for Host: {} server(s)", effectiveServers.size());
+    m_clientManager->setIceServers(effectiveServers);
+    LOG_INFO("Set ICE servers: {} server(s)", effectiveServers.size());
     
     // Send hello to verify communication and connect to signaling server
     QTimer::singleShot(500, this, [this]() {

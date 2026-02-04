@@ -6,6 +6,7 @@
 
 #include <QObject>
 #include <QJsonObject>
+#include <QJsonArray>
 #include <QList>
 #include <QMap>
 #include <QStringList>
@@ -54,6 +55,10 @@ public:
 
     // Set the Native Messaging handler
     void setMessaging(NativeMessaging* messaging);
+    
+    // ICE server configuration
+    void setIceServers(const QJsonArray& iceServers);
+    QJsonArray getIceServers() const;
 
     // Connection management
     Q_INVOKABLE QString connectToHost(const QString& deviceId,
@@ -141,6 +146,9 @@ private:
     QMap<QString, ConnectionInfo> m_connections;  // Each connection has its own signaling state
     QString m_activeConnectionId;
     int m_connectionCounter = 0;
+    
+    // ICE server configuration
+    QJsonArray m_iceServers;
 
     QString generateConnectionId();
     void handleHelloResponse(const QJsonObject& message);
