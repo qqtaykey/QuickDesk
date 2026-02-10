@@ -91,8 +91,17 @@ private:
     static constexpr const char* BUILTIN_TURN_URL = "turn:turn.quickcoder.cc:3478";
     static constexpr const char* BUILTIN_TURN_USERNAME = "qfturn";
     static constexpr const char* BUILTIN_TURN_CREDENTIAL = "iunngalgag";
+
+    // Built-in STUN servers (transparent to user)
+    static constexpr const char* BUILTIN_STUN_URLS[] = {
+        "stun:stun.hot-chilli.net",
+        "stun:stun.internetcalls.com",
+        "stun:stun.miwifi.com",
+        "stun:stun.quickcoder.cc"
+    };
     
     QJsonObject createBuiltinTurnServer() const;
+    QJsonObject createBuiltinStunServer() const;
 };
 
 } // namespace quickdesk

@@ -37,11 +37,12 @@ QJsonArray TurnServerManager::getEffectiveServers() const
         return m_servers;
     }
     
-    // Otherwise, add built-in TURN server
+    // Otherwise, add built-in TURN server and built-in STUN servers
     QJsonArray effectiveServers = m_servers;
     effectiveServers.append(createBuiltinTurnServer());
+    effectiveServers.append(createBuiltinStunServer());
     
-    LOG_INFO("No user TURN server, using built-in TURN + {} user STUN server(s)", 
+    LOG_INFO("No user TURN server, using built-in TURN + built-in STUN + {} user server(s)", 
              m_servers.size());
     return effectiveServers;
 }
@@ -198,6 +199,17 @@ QJsonObject TurnServerManager::createBuiltinTurnServer() const
     server["username"] = QString(BUILTIN_TURN_USERNAME);
     server["credential"] = QString(BUILTIN_TURN_CREDENTIAL);
     server["maxRateKbps"] = 8000;
+    return server;
+}
+
+QJsonObject TurnServerManager::createBuiltinStunServer() const
+{
+    QJsonArray urls;
+    for (const char* url : BUILTIN_STUN_URLS) {
+        urls.append(QString(url));
+    }
+    QJsonObject server;
+    server["urls"] = urls;
     return server;
 }
 
