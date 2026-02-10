@@ -87,6 +87,9 @@ public:
                                        int captureIntervalMs = 30, int boostDurationMs = 300);
     Q_INVOKABLE void setBitrate(const QString& connectionId, int minBitrateBps);
 
+    // Audio control
+    Q_INVOKABLE void setAudioEnabled(const QString& connectionId, bool enabled);
+
     // State getters
     int connectionCount() const;
     QString activeConnectionId() const;

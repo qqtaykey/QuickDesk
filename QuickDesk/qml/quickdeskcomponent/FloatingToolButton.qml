@@ -12,6 +12,9 @@ Item {
     property var desktopView: null
     property var videoInfo: null  // Video info including original resolution
     
+    // Audio state
+    property bool audioEnabled: true  // Default: audio enabled
+    
     // Framerate boost modes
     readonly property int boostModeOff: 0      // 关闭
     readonly property int boostModeOffice: 1   // 办公模式（默认）
@@ -400,6 +403,23 @@ Item {
             iconText: FluentIconGlyph.diagnosticGlyph
             onTriggered: {
                 root.toggleVideoStats()
+            }
+        }
+        
+        // Toggle audio (mute/unmute)
+        QDMenuItem {
+            text: root.audioEnabled ? qsTr("Mute Audio") : qsTr("Unmute Audio")
+            iconText: root.audioEnabled ? FluentIconGlyph.volumeGlyph : FluentIconGlyph.muteGlyph
+            onTriggered: {
+                root.audioEnabled = !root.audioEnabled
+                console.log("Audio toggled:", root.audioEnabled ? "enabled" : "muted", "for:", root.connectionId)
+                if (root.clientManager) {
+                    root.clientManager.setAudioEnabled(root.connectionId, root.audioEnabled)
+                    root.showToast(
+                        root.audioEnabled ? qsTr("Audio: Enabled") : qsTr("Audio: Muted"),
+                        QDToast.Type.Success
+                    )
+                }
             }
         }
         

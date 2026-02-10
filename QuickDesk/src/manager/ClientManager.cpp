@@ -294,6 +294,23 @@ void ClientManager::setBitrate(const QString& connectionId, int minBitrateBps)
     m_messaging->sendMessage(message);
 }
 
+void ClientManager::setAudioEnabled(const QString& connectionId, bool enabled)
+{
+    if (!m_messaging || !m_messaging->isReady()) {
+        LOG_WARN("Cannot set audio: messaging not ready");
+        return;
+    }
+
+    LOG_INFO("Setting audio enabled for {}: {}", 
+             connectionId.toStdString(), enabled);
+
+    QJsonObject message;
+    message["type"] = "setAudioEnabled";
+    message["connectionId"] = connectionId;
+    message["enabled"] = enabled;
+    m_messaging->sendMessage(message);
+}
+
 int ClientManager::connectionCount() const
 {
     return m_connections.size();
