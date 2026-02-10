@@ -72,7 +72,22 @@
         <translation>视频统计</translation>
     </message>
     <message>
-        <location filename="../../qml/quickdeskcomponent/FloatingToolButton.qml" line="409"/>
+        <source>Mute Audio</source>
+        <translation>静音</translation>
+    </message>
+    <message>
+        <source>Unmute Audio</source>
+        <translation>取消静音</translation>
+    </message>
+    <message>
+        <source>Audio: Enabled</source>
+        <translation>音频：已开启</translation>
+    </message>
+    <message>
+        <source>Audio: Muted</source>
+        <translation>音频：已静音</translation>
+    </message>
+    <message>
         <source>Disconnect</source>
         <translation>断开连接</translation>
     </message>

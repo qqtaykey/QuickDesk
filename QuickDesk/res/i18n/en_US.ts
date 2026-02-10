@@ -72,7 +72,22 @@
         <translation>Video Stats</translation>
     </message>
     <message>
-        <location filename="../../qml/quickdeskcomponent/FloatingToolButton.qml" line="409"/>
+        <source>Mute Audio</source>
+        <translation>Mute Audio</translation>
+    </message>
+    <message>
+        <source>Unmute Audio</source>
+        <translation>Unmute Audio</translation>
+    </message>
+    <message>
+        <source>Audio: Enabled</source>
+        <translation>Audio: Enabled</translation>
+    </message>
+    <message>
+        <source>Audio: Muted</source>
+        <translation>Audio: Muted</translation>
+    </message>
+    <message>
         <source>Disconnect</source>
         <translation>Disconnect</translation>
     </message>
