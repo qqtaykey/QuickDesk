@@ -4,14 +4,16 @@
 #ifndef QUICKDESK_MANAGER_CLIENTMANAGER_H
 #define QUICKDESK_MANAGER_CLIENTMANAGER_H
 
+#include <memory>
+
 #include <QObject>
+#include <QPointer>
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QList>
 #include <QMap>
 #include <QStringList>
 #include <QVariantMap>
-#include <memory>
 
 #include "SharedMemoryManager.h"
 #include "common/ProcessStatus.h"
@@ -153,7 +155,7 @@ private slots:
     void onMessagingError(const QString& error);
 
 private:
-    NativeMessaging* m_messaging = nullptr;
+    QPointer<NativeMessaging> m_messaging;
     std::unique_ptr<SharedMemoryManager> m_sharedMemoryManager;
     QMap<QString, ConnectionInfo> m_connections;  // Each connection has its own signaling state
     QString m_activeConnectionId;

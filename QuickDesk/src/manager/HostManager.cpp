@@ -62,7 +62,11 @@ void HostManager::connectToServer(const QString& serverUrl, const QString& saved
     message["type"] = "connect";
     // Only serverUrl is needed - Host will auto-generate deviceId and accessCode
     message["signalingServerUrl"] = serverUrl;
-    
+
+#ifdef Q_OS_WIN    
+    message["useElevatedHost"] = true;
+#endif
+
     // If savedAccessCode is provided (never refresh mode), include it
     if (!savedAccessCode.isEmpty()) {
         message["accessCode"] = savedAccessCode;
