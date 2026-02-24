@@ -7,7 +7,7 @@ echo check ENV
 echo ---------------------------------------------------------------
 
 :: example: C:\QtPro\6.8.4
-set ENV_QT_PATH=C:\QtPro\6.8.4
+if "%ENV_QT_PATH%"=="" set ENV_QT_PATH=C:\QtPro\6.8.4
 echo ENV_QT_PATH %ENV_QT_PATH%
 
 :: 获取脚本绝对路径
@@ -105,7 +105,7 @@ if not %errorlevel%==0 (
 
 echo=
 echo [*] 开始编译...
-cmake --build . --config %build_mode%
+cmake --build . --config %build_mode% --parallel
 if not %errorlevel%==0 (
     echo [?] CMake 编译失败
     goto return
