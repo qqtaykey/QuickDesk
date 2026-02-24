@@ -101,6 +101,13 @@ echo [*] 复制 host 和 client 程序...
 if not exist %src_out_path% (
     echo [?] 警告: src/out 路径不存在: %src_out_path%
 ) else (
+    if exist "%src_out_path%\quickdesk_core.dll" (
+        copy /Y "%src_out_path%\quickdesk_core.dll" %publish_path%\ >nul
+        echo [*] 已复制 quickdesk_core.dll
+    ) else (
+        echo [?] 警告: 未找到 quickdesk_core.dll
+    )
+
     if exist "%src_out_path%\quickdesk_host.exe" (
         copy /Y "%src_out_path%\quickdesk_host.exe" %publish_path%\ >nul
         echo [*] 已复制 quickdesk_host.exe
