@@ -122,6 +122,30 @@ find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core Quick QuickControls2 Mult
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Quick QuickControls2 Multimedia Sql WebSockets)
 message(STATUS "[${PROJECT_NAME}] Qt version is: ${QT_VERSION_MAJOR}.${QT_VERSION_MINOR}")
 
+# 在配置阶段生成qm
+if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    execute_process(
+        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/lrelease.bat ${CMAKE_PREFIX_PATH}/bin
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        RESULT_VARIABLE result
+        OUTPUT_VARIABLE output
+        ERROR_VARIABLE error
+    )
+else()
+    execute_process(
+        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/scripts/lrelease.sh
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        RESULT_VARIABLE result
+        OUTPUT_VARIABLE output
+        ERROR_VARIABLE error
+    )
+endif()
+
+if(NOT result EQUAL 0)
+    message(FATAL_ERROR "gen qm failed: ${result} ${output} ${error}")
+endif()
+message("gen qm: ${output}")
+
 # Subdirectory
 
 add_subdirectory(QuickDesk)
