@@ -197,6 +197,25 @@ rm -rf "$publish_path/QuickDesk.app/Contents/MacOS/logs"
 rm -rf "$publish_path/QuickDesk.app/Contents/MacOS/db"
 rm -rf "$publish_path/QuickDesk.app/Contents/translations"
 
+# Clean stale files that would break code signing
+find "$frameworks_dir/quickdesk_host.app" -name "*.log" -delete 2>/dev/null
+
+echo "[*] ad-hoc code signing (inside-out)..."
+# Sign nested components first, then the outer bundle.
+# Ad-hoc signing gives each binary a stable code identity (CDHash)
+# so that macOS TCC can recognize the app in permission lists.
+if [ -d "$frameworks_dir/quickdesk_host.app" ]; then
+    codesign --force --sign - "$frameworks_dir/quickdesk_host.app"
+fi
+if [ -f "$frameworks_dir/quickdesk_client" ]; then
+    codesign --force --sign - "$frameworks_dir/quickdesk_client"
+fi
+find "$frameworks_dir" -name "*.framework" -maxdepth 1 -exec codesign --force --sign - {} \;
+find "$frameworks_dir" -name "*.dylib" -maxdepth 1 -exec codesign --force --sign - {} \;
+find "$plugins_dir" -name "*.dylib" -exec codesign --force --sign - {} \;
+codesign --force --sign - "$publish_path/QuickDesk.app"
+echo "[*] code signing done"
+
 echo
 echo
 echo "---------------------------------------------------------------"

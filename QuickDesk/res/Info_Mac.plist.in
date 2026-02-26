@@ -38,5 +38,7 @@
 	<string>NSApplication</string>
 	<key>NSSupportsAutomaticGraphicsSwitching</key>
 	<true/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>QuickDesk needs microphone access to capture audio for remote sessions.</string>
 </dict>
 </plist>
