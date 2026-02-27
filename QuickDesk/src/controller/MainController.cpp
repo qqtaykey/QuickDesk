@@ -394,13 +394,26 @@ void MainController::onHostProcessStarted()
             m_hostServerStatus = ServerStatus::Connecting;
             emit hostServerStatusChanged();
             
-            // Check if we should use saved access code (never refresh mode)
             QString savedAccessCode;
             int interval = core::LocalConfigCenter::instance().accessCodeRefreshInterval();
             if (interval == -1) {
+                // "Never refresh" mode: always use saved access code
                 savedAccessCode = core::LocalConfigCenter::instance().savedAccessCode();
                 if (!savedAccessCode.isEmpty()) {
                     LOG_INFO("Using saved access code for 'never refresh' mode: {}", savedAccessCode.toStdString());
+                }
+            } else if (interval > 0) {
+                // Timed refresh mode: use saved access code if next refresh time hasn't expired
+                QString nextRefreshTimeStr = core::LocalConfigCenter::instance().accessCodeNextRefreshTime();
+                QDateTime nextRefreshTime = QDateTime::fromString(nextRefreshTimeStr, Qt::ISODate);
+                if (nextRefreshTime.isValid() && nextRefreshTime > QDateTime::currentDateTime()) {
+                    savedAccessCode = core::LocalConfigCenter::instance().savedAccessCode();
+                    if (!savedAccessCode.isEmpty()) {
+                        int remainingSecs = QDateTime::currentDateTime().secsTo(nextRefreshTime);
+                        LOG_INFO("Resuming saved access code, remaining {}s until next refresh", remainingSecs);
+                    }
+                } else {
+                    LOG_INFO("Saved refresh time expired or not set, will generate new access code");
                 }
             }
 
@@ -544,14 +557,22 @@ void MainController::onHostReady(const QString& deviceId, const QString& accessC
     m_accessCodeRefreshIntervalMinutes = core::LocalConfigCenter::instance().accessCodeRefreshInterval();
     LOG_INFO("Access code refresh interval: {} minutes", m_accessCodeRefreshIntervalMinutes);
     
-    // Save access code for "never refresh" mode
     if (m_accessCodeRefreshIntervalMinutes == -1) {
         core::LocalConfigCenter::instance().setSavedAccessCode(accessCode);
         LOG_INFO("Saved access code for 'never refresh' mode: {}", accessCode.toStdString());
-    } else {
-        // Auto-refresh enabled - start timer
-        LOG_INFO("Starting access code auto-refresh timer: {} minutes", m_accessCodeRefreshIntervalMinutes);
-        updateAccessCodeRefreshTimer();
+    } else if (m_accessCodeRefreshIntervalMinutes > 0) {
+        // Check if we have a saved next refresh time to resume from
+        QString nextRefreshTimeStr = core::LocalConfigCenter::instance().accessCodeNextRefreshTime();
+        QDateTime savedNextRefresh = QDateTime::fromString(nextRefreshTimeStr, Qt::ISODate);
+        
+        if (savedNextRefresh.isValid() && savedNextRefresh > QDateTime::currentDateTime()) {
+            int remainingSeconds = QDateTime::currentDateTime().secsTo(savedNextRefresh);
+            LOG_INFO("Resuming access code refresh timer with {} seconds remaining", remainingSeconds);
+            updateAccessCodeRefreshTimer(remainingSeconds);
+        } else {
+            LOG_INFO("Starting access code auto-refresh timer: {} minutes", m_accessCodeRefreshIntervalMinutes);
+            updateAccessCodeRefreshTimer();
+        }
     }
 
     QTimer::singleShot(0, this, [this]() {
@@ -578,14 +599,11 @@ void MainController::onAccessCodeRefreshTimer()
     // Call refresh access code
     m_hostManager->refreshAccessCode();
     
-    // Update next refresh time
-    if (m_accessCodeRefreshIntervalMinutes > 0) {
-        m_nextRefreshTime = QDateTime::currentDateTime().addSecs(m_accessCodeRefreshIntervalMinutes * 60);
-        emit nextAccessCodeRefreshTimeChanged();
-    }
+    // Restart timer with full interval (important when resuming from remaining time)
+    updateAccessCodeRefreshTimer();
 }
 
-void MainController::updateAccessCodeRefreshTimer()
+void MainController::updateAccessCodeRefreshTimer(int remainingSeconds)
 {
     // Stop existing timer
     m_accessCodeRefreshTimer.stop();
@@ -595,20 +613,30 @@ void MainController::updateAccessCodeRefreshTimer()
     // -1 means never refresh
     if (m_accessCodeRefreshIntervalMinutes <= 0) {
         LOG_INFO("Access code auto-refresh disabled (interval: {})", m_accessCodeRefreshIntervalMinutes);
+        core::LocalConfigCenter::instance().setAccessCodeNextRefreshTime("");
         return;
     }
     
-    // Start timer with interval in milliseconds
-    int intervalMs = m_accessCodeRefreshIntervalMinutes * 60 * 1000;
-    m_accessCodeRefreshTimer.start(intervalMs);
+    int timerMs;
+    if (remainingSeconds > 0) {
+        // Resume with remaining time
+        timerMs = remainingSeconds * 1000;
+        m_nextRefreshTime = QDateTime::currentDateTime().addSecs(remainingSeconds);
+    } else {
+        // Start with full interval
+        timerMs = m_accessCodeRefreshIntervalMinutes * 60 * 1000;
+        m_nextRefreshTime = QDateTime::currentDateTime().addSecs(m_accessCodeRefreshIntervalMinutes * 60);
+    }
     
-    // Set next refresh time
-    m_nextRefreshTime = QDateTime::currentDateTime().addSecs(m_accessCodeRefreshIntervalMinutes * 60);
+    m_accessCodeRefreshTimer.start(timerMs);
     emit nextAccessCodeRefreshTimeChanged();
     
-    LOG_INFO("Access code auto-refresh timer started: {} minutes ({} ms), next at {}", 
-             m_accessCodeRefreshIntervalMinutes, intervalMs, 
-             m_nextRefreshTime.toString("MM-dd HH:mm:ss").toStdString());
+    // Persist next refresh time so it survives restarts
+    core::LocalConfigCenter::instance().setAccessCodeNextRefreshTime(
+        m_nextRefreshTime.toString(Qt::ISODate));
+    
+    LOG_INFO("Access code auto-refresh timer started: {} ms, next at {}", 
+             timerMs, m_nextRefreshTime.toString("MM-dd HH:mm:ss").toStdString());
 }
 
 } // namespace quickdesk

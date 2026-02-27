@@ -184,7 +184,7 @@ private:
     QDateTime m_nextRefreshTime;  // Next scheduled refresh time
     
     void onAccessCodeRefreshTimer();
-    void updateAccessCodeRefreshTimer();
+    void updateAccessCodeRefreshTimer(int remainingSeconds = -1);
     QString getDefaultServerUrl() const;
 };
 
