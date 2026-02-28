@@ -42,6 +42,11 @@ jobs:
       - name: Publish
         run: bash scripts/publish_qd_mac.sh Release
 
+      - name: Package DMG
+        env:
+          PIP_BREAK_SYSTEM_PACKAGES: '1'
+        run: bash scripts/package_qd_mac.sh Release
+
       - name: Get version
         id: version
         run: |
@@ -52,20 +57,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: QuickDesk-mac-arm64-${{ steps.version.outputs.ref-name }}
-          path: publish/Release/
-
-      - name: Package for release
-        if: startsWith(github.ref, 'refs/tags/')
-        run: |
-          cd publish/Release
-          zip -r -y "$GITHUB_WORKSPACE/QuickDesk-mac-arm64-${{ steps.version.outputs.ref-name }}.zip" QuickDesk.app
+          path: publish/Release/QuickDesk.dmg
 
       - name: Upload to release
         if: startsWith(github.ref, 'refs/tags/')
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: QuickDesk-mac-arm64-${{ steps.version.outputs.ref-name }}.zip
-          asset_name: QuickDesk-mac-arm64-${{ steps.version.outputs.ref-name }}.zip
+          file: publish/Release/QuickDesk.dmg
+          asset_name: QuickDesk-mac-arm64-${{ steps.version.outputs.ref-name }}.dmg
           tag: ${{ github.ref }}
           overwrite: true
