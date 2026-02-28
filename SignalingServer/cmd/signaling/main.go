@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	signaling "quickdesk/signaling"
 	"quickdesk/signaling/internal/config"
 	"quickdesk/signaling/internal/database"
 	"quickdesk/signaling/internal/handler"
@@ -71,11 +72,16 @@ func main() {
 		// ICE server configuration (time-limited TURN credentials)
 		v1.GET("/ice-config", apiHandler.GetIceConfig)
 
-		// Preset configuration (client pull)
+		// Preset configuration (client pull, no auth)
 		v1.GET("/preset", apiHandler.GetPreset)
 
-		// Admin preset management
+		// Admin authentication
+		adminAuth := middleware.NewAdminAuth(&cfg.Admin)
+		v1.POST("/admin/login", adminAuth.Login)
+
+		// Admin API (requires token)
 		admin := v1.Group("/admin")
+		admin.Use(adminAuth.AuthRequired())
 		{
 			admin.GET("/preset", apiHandler.GetAdminPreset)
 			admin.PUT("/preset", apiHandler.UpdateAdminPreset)
@@ -98,10 +104,14 @@ func main() {
 		wsHandler.HandleWebSocket(c)
 	})
 
+	// Admin UI (embedded Vue frontend)
+	handler.RegisterAdminUI(router, signaling.WebDistFS)
+
 	// Start server
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
 	log.Printf("Server starting on %s", addr)
 	log.Printf("API: http://%s/api/v1", addr)
+	log.Printf("Admin: http://%s/admin/", addr)
 	log.Printf("WebSocket: ws://%s/signal/{device_id}?access_code={code}", addr)
 	log.Println("Ready to accept connections.")
 

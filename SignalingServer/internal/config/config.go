@@ -15,11 +15,17 @@ type IceConfig struct {
 	StunURLs      []string
 }
 
+type AdminConfig struct {
+	User     string
+	Password string
+}
+
 type Config struct {
 	Server   ServerConfig   `mapstructure:"server"`
 	Database DatabaseConfig `mapstructure:"database"`
 	Redis    RedisConfig    `mapstructure:"redis"`
 	Ice      IceConfig
+	Admin    AdminConfig
 }
 
 type ServerConfig struct {
@@ -64,6 +70,9 @@ func Load() *Config {
 	viper.SetDefault("TURN_CREDENTIAL_TTL", 86400)
 	viper.SetDefault("STUN_URLS", "")
 
+	viper.SetDefault("ADMIN_USER", "admin")
+	viper.SetDefault("ADMIN_PASSWORD", "admin")
+
 	// Read config file (optional, will use defaults if not exists)
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
@@ -93,6 +102,10 @@ func Load() *Config {
 	}
 
 	cfg.Ice = parseIceConfig()
+	cfg.Admin = AdminConfig{
+		User:     viper.GetString("ADMIN_USER"),
+		Password: viper.GetString("ADMIN_PASSWORD"),
+	}
 
 	log.Printf("Loaded config: Server=%s:%d, DB=%s:%d/%s, ICE TURN=%d STUN=%d TTL=%ds",
 		cfg.Server.Host, cfg.Server.Port,

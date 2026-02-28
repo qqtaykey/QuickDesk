@@ -62,3 +62,16 @@ build
 QuickDesk/res/Info_Mac.plist
 .DS_Store
 QuickDesk/3rdparty/quickdesk-remoting
+
+
+# Node.js
+node_modules/
+package-lock.json
+
+# Vue/Vite build output (embedded via go:embed, rebuilt from source)
+SignalingServer/web/dist/
+
+# Go build output
+SignalingServer/signaling_server.exe
+SignalingServer/signaling_server
+SignalingServer/*.pid
