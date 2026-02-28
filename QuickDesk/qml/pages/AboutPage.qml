@@ -196,7 +196,7 @@ Item {
                                     }
 
                                     Text {
-                                        text: "https://chromium.googlesource.com/chromium/src/+/refs/tags/140.0.7339.249/remoting/"
+                                        text: "https://github.com/barry-ran/quickdesk-remoting"
                                         font.pixelSize: Theme.fontSizeSmall
                                         color: Theme.textSecondary
                                         elide: Text.ElideRight
@@ -217,7 +217,7 @@ Item {
                                 anchors.fill: parent
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
-                                onClicked: Qt.openUrlExternally("https://chromium.googlesource.com/chromium/src/+/refs/tags/140.0.7339.249/remoting/")
+                                onClicked: Qt.openUrlExternally("https://github.com/barry-ran/quickdesk-remoting")
                             }
                         }
                     }
@@ -246,7 +246,7 @@ Item {
 
                         Text {
                             width: parent.width
-                            text: qsTr("This project is licensed under the BSD 3-Clause License, same as the Chromium project.")
+                            text: qsTr("QuickDesk is licensed under the MIT License. The bundled quickdesk-remoting component is based on Chromium and licensed under the BSD 3-Clause License.")
                             font.pixelSize: Theme.fontSizeMedium
                             color: Theme.text
                             wrapMode: Text.WordWrap
