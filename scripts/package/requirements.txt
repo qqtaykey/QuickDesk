@@ -1,2 +1,0 @@
-setuptools
-dmgbuild==1.4.2

@@ -19,18 +19,9 @@ while [ $# -gt 0 ]; do
     shift
 done
 
-echo
-echo
-echo "---------------------------------------------------------------"
-echo "install dmgbuild"
-echo "---------------------------------------------------------------"
-
-python3 -m pip install -r "$script_path/package/requirements.txt"
-if [ $? -ne 0 ]; then
-    echo "[!] pip install failed"
-    cd "$old_cd"
-    exit 1
-fi
+publish_path="$script_path/../publish/$build_mode"
+app_path="$publish_path/QuickDesk.app"
+dmg_path="$publish_path/QuickDesk.dmg"
 
 echo
 echo
@@ -38,9 +29,38 @@ echo "---------------------------------------------------------------"
 echo "create DMG"
 echo "---------------------------------------------------------------"
 
-python3 "$script_path/package/package_dmg.py" "$build_mode"
-if [ $? -ne 0 ]; then
-    echo "[!] create DMG failed"
+if [ ! -d "$app_path" ]; then
+    echo "[!] error: $app_path not found"
+    echo "[!] please run publish_qd_mac.sh $build_mode first"
+    cd "$old_cd"
+    exit 1
+fi
+
+echo "[*] app path: $app_path"
+echo "[*] dmg path: $dmg_path"
+
+if [ -f "$dmg_path" ]; then
+    rm -f "$dmg_path"
+fi
+
+tmp_dir=$(mktemp -d)
+echo "[*] staging in: $tmp_dir"
+
+cp -R "$app_path" "$tmp_dir/"
+ln -s /Applications "$tmp_dir/Applications"
+
+echo "[*] creating DMG..."
+hdiutil create \
+    -volname "QuickDesk" \
+    -srcfolder "$tmp_dir" \
+    -ov \
+    -format UDZO \
+    "$dmg_path"
+
+rm -rf "$tmp_dir"
+
+if [ ! -f "$dmg_path" ]; then
+    echo "[!] failed to create DMG"
     cd "$old_cd"
     exit 1
 fi
@@ -50,6 +70,8 @@ echo
 echo "---------------------------------------------------------------"
 echo "[*] DMG package finished!"
 echo "---------------------------------------------------------------"
+echo "[*] output: $dmg_path"
+echo
 
 cd "$old_cd"
 exit 0
