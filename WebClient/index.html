@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuickDesk Web Client</title>
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --bg-card: #1e2a4a;
+            --bg-input: #1a1a3e;
+            --accent: #e94560;
+            --accent-hover: #ff6b81;
+            --text-primary: #eee;
+            --text-secondary: #a0a0b0;
+            --text-disabled: #555;
+            --success: #4caf50;
+            --warning: #ffc107;
+            --error: #f44336;
+            --border: rgba(255,255,255,0.1);
+            --radius: 8px;
+            --nav-width: 200px;
+            --nav-bg: #0f1629;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+        }
+
+        /* ==================== Navigation ==================== */
+        .nav-sidebar {
+            width: var(--nav-width);
+            background: var(--nav-bg);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .nav-header {
+            padding: 24px 16px 16px;
+            text-align: center;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .nav-header h1 {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .nav-header .version {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .nav-items {
+            flex: 1;
+            padding: 8px 0;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 20px;
+            cursor: pointer;
+            font-size: 14px;
+            color: var(--text-secondary);
+            transition: all 0.15s;
+            border-left: 3px solid transparent;
+        }
+
+        .nav-item:hover {
+            background: rgba(255,255,255,0.04);
+            color: var(--text-primary);
+        }
+
+        .nav-item.active {
+            background: rgba(233, 69, 96, 0.1);
+            color: var(--accent);
+            border-left-color: var(--accent);
+        }
+
+        .nav-icon {
+            font-size: 18px;
+            width: 24px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        /* ==================== Content Area ==================== */
+        .content-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 32px 40px;
+        }
+
+        .page { display: none; }
+        .page.active { display: block; }
+
+        .page-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 24px;
+        }
+
+        /* ==================== Cards ==================== */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .card-subtitle {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+        }
+
+        /* ==================== Form Elements ==================== */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 10px 14px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            color: var(--text-primary);
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .form-input:focus { border-color: var(--accent); }
+        .form-input::placeholder { color: var(--text-disabled); }
+
+        .form-row {
+            display: flex;
+            gap: 12px;
+        }
+
+        .form-row .form-group { flex: 1; }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: var(--radius);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn:hover { opacity: 0.9; }
+        .btn:active { transform: scale(0.98); }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-secondary { background: rgba(255,255,255,0.08); color: var(--text-primary); }
+        .btn-danger { background: var(--error); color: white; }
+        .btn-sm { padding: 6px 14px; font-size: 13px; }
+        .btn-full { width: 100%; }
+
+        /* ==================== Remote Control Page ==================== */
+        .connect-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 900px) {
+            .connect-grid { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 600px) {
+            body { height: auto; min-height: 100vh; overflow: auto; flex-direction: column; }
+            .nav-sidebar { display: none; }
+            .content-area { padding: 16px; overflow-y: visible; }
+            .page-title { font-size: 20px; margin-bottom: 16px; }
+            .card { padding: 16px; margin-bottom: 14px; }
+            .card-title { font-size: 15px; }
+        }
+
+        /* History list */
+        .history-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            border-radius: var(--radius);
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .history-item:hover { background: rgba(255,255,255,0.05); }
+
+        .history-icon {
+            width: 36px; height: 36px;
+            border-radius: 8px;
+            background: rgba(233, 69, 96, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        .history-info { flex: 1; min-width: 0; }
+        .history-device {
+            font-size: 15px;
+            font-weight: 600;
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
+        .history-meta {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .history-actions {
+            display: flex;
+            gap: 4px;
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+
+        .history-item:hover .history-actions { opacity: 1; }
+
+        .icon-btn {
+            width: 28px; height: 28px;
+            border: none;
+            border-radius: 6px;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            transition: all 0.15s;
+        }
+
+        .icon-btn:hover { background: rgba(255,255,255,0.1); color: var(--text-primary); }
+        .icon-btn.danger:hover { background: rgba(244,67,54,0.2); color: var(--error); }
+
+        .empty-state {
+            text-align: center;
+            padding: 32px 16px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state .empty-icon { font-size: 32px; margin-bottom: 8px; opacity: 0.5; }
+        .empty-state p { font-size: 13px; }
+
+        /* ==================== Settings Page ==================== */
+        .setting-section {
+            margin-bottom: 24px;
+        }
+
+        .setting-section-title {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .server-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            border-radius: var(--radius);
+            background: rgba(255,255,255,0.03);
+            margin-bottom: 8px;
+        }
+
+        .server-type-badge {
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+
+        .server-type-badge.turn { background: rgba(233,69,96,0.2); color: var(--accent); }
+        .server-type-badge.stun { background: rgba(76,175,80,0.2); color: var(--success); }
+
+        .server-url {
+            flex: 1;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .builtin-badge {
+            font-size: 11px;
+            color: var(--text-secondary);
+            background: rgba(255,255,255,0.05);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        /* ==================== About Page ==================== */
+        .about-logo {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .about-logo-icon {
+            width: 56px; height: 56px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--accent), #c0392b);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            font-weight: 700;
+            color: white;
+        }
+
+        .about-app-name { font-size: 22px; font-weight: 700; }
+        .about-version { font-size: 14px; color: var(--text-secondary); margin-top: 2px; }
+
+        .about-desc {
+            font-size: 14px;
+            line-height: 1.6;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+        }
+
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border-radius: var(--radius);
+            cursor: pointer;
+            transition: background 0.15s;
+            text-decoration: none;
+            color: var(--text-primary);
+        }
+
+        .link-item:hover { background: rgba(255,255,255,0.05); }
+
+        .link-icon {
+            width: 32px; height: 32px;
+            border-radius: 8px;
+            background: rgba(233,69,96,0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        .link-info { flex: 1; }
+        .link-title { font-size: 14px; font-weight: 500; }
+        .link-url { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+
+        .link-arrow { color: var(--text-secondary); font-size: 14px; }
+
+        .separator { height: 1px; background: var(--border); margin: 16px 0; }
+
+        /* ==================== Toast ==================== */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            padding: 10px 24px;
+            border-radius: var(--radius);
+            font-size: 14px;
+            z-index: 10000;
+            transition: transform 0.3s;
+            pointer-events: none;
+        }
+
+        .toast.show { transform: translateX(-50%) translateY(0); }
+        .toast.success { background: var(--success); color: white; }
+        .toast.error { background: var(--error); color: white; }
+        .toast.info { background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border); }
+    </style>
+</head>
+<body>
+    <!-- ==================== Left Navigation ==================== -->
+    <nav class="nav-sidebar">
+        <div class="nav-header">
+            <h1>QuickDesk</h1>
+            <div class="version">Web Client v1.0.0</div>
+        </div>
+        <div class="nav-items">
+            <div class="nav-item active" data-page="remote">
+                <span class="nav-icon">🖥️</span>
+                <span>远程控制</span>
+            </div>
+            <div class="nav-item" data-page="settings">
+                <span class="nav-icon">⚙️</span>
+                <span>设置</span>
+            </div>
+            <div class="nav-item" data-page="about">
+                <span class="nav-icon">ℹ️</span>
+                <span>关于</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ==================== Content Area ==================== -->
+    <div class="content-area">
+
+        <!-- ===== Remote Control Page ===== -->
+        <div id="page-remote" class="page active">
+            <h2 class="page-title">远程控制</h2>
+            <div class="connect-grid">
+                <!-- Connect Form -->
+                <div class="card">
+                    <div class="card-title">连接远程设备</div>
+                    <div class="form-group">
+                        <label>信令服务器</label>
+                        <input type="text" id="serverUrl" class="form-input" placeholder="ws://localhost:8000" value="ws://localhost:8000" />
+                    </div>
+                    <div class="form-group">
+                        <label>设备 ID</label>
+                        <input type="text" id="deviceId" class="form-input" placeholder="请输入远程设备 ID" autocomplete="off" />
+                    </div>
+                    <div class="form-group">
+                        <label>访问码</label>
+                        <input type="password" id="accessCode" class="form-input" placeholder="请输入访问码" autocomplete="off" />
+                    </div>
+                    <button id="connectBtn" class="btn btn-primary btn-full">连接</button>
+                </div>
+
+                <!-- Connection History -->
+                <div class="card">
+                    <div class="card-title">历史连接</div>
+                    <div id="historyList" class="history-list">
+                        <div class="empty-state">
+                            <div class="empty-icon">📋</div>
+                            <p>暂无历史连接记录</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== Settings Page ===== -->
+        <div id="page-settings" class="page">
+            <h2 class="page-title">设置</h2>
+
+            <!-- Network Settings -->
+            <div class="card">
+                <div class="card-title">网络设置</div>
+
+                <!-- Built-in STUN -->
+                <div class="setting-section">
+                    <div class="setting-section-title">内置 STUN 服务器</div>
+                    <div id="builtinStunList"></div>
+                </div>
+
+                <!-- User servers -->
+                <div class="setting-section">
+                    <div class="setting-section-title">自定义服务器</div>
+                    <div id="userServerList"></div>
+                    <div id="noUserServers" class="empty-state" style="padding: 16px 0;">
+                        <p>暂无自定义服务器</p>
+                    </div>
+                </div>
+
+                <div class="separator"></div>
+
+                <!-- Add TURN -->
+                <div class="setting-section">
+                    <div class="setting-section-title">添加 TURN 服务器</div>
+                    <div class="form-group">
+                        <input type="text" id="turnUrl" class="form-input" placeholder="turn:your-server.com:3478" />
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <input type="text" id="turnUsername" class="form-input" placeholder="用户名" />
+                        </div>
+                        <div class="form-group">
+                            <input type="password" id="turnPassword" class="form-input" placeholder="密码" />
+                        </div>
+                    </div>
+                    <button id="addTurnBtn" class="btn btn-primary btn-sm">添加 TURN 服务器</button>
+                </div>
+
+                <div class="separator"></div>
+
+                <!-- Add STUN -->
+                <div class="setting-section">
+                    <div class="setting-section-title">添加 STUN 服务器</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <input type="text" id="stunUrl" class="form-input" placeholder="stun:stun.l.google.com:19302" />
+                        </div>
+                        <div style="flex-shrink:0;display:flex;align-items:flex-end;padding-bottom:16px">
+                            <button id="addStunBtn" class="btn btn-primary btn-sm">添加</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Video Settings -->
+            <div class="card">
+                <div class="card-title">视频设置</div>
+                <div class="setting-section">
+                    <div class="setting-section-title">首选视频编码器</div>
+                    <p class="card-subtitle">选择远程连接使用的视频编码器，实际使用取决于主机端支持情况。</p>
+                    <div class="form-group">
+                        <select id="videoCodecSelect" class="form-input">
+                            <option value="H264">H264</option>
+                            <option value="VP8">VP8</option>
+                            <option value="VP9">VP9</option>
+                            <option value="AV1">AV1</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== About Page ===== -->
+        <div id="page-about" class="page">
+            <h2 class="page-title">关于</h2>
+
+            <div class="card">
+                <div class="about-logo">
+                    <div class="about-logo-icon">Q</div>
+                    <div>
+                        <div class="about-app-name">QuickDesk</div>
+                        <div class="about-version">Web Client v1.0.0</div>
+                    </div>
+                </div>
+                <div class="separator"></div>
+                <p class="about-desc">
+                    QuickDesk 是一个基于 Chromium Remoting 技术的开源远程桌面应用，提供安全、高性能的远程控制功能。
+                </p>
+            </div>
+
+            <div class="card">
+                <div class="card-title">链接</div>
+                <a class="link-item" href="https://github.com/nicekun/remoting" target="_blank" rel="noopener">
+                    <div class="link-icon">🌐</div>
+                    <div class="link-info">
+                        <div class="link-title">源代码</div>
+                        <div class="link-url">github.com/nicekun/remoting</div>
+                    </div>
+                    <span class="link-arrow">→</span>
+                </a>
+                <a class="link-item" href="https://chromium.googlesource.com/chromium/src/+/refs/tags/140.0.7339.249/remoting/" target="_blank" rel="noopener">
+                    <div class="link-icon">🔗</div>
+                    <div class="link-info">
+                        <div class="link-title">基于 Chromium Remoting</div>
+                        <div class="link-url">chromium.googlesource.com/chromium/src/...</div>
+                    </div>
+                    <span class="link-arrow">→</span>
+                </a>
+            </div>
+
+            <div class="card">
+                <div class="card-title">开源协议</div>
+                <p class="about-desc" style="margin-bottom:0">
+                    本项目采用 BSD 3-Clause License 开源协议，与 Chromium 项目保持一致。
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast notification -->
+    <div id="toast" class="toast info"></div>
+
+    <!-- Main entry -->
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
