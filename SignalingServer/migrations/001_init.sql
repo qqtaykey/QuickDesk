@@ -1,3 +1,7 @@
+-- Reference SQL for QuickDesk Signaling Server
+-- NOTE: Tables are auto-created by GORM AutoMigrate on server startup.
+--       This file serves as documentation only.
+
 -- Create devices table
 CREATE TABLE IF NOT EXISTS devices (
     id SERIAL PRIMARY KEY,
@@ -12,15 +16,27 @@ CREATE TABLE IF NOT EXISTS devices (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
--- Create indexes
 CREATE INDEX IF NOT EXISTS idx_device_id ON devices(device_id);
 CREATE INDEX IF NOT EXISTS idx_device_uuid ON devices(device_uuid);
 CREATE INDEX IF NOT EXISTS idx_online ON devices(online);
 CREATE INDEX IF NOT EXISTS idx_last_seen ON devices(last_seen);
 
--- Comments
 COMMENT ON TABLE devices IS 'QuickDesk host devices';
 COMMENT ON COLUMN devices.device_id IS '9-digit unique device identifier';
 COMMENT ON COLUMN devices.device_uuid IS 'UUID for internal use';
 COMMENT ON COLUMN devices.online IS 'Whether the device is currently online';
 COMMENT ON COLUMN devices.last_seen IS 'Last time the device was seen online';
+
+-- Create presets table (server preset configuration)
+CREATE TABLE IF NOT EXISTS presets (
+    id SERIAL PRIMARY KEY,
+    notice TEXT DEFAULT '',
+    links TEXT DEFAULT '',
+    min_version VARCHAR(20) DEFAULT '',
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+COMMENT ON TABLE presets IS 'Server preset configuration (single row)';
+COMMENT ON COLUMN presets.notice IS 'Announcement text, JSON: {"zh_CN":"...", "en_US":"..."}';
+COMMENT ON COLUMN presets.links IS 'Navigation links, JSON: {"zh_CN":[{icon,text,url},...], "en_US":[...]}';
+COMMENT ON COLUMN presets.min_version IS 'Minimum allowed client version, e.g. "1.0.0"';

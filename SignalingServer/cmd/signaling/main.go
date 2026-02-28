@@ -28,19 +28,21 @@ func main() {
 
 	// Auto-migrate models
 	log.Println("Running database migrations...")
-	if err := db.AutoMigrate(&models.Device{}); err != nil {
+	if err := db.AutoMigrate(&models.Device{}, &models.Preset{}); err != nil {
 		log.Fatalf("Failed to run migrations: %v", err)
 	}
 
 	// Initialize repositories
 	deviceRepo := repository.NewDeviceRepository(db)
+	presetRepo := repository.NewPresetRepository(db)
 
 	// Initialize services
 	deviceService := service.NewDeviceService(deviceRepo, redisClient)
 	authService := service.NewAuthService(redisClient)
+	presetService := service.NewPresetService(presetRepo)
 
 	// Initialize handlers
-	apiHandler := handler.NewAPIHandler(deviceService, authService, cfg)
+	apiHandler := handler.NewAPIHandler(deviceService, authService, presetService, cfg)
 	wsHandler := handler.NewWSHandler(deviceService, authService)
 	
 	// Set WSHandler reference for API handler (needed for online status checks)
@@ -68,6 +70,16 @@ func main() {
 
 		// ICE server configuration (time-limited TURN credentials)
 		v1.GET("/ice-config", apiHandler.GetIceConfig)
+
+		// Preset configuration (client pull)
+		v1.GET("/preset", apiHandler.GetPreset)
+
+		// Admin preset management
+		admin := v1.Group("/admin")
+		{
+			admin.GET("/preset", apiHandler.GetAdminPreset)
+			admin.PUT("/preset", apiHandler.UpdateAdminPreset)
+		}
 	}
 
 	// WebSocket routes

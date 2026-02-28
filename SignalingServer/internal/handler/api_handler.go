@@ -6,8 +6,10 @@ import (
 	"encoding/base64"
 	"fmt"
 	"log"
+	"encoding/json"
 	"net/http"
 	"quickdesk/signaling/internal/config"
+	"quickdesk/signaling/internal/models"
 	"quickdesk/signaling/internal/service"
 	"time"
 
@@ -17,14 +19,16 @@ import (
 type APIHandler struct {
 	deviceService *service.DeviceService
 	authService   *service.AuthService
+	presetService *service.PresetService
 	config        *config.Config
 	wsHandler     *WSHandler
 }
 
-func NewAPIHandler(deviceService *service.DeviceService, authService *service.AuthService, cfg *config.Config) *APIHandler {
+func NewAPIHandler(deviceService *service.DeviceService, authService *service.AuthService, presetService *service.PresetService, cfg *config.Config) *APIHandler {
 	return &APIHandler{
 		deviceService: deviceService,
 		authService:   authService,
+		presetService: presetService,
 		config:        cfg,
 	}
 }
@@ -174,6 +178,79 @@ func (h *APIHandler) GetIceConfig(c *gin.Context) {
 		"iceServers":       iceServers,
 		"lifetimeDuration": fmt.Sprintf("%d.000s", ttl),
 	})
+}
+
+// GetPreset handles GET /api/v1/preset
+// Returns preset configuration as a flat JSON for clients.
+func (h *APIHandler) GetPreset(c *gin.Context) {
+	preset, err := h.presetService.GetPreset()
+	if err != nil {
+		log.Printf("Failed to get preset: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get preset"})
+		return
+	}
+
+	// Build response: parse stored JSON strings into proper JSON objects
+	response := gin.H{
+		"min_version": preset.MinVersion,
+	}
+
+	// Parse notice JSON
+	if preset.Notice != "" {
+		var notice interface{}
+		if json.Unmarshal([]byte(preset.Notice), &notice) == nil {
+			response["notice"] = notice
+		} else {
+			response["notice"] = gin.H{}
+		}
+	} else {
+		response["notice"] = gin.H{}
+	}
+
+	// Parse links JSON
+	if preset.Links != "" {
+		var links interface{}
+		if json.Unmarshal([]byte(preset.Links), &links) == nil {
+			response["links"] = links
+		} else {
+			response["links"] = gin.H{}
+		}
+	} else {
+		response["links"] = gin.H{}
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+// GetAdminPreset handles GET /api/v1/admin/preset
+// Returns raw preset record for admin management.
+func (h *APIHandler) GetAdminPreset(c *gin.Context) {
+	preset, err := h.presetService.GetPreset()
+	if err != nil {
+		log.Printf("Failed to get preset: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get preset"})
+		return
+	}
+	c.JSON(http.StatusOK, preset)
+}
+
+// UpdateAdminPreset handles PUT /api/v1/admin/preset
+// Request body: { "notice": "{...}", "links": "{...}", "min_version": "1.0.0" }
+func (h *APIHandler) UpdateAdminPreset(c *gin.Context) {
+	var req models.Preset
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+
+	if err := h.presetService.UpsertPreset(&req); err != nil {
+		log.Printf("Failed to update preset: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update preset"})
+		return
+	}
+
+	log.Printf("Preset updated: min_version=%s", req.MinVersion)
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
 
 // Health check endpoint
