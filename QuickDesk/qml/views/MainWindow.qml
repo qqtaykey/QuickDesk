@@ -191,7 +191,8 @@ ApplicationWindow {
             
             if (component.status === Component.Ready) {
                 remoteWindow = component.createObject(null, {
-                    clientManager: mainController.clientManager
+                    clientManager: mainController.clientManager,
+                    localDeviceId: mainController.deviceId
                 })
                 
                 if (!remoteWindow) {

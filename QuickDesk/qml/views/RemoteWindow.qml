@@ -17,6 +17,7 @@ Window {
     
     // Properties
     property var clientManager: null
+    property string localDeviceId: ""  // Local device ID — used to detect self-connection
     property alias connectionModel: connectionModelObj  // C++ model for incremental updates
     property int currentTabIndex: 0
     property bool hasAutoResized: false  // Only auto-resize once on first frame
@@ -337,6 +338,10 @@ Window {
                     id: delegateItem
                     required property int index
                     required property string connectionId
+                    required property string deviceId
+                    
+                    // Detect self-connection: remote deviceId matches local deviceId
+                    readonly property bool isSelfConnection: remoteWindow.localDeviceId !== "" && delegateItem.deviceId === remoteWindow.localDeviceId
                     
                     // Remote desktop video view (ONLY video, no overlay UI)
                     RemoteDesktopView {
@@ -345,6 +350,7 @@ Window {
                         connectionId: delegateItem.connectionId
                         clientManager: remoteWindow.clientManager
                         active: delegateItem.index === remoteWindow.currentTabIndex
+                        inputEnabled: !delegateItem.isSelfConnection  // Disable input for self-connection
                         
                         // Monitor video size changes (frameRate and ping updated from PerformanceTracker)
                         onFrameWidthChanged: {

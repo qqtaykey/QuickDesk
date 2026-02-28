@@ -122,7 +122,7 @@ Rectangle {
         enabled: root.inputEnabled && root.hasVideo
         hoverEnabled: true
         acceptedButtons: Qt.AllButtons
-        cursorShape: (root.hasVideo && frameProvider.hasCursor) ? Qt.BlankCursor : Qt.ArrowCursor
+        cursorShape: (root.inputEnabled && root.hasVideo && frameProvider.hasCursor) ? Qt.BlankCursor : Qt.ArrowCursor
         
         property point lastPosition: Qt.point(0, 0)
         
