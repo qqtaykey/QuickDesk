@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'QuickDesk/**'
+      - 'quickdesk-mcp/**'
       - 'cmake/**'
       - 'scripts/**'
       - 'CMakeLists.txt'
@@ -11,6 +12,7 @@ on:
   pull_request:
     paths:
       - 'QuickDesk/**'
+      - 'quickdesk-mcp/**'
       - 'cmake/**'
       - 'scripts/**'
       - 'CMakeLists.txt'
@@ -54,11 +56,28 @@ jobs:
             Select-Object -First 1
           echo "ENV_VCRUNTIME_VERSION=$($latest.Name)" >> $env:GITHUB_ENV
 
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            quickdesk-mcp/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('quickdesk-mcp/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
       - name: Build
         shell: cmd
         env:
           ENV_QUICKDESK_API_KEY: ${{ secrets.QUICKDESK_API_KEY }}
         run: call scripts\build_qd_win.bat Release
+
+      - name: Build MCP Bridge
+        shell: cmd
+        run: call scripts\build_mcp_win.bat Release
 
       - name: Publish
         shell: cmd

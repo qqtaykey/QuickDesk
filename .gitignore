@@ -75,3 +75,5 @@ SignalingServer/web/dist/
 SignalingServer/signaling_server.exe
 SignalingServer/signaling_server
 SignalingServer/*.pid
+
+quickdesk-mcp/target

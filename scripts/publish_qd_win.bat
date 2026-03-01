@@ -7,7 +7,7 @@ echo check ENV
 echo ---------------------------------------------------------------
 
 :: example: C:\QtPro\6.8.4
-if "%ENV_QT_PATH%"=="" set ENV_QT_PATH=C:\QtPro\6.8.4
+if "%ENV_QT_PATH%"=="" set ENV_QT_PATH=D:\Qt\Qt5.15.2\6.8.3
 :: example: C:\Program Files\Microsoft Visual Studio\2022\Community
 if "%ENV_VS_INSTALL%"=="" set "ENV_VS_INSTALL=C:\Program Files\Microsoft Visual Studio\2022\Community"
 if "%ENV_VCVARSALL%"=="" set "ENV_VCVARSALL=%ENV_VS_INSTALL%\VC\Auxiliary\Build\vcvarsall.bat"
@@ -151,6 +151,15 @@ if exist "%src_out_path%\icudtl.dat" (
     echo [*] copied icudtl.dat from 3rdparty
 ) else (
     echo [!] warning: icudtl.dat not found
+)
+
+:: copy MCP bridge
+echo [*] copying quickdesk-mcp...
+if exist "%release_path%\quickdesk-mcp.exe" (
+    copy /Y "%release_path%\quickdesk-mcp.exe" "%publish_path%\" >nul
+    echo [*] copied quickdesk-mcp.exe from output
+) else (
+    echo [!] warning: quickdesk-mcp.exe not found (run build_mcp_win.bat first)
 )
 echo=
 

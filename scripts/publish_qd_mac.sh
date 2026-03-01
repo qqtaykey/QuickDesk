@@ -105,6 +105,16 @@ elif [ -f "$thirdparty_path/quickdesk_client" ]; then
 else
     echo "[!] warning: quickdesk_client not found"
 fi
+
+# Copy MCP bridge
+echo "[*] copying quickdesk-mcp..."
+mcp_output="$script_path/../output/arm64/$build_mode/quickdesk-mcp"
+if [ -f "$mcp_output" ]; then
+    cp "$mcp_output" "$macos_dir/"
+    echo "[*] copied quickdesk-mcp from output"
+else
+    echo "[!] warning: quickdesk-mcp not found (run build_mcp_mac.sh first)"
+fi
 echo
 
 echo "[*] running macdeployqt..."
@@ -213,6 +223,9 @@ if [ -d "$frameworks_dir/quickdesk_host.app" ]; then
 fi
 if [ -f "$frameworks_dir/quickdesk_client" ]; then
     codesign --force --sign - "$frameworks_dir/quickdesk_client"
+fi
+if [ -f "$macos_dir/quickdesk-mcp" ]; then
+    codesign --force --sign - "$macos_dir/quickdesk-mcp"
 fi
 find "$frameworks_dir" -name "*.framework" -maxdepth 1 -exec codesign --force --sign - {} \;
 find "$frameworks_dir" -name "*.dylib" -maxdepth 1 -exec codesign --force --sign - {} \;
