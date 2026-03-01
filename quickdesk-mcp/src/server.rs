@@ -373,6 +373,19 @@ impl QuickDeskMcpServer {
         }
     }
 
+    #[tool(description = "Get the last known clipboard content from the remote desktop. Clipboard is synced automatically when something is copied on the remote machine.")]
+    async fn get_clipboard(&self, params: Parameters<ConnectionIdParam>) -> String {
+        let p = params.0;
+        match self
+            .ws
+            .request("getClipboard", json!({"connectionId": p.connection_id}))
+            .await
+        {
+            Ok(v) => serde_json::to_string_pretty(&v).unwrap_or_default(),
+            Err(e) => format!("Error: {e}"),
+        }
+    }
+
     #[tool(description = "Set remote clipboard content.")]
     async fn set_clipboard(&self, params: Parameters<SetClipboardParam>) -> String {
         let p = params.0;

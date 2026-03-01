@@ -61,6 +61,7 @@ private:
 
     MainController* m_controller;
     QMap<QString, Handler> m_handlers;
+    QMap<QString, QString> m_clipboardCache;  // connectionId -> last received text
 };
 
 } // namespace quickdesk

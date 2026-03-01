@@ -45,6 +45,16 @@ ApiHandler::ApiHandler(MainController* controller, QObject* parent)
     : QObject(parent)
     , m_controller(controller) {
     registerHandlers();
+
+    connect(m_controller->clientManager(), &ClientManager::clipboardReceived,
+            this, [this](const QString& connectionId, const QString& text) {
+                m_clipboardCache[connectionId] = text;
+            });
+
+    connect(m_controller->clientManager(), &ClientManager::connectionRemoved,
+            this, [this](const QString& connectionId) {
+                m_clipboardCache.remove(connectionId);
+            });
 }
 
 void ApiHandler::registerHandlers() {
@@ -575,12 +585,19 @@ QJsonObject ApiHandler::handleKeyboardHotkey(const QJsonObject& params) {
 }
 
 QJsonObject ApiHandler::handleGetClipboard(const QJsonObject& params) {
-    Q_UNUSED(params);
-    // Clipboard is received asynchronously via clipboardReceived signal.
-    // Return the last known value or indicate it's event-driven.
+    auto connectionId = params["connectionId"].toString();
+    if (connectionId.isEmpty()) {
+        return makeError(400, "Missing 'connectionId'");
+    }
+
     QJsonObject data;
-    data["note"] = "Clipboard content is delivered via 'clipboardReceived' event. "
-                   "Use setClipboard to push content to remote.";
+    if (m_clipboardCache.contains(connectionId)) {
+        data["text"] = m_clipboardCache[connectionId];
+    } else {
+        data["text"] = "";
+        data["note"] = "No clipboard content received yet from remote. "
+                       "Clipboard is synced when the remote user copies something.";
+    }
     return makeResult(data);
 }
 
