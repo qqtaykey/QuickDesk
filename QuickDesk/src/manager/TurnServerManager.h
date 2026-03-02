@@ -40,7 +40,7 @@ public:
     Q_INVOKABLE bool addTurnServer(const QString& url,
                                      const QString& username,
                                      const QString& credential,
-                                     int maxRateKbps = 8000);
+                                     int maxRateKbps = 0);
     Q_INVOKABLE bool addStunServer(const QString& url);
     Q_INVOKABLE void removeServer(int index);
     Q_INVOKABLE void clearServers();
