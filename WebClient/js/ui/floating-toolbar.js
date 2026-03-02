@@ -63,7 +63,12 @@ export class FloatingToolbar extends EventTarget {
         this._element.addEventListener('click', (e) => {
             if (!this._isDragging) this._toggleMenu();
         });
-        this._element.addEventListener('mousedown', (e) => this._startDrag(e));
+        this._element.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            this._startDrag(e);
+        });
+
+        this._menuElement.addEventListener('mousedown', (e) => e.preventDefault());
         document.addEventListener('mousemove', (e) => this._onDrag(e));
         document.addEventListener('mouseup', () => this._endDrag());
 
@@ -222,6 +227,8 @@ export class FloatingToolbar extends EventTarget {
 
             submenu.appendChild(el);
         }
+
+        submenu.addEventListener('mousedown', (e) => e.preventDefault());
 
         this.container.appendChild(submenu);
         return submenu;
