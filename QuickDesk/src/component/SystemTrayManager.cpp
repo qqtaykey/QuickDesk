@@ -51,11 +51,10 @@ void SystemTrayManager::initTrayIcon()
 
     connect(m_trayIcon, &QSystemTrayIcon::activated, this,
         [this](QSystemTrayIcon::ActivationReason reason) {
-#ifdef Q_OS_WIN
-            if (reason == QSystemTrayIcon::Trigger) {
+            if (reason == QSystemTrayIcon::Trigger ||
+                reason == QSystemTrayIcon::DoubleClick) {
                 Q_EMIT showWindowRequested();
             }
-#endif
         });
 }
 
