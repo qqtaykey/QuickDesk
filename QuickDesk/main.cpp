@@ -6,6 +6,7 @@
 #include <QIcon>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
+#include <QSharedMemory>
 #include <QJSEngine>
 #include <QtQuickControls2/QQuickStyle>
 
@@ -30,6 +31,13 @@
 
 int main(int argc, char *argv[])
 {
+    QSharedMemory sharedMemory("quick_coder_qdsm");
+    // attach成功说明已经create过了，直接退出
+    if (sharedMemory.attach()) {
+        return 0;
+    }
+    sharedMemory.create(1);
+
     QApplication::setHighDpiScaleFactorRoundingPolicy(
         Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
 
