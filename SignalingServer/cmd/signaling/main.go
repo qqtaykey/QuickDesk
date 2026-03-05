@@ -54,6 +54,7 @@ func main() {
 	router := gin.New()
 	router.Use(gin.Recovery())
 	router.Use(middleware.LoggerMiddleware())
+	router.Use(middleware.CORSMiddleware(cfg.Security.AllowedOrigins))
 
 	// API Key authentication middleware
 	apiKeyAuth := middleware.NewAPIKeyAuth(cfg.Security.APIKey, cfg.Security.AllowedOrigins)
