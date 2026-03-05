@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Window
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtQuick.Dialogs
 import QuickDesk 1.0
 
 import "../component"
@@ -404,6 +405,12 @@ Window {
                 var stats = connId ? remoteWindow.getPerformanceStats(connId) : null
                 return stats ? (stats.supportsLockWorkstation || false) : false
             }
+            supportsFileTransfer: {
+                var connId = currentTabIndex >= 0 && currentTabIndex < connectionModel.count 
+                    ? connectionModel.connectionIdAt(currentTabIndex) : ""
+                var stats = connId ? remoteWindow.getPerformanceStats(connId) : null
+                return stats ? (stats.supportsFileTransfer || false) : false
+            }
             videoInfo: {
                 var connId = currentTabIndex >= 0 && currentTabIndex < connectionModel.count 
                     ? connectionModel.connectionIdAt(currentTabIndex) 
@@ -448,6 +455,16 @@ Window {
             
             onShowToast: function(message, toastType) {
                 toast.show(message, toastType)
+            }
+
+            activeTransferCount: remoteWindow.activeTransferCount
+
+            onUploadFileRequested: {
+                fileDialog.open()
+            }
+
+            onShowTransferPanelRequested: {
+                fileTransferDrawer.open()
             }
         }
         
@@ -570,13 +587,13 @@ Window {
     Connections {
         target: remoteWindow.clientManager
 
-        function onHostCapabilitiesChanged(connectionId, supportsSendAttentionSequence, supportsLockWorkstation) {
-            // Store per-connection capabilities in the stats map
+        function onHostCapabilitiesChanged(connectionId, supportsSendAttentionSequence, supportsLockWorkstation, supportsFileTransfer) {
             var current = remoteWindow.performanceStatsMap[connectionId] || {}
             var newStatsMap = Object.assign({}, remoteWindow.performanceStatsMap)
             newStatsMap[connectionId] = Object.assign({}, current, {
                 supportsSendAttentionSequence: supportsSendAttentionSequence,
-                supportsLockWorkstation: supportsLockWorkstation
+                supportsLockWorkstation: supportsLockWorkstation,
+                supportsFileTransfer: supportsFileTransfer
             })
             remoteWindow.performanceStatsMap = newStatsMap
         }
@@ -601,6 +618,281 @@ Window {
                     remoteCandidates: routeInfo.remoteCandidates || []
                 })
                 remoteWindow.performanceStatsMap = newStatsMap
+            }
+        }
+    }
+
+    // File upload dialog (supports multiple file selection)
+    FileDialog {
+        id: fileDialog
+        title: qsTr("Select Files to Upload")
+        fileMode: FileDialog.OpenFiles
+        onAccepted: {
+            var connId = currentTabIndex >= 0 && currentTabIndex < connectionModel.count
+                ? connectionModel.connectionIdAt(currentTabIndex) : ""
+            if (connId && remoteWindow.clientManager) {
+                for (var i = 0; i < selectedFiles.length; i++) {
+                    remoteWindow.clientManager.startFileUpload(connId, selectedFiles[i])
+                    var fname = selectedFiles[i].toString().split('/').pop()
+                    transferModel.append({
+                        transferId: "",
+                        connectionId: connId,
+                        filename: decodeURIComponent(fname),
+                        progress: 0,
+                        status: "uploading",
+                        errorMessage: ""
+                    })
+                }
+                fileTransferDrawer.open()
+            }
+        }
+    }
+
+    // File transfer data model
+    ListModel {
+        id: transferModel
+    }
+
+    property int activeTransferCount: {
+        var count = 0
+        for (var i = 0; i < transferModel.count; i++) {
+            if (transferModel.get(i).status === "uploading") count++
+        }
+        return count
+    }
+
+    function findTransferIndex(transferId) {
+        for (var i = 0; i < transferModel.count; i++) {
+            if (transferModel.get(i).transferId === transferId) return i
+        }
+        return -1
+    }
+
+    function findTransferByFilename(filename) {
+        for (var i = transferModel.count - 1; i >= 0; i--) {
+            var item = transferModel.get(i)
+            if (item.filename === filename && item.transferId === "") return i
+        }
+        return -1
+    }
+
+    // File transfer event handlers
+    Connections {
+        target: remoteWindow.clientManager
+
+        function onFileTransferProgress(connectionId, transferId, filename, bytesSent, totalBytes) {
+            var idx = remoteWindow.findTransferIndex(transferId)
+            if (idx < 0) {
+                idx = remoteWindow.findTransferByFilename(filename)
+                if (idx >= 0) {
+                    transferModel.setProperty(idx, "transferId", transferId)
+                } else {
+                    transferModel.append({
+                        transferId: transferId,
+                        connectionId: connectionId,
+                        filename: filename,
+                        progress: 0,
+                        status: "uploading",
+                        errorMessage: ""
+                    })
+                    idx = transferModel.count - 1
+                }
+            }
+            var pct = totalBytes > 0 ? bytesSent / totalBytes : 0
+            transferModel.setProperty(idx, "progress", pct)
+        }
+
+        function onFileTransferComplete(connectionId, transferId, filename) {
+            var idx = remoteWindow.findTransferIndex(transferId)
+            if (idx < 0) idx = remoteWindow.findTransferByFilename(filename)
+            if (idx >= 0) {
+                transferModel.setProperty(idx, "status", "complete")
+                transferModel.setProperty(idx, "progress", 1)
+                if (transferModel.get(idx).transferId === "")
+                    transferModel.setProperty(idx, "transferId", transferId)
+            }
+            toast.show(qsTr("Upload complete: %1").arg(filename), QDToast.Type.Success)
+        }
+
+        function onFileTransferError(connectionId, transferId, errorMessage) {
+            var idx = remoteWindow.findTransferIndex(transferId)
+            if (idx < 0) {
+                for (var i = transferModel.count - 1; i >= 0; i--) {
+                    if (transferModel.get(i).status === "uploading" && transferModel.get(i).transferId === "") {
+                        idx = i
+                        break
+                    }
+                }
+            }
+            if (idx >= 0) {
+                transferModel.setProperty(idx, "status", "error")
+                transferModel.setProperty(idx, "errorMessage", errorMessage)
+                if (transferId && transferModel.get(idx).transferId === "")
+                    transferModel.setProperty(idx, "transferId", transferId)
+            }
+            toast.show(qsTr("Upload failed: %1").arg(errorMessage), QDToast.Type.Error)
+        }
+    }
+
+    // File Transfer Drawer (right side panel)
+    QDDrawer {
+        id: fileTransferDrawer
+        edge: Qt.RightEdge
+        width: 360
+        title: qsTr("File Transfers") + (remoteWindow.activeTransferCount > 0
+            ? " (" + remoteWindow.activeTransferCount + ")" : "")
+
+        ColumnLayout {
+            anchors.fill: parent
+            spacing: 0
+
+            // Empty state
+            QDEmptyState {
+                visible: transferModel.count === 0
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                iconSource: FluentIconGlyph.uploadGlyph
+                title: qsTr("No Transfers")
+                description: qsTr("Use the menu to upload files to the remote host")
+            }
+
+            // Transfer list
+            ListView {
+                id: transferListView
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                visible: transferModel.count > 0
+                model: transferModel
+                clip: true
+                spacing: 2
+
+                delegate: Rectangle {
+                    width: transferListView.width
+                    height: transferItemLayout.implicitHeight + Theme.spacingMedium * 2
+                    color: delegateHover.hovered ? Theme.surfaceHover : "transparent"
+                    radius: Theme.radiusSmall
+
+                    HoverHandler { id: delegateHover }
+
+                    ColumnLayout {
+                        id: transferItemLayout
+                        anchors.fill: parent
+                        anchors.margins: Theme.spacingMedium
+                        spacing: Theme.spacingSmall
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: Theme.spacingSmall
+
+                            // File icon
+                            Text {
+                                text: FluentIconGlyph.documentGlyph
+                                font.family: "Segoe Fluent Icons"
+                                font.pixelSize: Theme.iconSizeMedium
+                                color: {
+                                    if (model.status === "complete") return Theme.success
+                                    if (model.status === "error" || model.status === "cancelled") return Theme.error
+                                    return Theme.primary
+                                }
+                            }
+
+                            // Filename
+                            Text {
+                                Layout.fillWidth: true
+                                text: model.filename
+                                font.family: Theme.fontFamily
+                                font.pixelSize: Theme.fontSizeMedium
+                                color: Theme.text
+                                elide: Text.ElideMiddle
+                            }
+
+                            // Status / action
+                            Text {
+                                visible: model.status === "uploading"
+                                text: Math.round(model.progress * 100) + "%"
+                                font.family: Theme.fontFamily
+                                font.pixelSize: Theme.fontSizeSmall
+                                color: Theme.textSecondary
+                            }
+
+                            // Cancel button (only for uploading)
+                            QDIconButton {
+                                visible: model.status === "uploading"
+                                iconSource: FluentIconGlyph.cancelGlyph
+                                buttonSize: QDIconButton.Size.Small
+                                buttonStyle: QDIconButton.Style.Transparent
+                                onClicked: {
+                                    var item = transferModel.get(index)
+                                    if (item.transferId && remoteWindow.clientManager) {
+                                        remoteWindow.clientManager.cancelFileUpload(
+                                            item.connectionId, item.transferId)
+                                    }
+                                    transferModel.setProperty(index, "status", "cancelled")
+                                    transferModel.setProperty(index, "errorMessage", qsTr("Cancelled"))
+                                }
+                            }
+
+                            // Success icon
+                            Text {
+                                visible: model.status === "complete"
+                                text: FluentIconGlyph.checkMarkGlyph
+                                font.family: "Segoe Fluent Icons"
+                                font.pixelSize: 14
+                                color: Theme.success
+                            }
+
+                            // Error icon
+                            Text {
+                                visible: model.status === "error" || model.status === "cancelled"
+                                text: FluentIconGlyph.errorGlyph
+                                font.family: "Segoe Fluent Icons"
+                                font.pixelSize: 14
+                                color: Theme.error
+                            }
+                        }
+
+                        // Progress bar (only for uploading)
+                        QDProgressBar {
+                            visible: model.status === "uploading"
+                            Layout.fillWidth: true
+                            value: model.progress
+                            from: 0
+                            to: 1
+                        }
+
+                        // Error message
+                        Text {
+                            visible: (model.status === "error" || model.status === "cancelled") && model.errorMessage !== ""
+                            Layout.fillWidth: true
+                            text: model.errorMessage
+                            font.family: Theme.fontFamily
+                            font.pixelSize: Theme.fontSizeSmall
+                            color: Theme.error
+                            elide: Text.ElideRight
+                        }
+                    }
+                }
+            }
+
+            // Clear completed button
+            Rectangle {
+                visible: transferModel.count > 0
+                Layout.fillWidth: true
+                Layout.preferredHeight: 48
+                color: Theme.surfaceVariant
+
+                QDButton {
+                    anchors.centerIn: parent
+                    text: qsTr("Clear Completed")
+                    onClicked: {
+                        for (var i = transferModel.count - 1; i >= 0; i--) {
+                            var s = transferModel.get(i).status
+                            if (s === "complete" || s === "error" || s === "cancelled") {
+                                transferModel.remove(i)
+                            }
+                        }
+                    }
+                }
             }
         }
     }

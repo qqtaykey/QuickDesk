@@ -13,6 +13,7 @@
 #include <QList>
 #include <QMap>
 #include <QStringList>
+#include <QUrl>
 #include <QVariantMap>
 
 #include "SharedMemoryManager.h"
@@ -43,6 +44,7 @@ struct ConnectionInfo {
     // Negotiated host capabilities
     bool supportsSendAttentionSequence = false;
     bool supportsLockWorkstation = false;
+    bool supportsFileTransfer = false;
 };
 
 /**
@@ -101,6 +103,11 @@ public:
     Q_INVOKABLE void sendAction(const QString& connectionId, const QString& action);
     Q_INVOKABLE bool supportsSendAttentionSequence(const QString& connectionId) const;
     Q_INVOKABLE bool supportsLockWorkstation(const QString& connectionId) const;
+
+    // File transfer (Client -> Host upload)
+    Q_INVOKABLE void startFileUpload(const QString& connectionId, const QUrl& fileUrl);
+    Q_INVOKABLE void cancelFileUpload(const QString& connectionId, const QString& transferId);
+    Q_INVOKABLE bool supportsFileTransfer(const QString& connectionId) const;
 
     // State getters
     int connectionCount() const;
@@ -171,7 +178,21 @@ signals:
     // Host capabilities negotiated
     void hostCapabilitiesChanged(const QString& connectionId,
                                  bool supportsSendAttentionSequence,
-                                 bool supportsLockWorkstation);
+                                 bool supportsLockWorkstation,
+                                 bool supportsFileTransfer);
+
+    // File transfer signals
+    void fileTransferProgress(const QString& connectionId,
+                              const QString& transferId,
+                              const QString& filename,
+                              double bytesSent,
+                              double totalBytes);
+    void fileTransferComplete(const QString& connectionId,
+                              const QString& transferId,
+                              const QString& filename);
+    void fileTransferError(const QString& connectionId,
+                           const QString& transferId,
+                           const QString& errorMessage);
 
 private slots:
     void onMessageReceived(const QJsonObject& message);
@@ -207,6 +228,9 @@ private:
     void handleVideoLayoutChanged(const QJsonObject& message);
     void handleRouteChanged(const QJsonObject& message);
     void handleHostCapabilities(const QJsonObject& message);
+    void handleFileTransferProgress(const QJsonObject& message);
+    void handleFileTransferComplete(const QJsonObject& message);
+    void handleFileTransferError(const QJsonObject& message);
     
     void sendMouseEvent(const QString& connectionId, const QString& eventType,
                         int x, int y, int button,

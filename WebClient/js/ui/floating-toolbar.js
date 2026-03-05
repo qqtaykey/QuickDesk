@@ -29,6 +29,7 @@ export class FloatingToolbar extends EventTarget {
 
         this._supportsSAS = false;
         this._supportsLock = false;
+        this._supportsFileTransfer = false;
 
         this._remoteWidth = 0;
         this._remoteHeight = 0;
@@ -118,6 +119,9 @@ export class FloatingToolbar extends EventTarget {
             { type: 'separator', id: 'actionSeparator', hidden: true },
             { text: 'Send Ctrl+Alt+Del', icon: '⌨', action: 'sendAttentionSequence', id: 'sasMenuItem', hidden: true },
             { text: 'Lock Screen', icon: '🔒', action: 'lockWorkstation', id: 'lockMenuItem', hidden: true },
+            { type: 'separator', id: 'uploadSeparator', hidden: true },
+            { text: 'Upload File', icon: '📤', action: 'uploadFile', id: 'uploadMenuItem', hidden: true },
+            { text: 'Transfers', icon: '📊', action: 'showTransfers', id: 'transfersMenuItem', hidden: true },
             { type: 'separator' },
             { text: 'Disconnect', icon: '✕', action: 'disconnect', destructive: true },
         ];
@@ -340,6 +344,14 @@ export class FloatingToolbar extends EventTarget {
                 this.dispatchEvent(new CustomEvent('action', { detail: { action } }));
                 this._hideMenu();
                 break;
+            case 'uploadFile':
+                this.dispatchEvent(new CustomEvent('action', { detail: { action: 'uploadFile' } }));
+                this._hideMenu();
+                break;
+            case 'showTransfers':
+                this.dispatchEvent(new CustomEvent('action', { detail: { action: 'showTransfers' } }));
+                this._hideMenu();
+                break;
         }
     }
 
@@ -490,18 +502,37 @@ export class FloatingToolbar extends EventTarget {
         this._menuElement.style.display = 'none';
     }
 
-    setActionSupport(supportsSAS, supportsLock) {
+    setActionSupport(supportsSAS, supportsLock, supportsFileTransfer = false) {
         this._supportsSAS = supportsSAS;
         this._supportsLock = supportsLock;
+        this._supportsFileTransfer = supportsFileTransfer;
 
         const sasItem = this._menuElement.querySelector('#sasMenuItem');
         const lockItem = this._menuElement.querySelector('#lockMenuItem');
         const actionSep = this._menuElement.querySelector('#actionSeparator');
+        const uploadItem = this._menuElement.querySelector('#uploadMenuItem');
+        const uploadSep = this._menuElement.querySelector('#uploadSeparator');
 
         if (sasItem) sasItem.style.display = supportsSAS ? '' : 'none';
         if (lockItem) lockItem.style.display = supportsLock ? '' : 'none';
         if (actionSep) actionSep.style.display = 
             (supportsSAS || supportsLock) ? '' : 'none';
+        if (uploadItem) uploadItem.style.display = supportsFileTransfer ? '' : 'none';
+        if (uploadSep) uploadSep.style.display = supportsFileTransfer ? '' : 'none';
+
+        const transfersItem = this._menuElement.querySelector('#transfersMenuItem');
+        if (transfersItem) transfersItem.style.display = supportsFileTransfer ? '' : 'none';
+    }
+
+    updateTransferCount(count) {
+        const transfersItem = this._menuElement.querySelector('#transfersMenuItem');
+        if (transfersItem) {
+            const textEl = transfersItem.querySelector('.menu-text');
+            if (textEl) {
+                textEl.textContent = count > 0 ? `Transfers (${count})` : 'Transfers';
+            }
+            transfersItem.style.display = (this._supportsFileTransfer && count > 0) ? '' : 'none';
+        }
     }
 
     setVisible(visible) {

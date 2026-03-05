@@ -138,12 +138,30 @@ class RemoteDesktopApp {
             });
 
             this.dcHandler.addEventListener('hostCapabilities', (e) => {
-                const { supportsSendAttentionSequence, supportsLockWorkstation } = e.detail;
-                this._log(`Negotiated actions: SAS=${supportsSendAttentionSequence} Lock=${supportsLockWorkstation}`);
+                const { supportsSendAttentionSequence, supportsLockWorkstation, supportsFileTransfer } = e.detail;
+                this._log(`Negotiated caps: SAS=${supportsSendAttentionSequence} Lock=${supportsLockWorkstation} FileTransfer=${supportsFileTransfer}`);
                 if (this.floatingToolbar) {
                     this.floatingToolbar.setActionSupport(
-                        supportsSendAttentionSequence, supportsLockWorkstation);
+                        supportsSendAttentionSequence, supportsLockWorkstation, supportsFileTransfer);
                 }
+            });
+
+            this.dcHandler.addEventListener('fileTransferStarted', (e) => {
+                this._addTransferItem(e.detail.transferId, e.detail.filename, e.detail.totalBytes);
+            });
+
+            this.dcHandler.addEventListener('fileTransferProgress', (e) => {
+                this._updateTransferProgress(e.detail.transferId, e.detail.bytesSent, e.detail.totalBytes);
+            });
+
+            this.dcHandler.addEventListener('fileTransferComplete', (e) => {
+                this._updateTransferStatus(e.detail.transferId, 'complete');
+                this._log(`Upload complete: ${e.detail.filename}`);
+            });
+
+            this.dcHandler.addEventListener('fileTransferError', (e) => {
+                this._updateTransferStatus(e.detail.transferId, 'error', e.detail.errorMessage);
+                this._log(`Upload failed: ${e.detail.errorMessage}`);
             });
 
             await this.session.connect(deviceId, accessCode);
@@ -325,7 +343,7 @@ class RemoteDesktopApp {
 
     _sendInitialConfig() {
         this.dcHandler.sendCapabilities(
-            'sendAttentionSequenceAction lockWorkstationAction');
+            'sendAttentionSequenceAction lockWorkstationAction fileTransfer');
         this.dcHandler.sendAudioControl({ enable: true });
         this._log('已发送初始配置');
     }
@@ -358,7 +376,172 @@ class RemoteDesktopApp {
                     this._log('Sent Lock Screen');
                 }
                 break;
+            case 'uploadFile':
+                this._triggerFileUpload();
+                break;
+            case 'showTransfers':
+                this._toggleTransferPanel();
+                break;
         }
+    }
+
+    _triggerFileUpload() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.multiple = true;
+        input.style.display = 'none';
+        input.addEventListener('change', () => {
+            if (input.files && input.files.length > 0 && this.dcHandler) {
+                for (const file of input.files) {
+                    this._log(`Uploading file: ${file.name} (${file.size} bytes)`);
+                    this.dcHandler.startFileUpload(file);
+                }
+                this._showTransferPanel();
+            }
+            input.remove();
+        });
+        document.body.appendChild(input);
+        input.click();
+    }
+
+    // ==================== Transfer Panel ====================
+
+    _ensureTransferPanel() {
+        if (this._transferPanel) return;
+
+        const panel = document.createElement('div');
+        panel.className = 'transfer-panel';
+        panel.innerHTML = `
+            <div class="transfer-panel-header">
+                <span class="transfer-panel-title">File Transfers</span>
+                <span class="transfer-panel-close" title="Close">&times;</span>
+            </div>
+            <div class="transfer-panel-list"></div>
+            <div class="transfer-panel-footer">
+                <button class="transfer-panel-clear">Clear Completed</button>
+            </div>
+        `;
+        panel.style.display = 'none';
+
+        panel.querySelector('.transfer-panel-close').addEventListener('click', () => {
+            this._hideTransferPanel();
+        });
+        panel.querySelector('.transfer-panel-clear').addEventListener('click', () => {
+            this._clearCompletedTransfers();
+        });
+
+        const container = document.getElementById('remoteContainer') || document.body;
+        container.appendChild(panel);
+        this._transferPanel = panel;
+        this._transferItems = new Map();
+    }
+
+    _showTransferPanel() {
+        this._ensureTransferPanel();
+        this._transferPanel.style.display = 'flex';
+    }
+
+    _hideTransferPanel() {
+        if (this._transferPanel) {
+            this._transferPanel.style.display = 'none';
+        }
+    }
+
+    _toggleTransferPanel() {
+        this._ensureTransferPanel();
+        if (this._transferPanel.style.display === 'none') {
+            this._showTransferPanel();
+        } else {
+            this._hideTransferPanel();
+        }
+    }
+
+    _addTransferItem(transferId, filename, totalBytes) {
+        this._ensureTransferPanel();
+        const list = this._transferPanel.querySelector('.transfer-panel-list');
+        const item = document.createElement('div');
+        item.className = 'transfer-item';
+        item.dataset.transferId = transferId;
+        item.innerHTML = `
+            <div class="transfer-item-row">
+                <span class="transfer-item-icon">📄</span>
+                <span class="transfer-item-name" title="${filename}">${filename}</span>
+                <span class="transfer-item-pct">0%</span>
+                <span class="transfer-item-cancel" title="Cancel">&times;</span>
+            </div>
+            <div class="transfer-item-bar"><div class="transfer-item-fill"></div></div>
+        `;
+        item.querySelector('.transfer-item-cancel').addEventListener('click', () => {
+            if (this.dcHandler) {
+                this.dcHandler.cancelFileUpload(transferId);
+            }
+        });
+        list.appendChild(item);
+        this._transferItems.set(transferId, item);
+        this._updateActiveCount();
+        this._showTransferPanel();
+    }
+
+    _updateTransferProgress(transferId, bytesSent, totalBytes) {
+        const item = this._transferItems?.get(transferId);
+        if (!item) return;
+        const pct = totalBytes > 0 ? Math.round(bytesSent / totalBytes * 100) : 0;
+        const pctEl = item.querySelector('.transfer-item-pct');
+        if (pctEl) pctEl.textContent = `${pct}%`;
+        const fill = item.querySelector('.transfer-item-fill');
+        if (fill) fill.style.width = `${pct}%`;
+    }
+
+    _updateTransferStatus(transferId, status, errorMessage) {
+        const item = this._transferItems?.get(transferId);
+        if (!item) return;
+
+        const pctEl = item.querySelector('.transfer-item-pct');
+        const cancelEl = item.querySelector('.transfer-item-cancel');
+        const fill = item.querySelector('.transfer-item-fill');
+        const iconEl = item.querySelector('.transfer-item-icon');
+
+        if (status === 'complete') {
+            if (pctEl) pctEl.textContent = '✅';
+            if (cancelEl) cancelEl.style.display = 'none';
+            if (fill) { fill.style.width = '100%'; fill.classList.add('complete'); }
+            if (iconEl) iconEl.textContent = '✅';
+            item.classList.add('transfer-complete');
+        } else {
+            const msg = errorMessage || 'Failed';
+            if (pctEl) pctEl.textContent = '❌';
+            if (cancelEl) cancelEl.style.display = 'none';
+            if (fill) fill.classList.add('error');
+            if (iconEl) iconEl.textContent = '❌';
+            item.classList.add('transfer-error');
+            const errEl = document.createElement('div');
+            errEl.className = 'transfer-item-error';
+            errEl.textContent = msg;
+            item.appendChild(errEl);
+        }
+        this._updateActiveCount();
+    }
+
+    _clearCompletedTransfers() {
+        if (!this._transferItems) return;
+        for (const [id, item] of this._transferItems) {
+            if (item.classList.contains('transfer-complete') || item.classList.contains('transfer-error')) {
+                item.remove();
+                this._transferItems.delete(id);
+            }
+        }
+        this._updateActiveCount();
+    }
+
+    _updateActiveCount() {
+        if (!this._transferItems || !this.floatingToolbar) return;
+        let count = 0;
+        for (const [, item] of this._transferItems) {
+            if (!item.classList.contains('transfer-complete') && !item.classList.contains('transfer-error')) {
+                count++;
+            }
+        }
+        this.floatingToolbar.updateTransferCount(count);
     }
 
     _handleSettingChange(detail) {

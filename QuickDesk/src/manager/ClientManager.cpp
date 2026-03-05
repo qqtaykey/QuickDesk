@@ -376,6 +376,50 @@ bool ClientManager::supportsLockWorkstation(const QString& connectionId) const
     return it.value().supportsLockWorkstation;
 }
 
+void ClientManager::startFileUpload(const QString& connectionId, const QUrl& fileUrl)
+{
+    if (!m_messaging || !m_messaging->isReady()) {
+        LOG_WARN("Cannot start file upload: messaging not ready");
+        return;
+    }
+
+    QString filePath = fileUrl.toLocalFile();
+    LOG_INFO("Starting file upload for {}: {}", connectionId.toStdString(),
+             filePath.toStdString());
+
+    QJsonObject message;
+    message["type"] = "startFileUpload";
+    message["connectionId"] = connectionId;
+    message["filePath"] = filePath;
+    m_messaging->sendMessage(message);
+}
+
+void ClientManager::cancelFileUpload(const QString& connectionId,
+                                     const QString& transferId)
+{
+    if (!m_messaging || !m_messaging->isReady()) {
+        LOG_WARN("Cannot cancel file upload: messaging not ready");
+        return;
+    }
+
+    LOG_INFO("Cancelling file upload: transfer={} connection={}",
+             transferId.toStdString(), connectionId.toStdString());
+
+    QJsonObject message;
+    message["type"] = "cancelFileUpload";
+    message["connectionId"] = connectionId;
+    message["transferId"] = transferId;
+    m_messaging->sendMessage(message);
+}
+
+bool ClientManager::supportsFileTransfer(const QString& connectionId) const
+{
+    auto it = m_connections.find(connectionId);
+    if (it == m_connections.end())
+        return false;
+    return it.value().supportsFileTransfer;
+}
+
 int ClientManager::connectionCount() const
 {
     return m_connections.size();
@@ -503,6 +547,12 @@ void ClientManager::onMessageReceived(const QJsonObject& message)
         handleRouteChanged(message);
     } else if (type == "hostCapabilities") {
         handleHostCapabilities(message);
+    } else if (type == "fileTransferProgress") {
+        handleFileTransferProgress(message);
+    } else if (type == "fileTransferComplete") {
+        handleFileTransferComplete(message);
+    } else if (type == "fileTransferError") {
+        handleFileTransferError(message);
     } else if (type == "setFramerateResponse" || type == "setResolutionResponse" || type == "setFramerateBoostResponse" || type == "setBitrateResponse") {
         // Acknowledgement responses - just log success/failure
         bool success = message["success"].toBool();
@@ -1030,17 +1080,55 @@ void ClientManager::handleHostCapabilities(const QJsonObject& message)
     QString connectionId = message["connectionId"].toString();
     bool supportsSAS = message["supportsSendAttentionSequence"].toBool();
     bool supportsLock = message["supportsLockWorkstation"].toBool();
+    bool supportsFile = message["supportsFileTransfer"].toBool();
 
     auto it = m_connections.find(connectionId);
     if (it != m_connections.end()) {
         it->supportsSendAttentionSequence = supportsSAS;
         it->supportsLockWorkstation = supportsLock;
+        it->supportsFileTransfer = supportsFile;
     }
 
-    LOG_INFO("Host capabilities for {}: SAS={} Lock={}",
-             connectionId.toStdString(), supportsSAS, supportsLock);
+    LOG_INFO("Host capabilities for {}: SAS={} Lock={} FileTransfer={}",
+             connectionId.toStdString(), supportsSAS, supportsLock, supportsFile);
 
-    emit hostCapabilitiesChanged(connectionId, supportsSAS, supportsLock);
+    emit hostCapabilitiesChanged(connectionId, supportsSAS, supportsLock, supportsFile);
+}
+
+void ClientManager::handleFileTransferProgress(const QJsonObject& message)
+{
+    QString connectionId = message["connectionId"].toString();
+    QString transferId = message["transferId"].toString();
+    QString filename = message["filename"].toString();
+    double bytesSent = message["bytesSent"].toDouble();
+    double totalBytes = message["totalBytes"].toDouble();
+
+    emit fileTransferProgress(connectionId, transferId, filename,
+                              bytesSent, totalBytes);
+}
+
+void ClientManager::handleFileTransferComplete(const QJsonObject& message)
+{
+    QString connectionId = message["connectionId"].toString();
+    QString transferId = message["transferId"].toString();
+    QString filename = message["filename"].toString();
+
+    LOG_INFO("File transfer complete: {} (transfer={})",
+             filename.toStdString(), transferId.toStdString());
+
+    emit fileTransferComplete(connectionId, transferId, filename);
+}
+
+void ClientManager::handleFileTransferError(const QJsonObject& message)
+{
+    QString connectionId = message["connectionId"].toString();
+    QString transferId = message["transferId"].toString();
+    QString errorMessage = message["errorMessage"].toString();
+
+    LOG_ERROR("File transfer error: {} (transfer={})",
+              errorMessage.toStdString(), transferId.toStdString());
+
+    emit fileTransferError(connectionId, transferId, errorMessage);
 }
 
 } // namespace quickdesk

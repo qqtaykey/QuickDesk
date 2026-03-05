@@ -26,6 +26,10 @@ export class DataChannelHandler extends EventTarget {
         this._hostCapabilities = '';
         this.supportsSendAttentionSequence = false;
         this.supportsLockWorkstation = false;
+        this.supportsFileTransfer = false;
+
+        this._nextFileTransferId = 1;
+        this._activeUploads = new Map();
     }
 
     /**
@@ -307,6 +311,235 @@ export class DataChannelHandler extends EventTarget {
     }
 
     /**
+     * Start uploading a file to the remote host.
+     * @param {File} file - Browser File object from <input type="file">
+     * @returns {string|null} transferId or null on failure
+     */
+    startFileUpload(file) {
+        if (!this._pc) {
+            console.warn('[DataChannel] No PeerConnection for file transfer');
+            return null;
+        }
+        if (!this.supportsFileTransfer) {
+            console.warn('[DataChannel] Host does not support file transfer');
+            return null;
+        }
+
+        const transferId = String(this._nextFileTransferId++);
+        const channelName = `filetransfer-${transferId}`;
+        const channel = this._pc.createDataChannel(channelName, { ordered: true });
+        channel.binaryType = 'arraybuffer';
+
+        const CHUNK_SIZE = 8192;
+        let offset = 0;
+
+        const state = {
+            transferId, filename: file.name, totalBytes: file.size,
+            bytesSent: 0, cancelled: false, channel
+        };
+        this._activeUploads.set(transferId, state);
+
+        this.dispatchEvent(new CustomEvent('fileTransferStarted', {
+            detail: { transferId, filename: file.name, totalBytes: file.size }
+        }));
+
+        channel.onopen = () => {
+            if (state.cancelled) return;
+            console.log(`[DataChannel] File transfer channel opened: ${channelName}`);
+            const metadata = this._encodeFileTransfer({
+                metadata: { filename: file.name, size: file.size }
+            });
+            channel.send(metadata);
+            this._sendNextChunk(channel, file, offset, CHUNK_SIZE, state);
+        };
+
+        channel.onmessage = (event) => {
+            const msg = this._decodeFileTransfer(new Uint8Array(event.data));
+            if (msg.success) {
+                console.log(`[DataChannel] File saved on host: ${file.name}`);
+                this.dispatchEvent(new CustomEvent('fileTransferComplete', {
+                    detail: { transferId, filename: file.name }
+                }));
+                this._activeUploads.delete(transferId);
+            } else if (msg.error) {
+                const errMsg = `Host error type=${msg.error.type}`;
+                console.error(`[DataChannel] File transfer error: ${errMsg}`);
+                this.dispatchEvent(new CustomEvent('fileTransferError', {
+                    detail: { transferId, errorMessage: errMsg }
+                }));
+                this._activeUploads.delete(transferId);
+            }
+        };
+
+        channel.onclose = () => {
+            console.log(`[DataChannel] File transfer channel closed: ${channelName}`);
+        };
+
+        channel.onerror = (event) => {
+            console.error(`[DataChannel] File transfer channel error:`, event);
+            this.dispatchEvent(new CustomEvent('fileTransferError', {
+                detail: { transferId, errorMessage: 'Channel error' }
+            }));
+            this._activeUploads.delete(transferId);
+        };
+
+        return transferId;
+    }
+
+    /**
+     * Cancel an in-progress file upload.
+     * @param {string} transferId
+     */
+    cancelFileUpload(transferId) {
+        const state = this._activeUploads.get(transferId);
+        if (!state) {
+            console.warn(`[DataChannel] cancelFileUpload: unknown transfer ${transferId}`);
+            return;
+        }
+        state.cancelled = true;
+        if (state.channel && state.channel.readyState === 'open') {
+            try {
+                const errMsg = this._encodeFileTransfer({
+                    error: { type: 3 }  // CANCELED
+                });
+                state.channel.send(errMsg);
+            } catch (e) { /* ignore */ }
+            state.channel.close();
+        }
+        this._activeUploads.delete(transferId);
+        this.dispatchEvent(new CustomEvent('fileTransferError', {
+            detail: { transferId, errorMessage: 'Cancelled by user' }
+        }));
+    }
+
+    /** @private */
+    _sendNextChunk(channel, file, offset, chunkSize, state) {
+        if (state.cancelled) return;
+
+        if (offset >= file.size) {
+            const end = this._encodeFileTransfer({ end: {} });
+            channel.send(end);
+            console.log(`[DataChannel] File upload sent all bytes: ${file.name}`);
+            return;
+        }
+
+        const slice = file.slice(offset, Math.min(offset + chunkSize, file.size));
+        const reader = new FileReader();
+        reader.onload = () => {
+            if (state.cancelled) return;
+            const chunk = new Uint8Array(reader.result);
+            const data = this._encodeFileTransfer({ data: { data: chunk } });
+            channel.send(data);
+            offset += chunk.length;
+            state.bytesSent = offset;
+
+            this.dispatchEvent(new CustomEvent('fileTransferProgress', {
+                detail: {
+                    transferId: state.transferId,
+                    filename: state.filename,
+                    bytesSent: offset,
+                    totalBytes: state.totalBytes
+                }
+            }));
+
+            if (channel.bufferedAmount > chunkSize * 8) {
+                setTimeout(() => this._sendNextChunk(channel, file, offset, chunkSize, state), 50);
+            } else {
+                this._sendNextChunk(channel, file, offset, chunkSize, state);
+            }
+        };
+        reader.readAsArrayBuffer(slice);
+    }
+
+    /**
+     * Encode a FileTransfer protobuf message (simplified hand-encoding).
+     * Follows remoting/proto/file_transfer.proto
+     * @private
+     */
+    _encodeFileTransfer(msg) {
+        const parts = [];
+        if (msg.metadata) {
+            // field 1 = Metadata (sub-message)
+            const inner = [];
+            // filename: field 1, type string
+            if (msg.metadata.filename) {
+                const encoded = new TextEncoder().encode(msg.metadata.filename);
+                inner.push(0x0A, ...this._encodeVarint(encoded.length), ...encoded);
+            }
+            // size: field 2, type int64 (varint)
+            if (msg.metadata.size !== undefined) {
+                inner.push(0x10, ...this._encodeVarint(msg.metadata.size));
+            }
+            parts.push(0x0A, ...this._encodeVarint(inner.length), ...inner);
+        }
+        if (msg.data) {
+            // field 2 = Data (sub-message), data: field 1, type bytes
+            const bytes = msg.data.data;
+            const inner = [0x0A, ...this._encodeVarint(bytes.length), ...bytes];
+            parts.push(0x12, ...this._encodeVarint(inner.length), ...inner);
+        }
+        if (msg.end) {
+            // field 3 = End (sub-message, empty)
+            parts.push(0x1A, 0x00);
+        }
+        if (msg.success) {
+            // field 4 = Success (sub-message, empty)
+            parts.push(0x22, 0x00);
+        }
+        if (msg.error) {
+            // field 6 = Error (sub-message), type: field 1 varint
+            const inner = [0x08, ...this._encodeVarint(msg.error.type || 0)];
+            parts.push(0x32, ...this._encodeVarint(inner.length), ...inner);
+        }
+        return new Uint8Array(parts).buffer;
+    }
+
+    /**
+     * Decode a FileTransfer protobuf response (simplified).
+     * Only parses Success (field 5) and Error (field 4).
+     * @private
+     */
+    _decodeFileTransfer(data) {
+        const result = {};
+        let pos = 0;
+        while (pos < data.length) {
+            const tag = data[pos++];
+            const fieldNumber = tag >> 3;
+            const wireType = tag & 0x07;
+
+            if (wireType === 2) {
+                // length-delimited
+                let len = 0;
+                let shift = 0;
+                while (pos < data.length) {
+                    const b = data[pos++];
+                    len |= (b & 0x7F) << shift;
+                    if (!(b & 0x80)) break;
+                    shift += 7;
+                }
+                const subdata = data.subarray(pos, pos + len);
+                pos += len;
+
+                if (fieldNumber === 4) {
+                    result.success = true;
+                } else if (fieldNumber === 6) {
+                    // Error sub-message: parse type (field 1 varint)
+                    let errType = 0;
+                    if (subdata.length > 1 && subdata[0] === 0x08) {
+                        errType = subdata[1];
+                    }
+                    result.error = { type: errType };
+                }
+            } else if (wireType === 0) {
+                // varint - skip
+                while (pos < data.length && data[pos] & 0x80) pos++;
+                pos++;
+            }
+        }
+        return result;
+    }
+
+    /**
      * Encode an unsigned integer as a protobuf varint.
      * @private
      */
@@ -330,8 +563,9 @@ export class DataChannelHandler extends EventTarget {
 
         this.supportsSendAttentionSequence = hostSet.has('sendAttentionSequenceAction');
         this.supportsLockWorkstation = hostSet.has('lockWorkstationAction');
+        this.supportsFileTransfer = hostSet.has('fileTransfer');
 
-        console.log(`[DataChannel] Host caps: SAS=${this.supportsSendAttentionSequence} Lock=${this.supportsLockWorkstation}`);
+        console.log(`[DataChannel] Host caps: SAS=${this.supportsSendAttentionSequence} Lock=${this.supportsLockWorkstation} FileTransfer=${this.supportsFileTransfer}`);
 
         // Create "actions" outgoing data channel if any action is supported.
         if ((this.supportsSendAttentionSequence || this.supportsLockWorkstation) && this._pc) {
@@ -356,6 +590,7 @@ export class DataChannelHandler extends EventTarget {
             detail: {
                 supportsSendAttentionSequence: this.supportsSendAttentionSequence,
                 supportsLockWorkstation: this.supportsLockWorkstation,
+                supportsFileTransfer: this.supportsFileTransfer,
             }
         }));
     }
@@ -386,5 +621,6 @@ export class DataChannelHandler extends EventTarget {
         this._controlReady = false;
         this._eventReady = false;
         this._actionsReady = false;
+        this._activeUploads.clear();
     }
 }

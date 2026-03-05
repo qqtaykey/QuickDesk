@@ -32,12 +32,18 @@ Item {
     // Host capabilities (negotiated with host, updated via hostCapabilitiesChanged)
     property bool supportsSendAttentionSequence: false
     property bool supportsLockWorkstation: false
+    property bool supportsFileTransfer: false
+
+    // Active file transfer count (for badge display)
+    property int activeTransferCount: 0
 
     // Signals
     signal disconnectRequested(string connectionId)
     signal fitToRemoteDesktopRequested()
     signal toggleVideoStats()
     signal showToast(string message, var toastType)
+    signal uploadFileRequested()
+    signal showTransferPanelRequested()
     
     // Apply framerate boost mode
     function applyFramerateBoostMode(mode) {
@@ -175,6 +181,18 @@ Item {
                 }
             }
         }
+    }
+
+    // Active transfer count badge
+    QDBadge {
+        visible: root.activeTransferCount > 0
+        anchors.top: buttonBackground.top
+        anchors.right: buttonBackground.right
+        anchors.topMargin: -4
+        anchors.rightMargin: -4
+        z: 1
+        count: root.activeTransferCount
+        badgeType: QDBadge.Type.Info
     }
 
     // Shadow effect (outside of button, with margins for shadow space)
@@ -455,6 +473,29 @@ Item {
                     root.clientManager.sendAction(root.connectionId, "lockWorkstationAction")
                     root.showToast(qsTr("Lock screen sent"), QDToast.Type.Success)
                 }
+            }
+        }
+
+        QDMenuSeparator {
+            visible: root.supportsFileTransfer
+        }
+
+        QDMenuItem {
+            visible: root.supportsFileTransfer
+            text: qsTr("Upload File")
+            iconText: FluentIconGlyph.uploadGlyph
+            onTriggered: {
+                console.log("Upload file for:", root.connectionId)
+                root.uploadFileRequested()
+            }
+        }
+
+        QDMenuItem {
+            visible: root.supportsFileTransfer && root.activeTransferCount > 0
+            text: qsTr("Transfers") + " (" + root.activeTransferCount + ")"
+            iconText: FluentIconGlyph.statusDataTransferGlyph
+            onTriggered: {
+                root.showTransferPanelRequested()
             }
         }
         
