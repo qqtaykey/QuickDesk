@@ -27,6 +27,9 @@ export class FloatingToolbar extends EventTarget {
             statsVisible: false,
         };
 
+        this._supportsSAS = false;
+        this._supportsLock = false;
+
         this._remoteWidth = 0;
         this._remoteHeight = 0;
         this._originalWidth = 0;
@@ -112,6 +115,9 @@ export class FloatingToolbar extends EventTarget {
             { text: '', icon: '🔊', action: 'toggleAudio', id: 'audioMenuItem' },
             { text: 'Screenshot', icon: '📷', action: 'screenshot' },
             { text: 'Logs', icon: '📋', action: 'toggleLogs' },
+            { type: 'separator', id: 'actionSeparator', hidden: true },
+            { text: 'Send Ctrl+Alt+Del', icon: '⌨', action: 'sendAttentionSequence', id: 'sasMenuItem', hidden: true },
+            { text: 'Lock Screen', icon: '🔒', action: 'lockWorkstation', id: 'lockMenuItem', hidden: true },
             { type: 'separator' },
             { text: 'Disconnect', icon: '✕', action: 'disconnect', destructive: true },
         ];
@@ -120,6 +126,8 @@ export class FloatingToolbar extends EventTarget {
             if (item.type === 'separator') {
                 const sep = document.createElement('div');
                 sep.className = 'menu-separator';
+                if (item.id) sep.id = item.id;
+                if (item.hidden) sep.style.display = 'none';
                 this._menuElement.appendChild(sep);
                 continue;
             }
@@ -127,6 +135,7 @@ export class FloatingToolbar extends EventTarget {
             const el = document.createElement('div');
             el.className = 'menu-item' + (item.destructive ? ' destructive' : '');
             if (item.id) el.id = item.id;
+            if (item.hidden) el.style.display = 'none';
 
             let label = item.text;
             if (item.action === 'toggleAudio') {
@@ -326,6 +335,11 @@ export class FloatingToolbar extends EventTarget {
                 this.dispatchEvent(new CustomEvent('action', { detail: { action: 'toggleLogs' } }));
                 this._hideMenu();
                 break;
+            case 'sendAttentionSequence':
+            case 'lockWorkstation':
+                this.dispatchEvent(new CustomEvent('action', { detail: { action } }));
+                this._hideMenu();
+                break;
         }
     }
 
@@ -474,6 +488,20 @@ export class FloatingToolbar extends EventTarget {
         this._menuVisible = false;
         this._closeActiveSubmenu();
         this._menuElement.style.display = 'none';
+    }
+
+    setActionSupport(supportsSAS, supportsLock) {
+        this._supportsSAS = supportsSAS;
+        this._supportsLock = supportsLock;
+
+        const sasItem = this._menuElement.querySelector('#sasMenuItem');
+        const lockItem = this._menuElement.querySelector('#lockMenuItem');
+        const actionSep = this._menuElement.querySelector('#actionSeparator');
+
+        if (sasItem) sasItem.style.display = supportsSAS ? '' : 'none';
+        if (lockItem) lockItem.style.display = supportsLock ? '' : 'none';
+        if (actionSep) actionSep.style.display = 
+            (supportsSAS || supportsLock) ? '' : 'none';
     }
 
     setVisible(visible) {

@@ -392,6 +392,18 @@ Window {
                 ? connectionModel.connectionIdAt(currentTabIndex) 
                 : ""
             clientManager: remoteWindow.clientManager
+            supportsSendAttentionSequence: {
+                var connId = currentTabIndex >= 0 && currentTabIndex < connectionModel.count 
+                    ? connectionModel.connectionIdAt(currentTabIndex) : ""
+                var stats = connId ? remoteWindow.getPerformanceStats(connId) : null
+                return stats ? (stats.supportsSendAttentionSequence || false) : false
+            }
+            supportsLockWorkstation: {
+                var connId = currentTabIndex >= 0 && currentTabIndex < connectionModel.count 
+                    ? connectionModel.connectionIdAt(currentTabIndex) : ""
+                var stats = connId ? remoteWindow.getPerformanceStats(connId) : null
+                return stats ? (stats.supportsLockWorkstation || false) : false
+            }
             videoInfo: {
                 var connId = currentTabIndex >= 0 && currentTabIndex < connectionModel.count 
                     ? connectionModel.connectionIdAt(currentTabIndex) 
@@ -551,6 +563,22 @@ Window {
                 })
                 remoteWindow.performanceStatsMap = newStatsMap
             }
+        }
+    }
+
+    // Monitor host capabilities negotiation
+    Connections {
+        target: remoteWindow.clientManager
+
+        function onHostCapabilitiesChanged(connectionId, supportsSendAttentionSequence, supportsLockWorkstation) {
+            // Store per-connection capabilities in the stats map
+            var current = remoteWindow.performanceStatsMap[connectionId] || {}
+            var newStatsMap = Object.assign({}, remoteWindow.performanceStatsMap)
+            newStatsMap[connectionId] = Object.assign({}, current, {
+                supportsSendAttentionSequence: supportsSendAttentionSequence,
+                supportsLockWorkstation: supportsLockWorkstation
+            })
+            remoteWindow.performanceStatsMap = newStatsMap
         }
     }
 

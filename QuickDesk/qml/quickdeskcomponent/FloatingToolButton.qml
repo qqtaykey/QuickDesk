@@ -29,6 +29,10 @@ Item {
     // Bitrate options (in bps, using 1024 as unit: 1 MiB = 1024*1024)
     property int preferredMinBitrate: 10485760  // 默认10 MiB (10 * 1024 * 1024)
     
+    // Host capabilities (negotiated with host, updated via hostCapabilitiesChanged)
+    property bool supportsSendAttentionSequence: false
+    property bool supportsLockWorkstation: false
+
     // Signals
     signal disconnectRequested(string connectionId)
     signal fitToRemoteDesktopRequested()
@@ -419,6 +423,37 @@ Item {
                         root.audioEnabled ? qsTr("Audio: Enabled") : qsTr("Audio: Muted"),
                         QDToast.Type.Success
                     )
+                }
+            }
+        }
+        
+        // Remote actions (only visible when host supports them)
+        QDMenuSeparator {
+            visible: root.supportsSendAttentionSequence || root.supportsLockWorkstation
+        }
+        
+        QDMenuItem {
+            visible: root.supportsSendAttentionSequence
+            text: qsTr("Send Ctrl+Alt+Del")
+            iconText: FluentIconGlyph.keyboardShortcutGlyph
+            onTriggered: {
+                console.log("Send Ctrl+Alt+Del for:", root.connectionId)
+                if (root.clientManager) {
+                    root.clientManager.sendAction(root.connectionId, "sendAttentionSequenceAction")
+                    root.showToast(qsTr("Ctrl+Alt+Del sent"), QDToast.Type.Success)
+                }
+            }
+        }
+        
+        QDMenuItem {
+            visible: root.supportsLockWorkstation
+            text: qsTr("Lock Screen")
+            iconText: FluentIconGlyph.lockGlyph
+            onTriggered: {
+                console.log("Lock screen for:", root.connectionId)
+                if (root.clientManager) {
+                    root.clientManager.sendAction(root.connectionId, "lockWorkstationAction")
+                    root.showToast(qsTr("Lock screen sent"), QDToast.Type.Success)
                 }
             }
         }

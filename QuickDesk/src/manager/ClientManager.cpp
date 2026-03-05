@@ -343,6 +343,39 @@ void ClientManager::setAudioEnabled(const QString& connectionId, bool enabled)
     m_messaging->sendMessage(message);
 }
 
+void ClientManager::sendAction(const QString& connectionId, const QString& action)
+{
+    if (!m_messaging || !m_messaging->isReady()) {
+        LOG_WARN("Cannot send action: messaging not ready");
+        return;
+    }
+
+    LOG_INFO("Sending action '{}' for {}", action.toStdString(),
+             connectionId.toStdString());
+
+    QJsonObject message;
+    message["type"] = "sendAction";
+    message["connectionId"] = connectionId;
+    message["action"] = action;
+    m_messaging->sendMessage(message);
+}
+
+bool ClientManager::supportsSendAttentionSequence(const QString& connectionId) const
+{
+    auto it = m_connections.find(connectionId);
+    if (it == m_connections.end())
+        return false;
+    return it.value().supportsSendAttentionSequence;
+}
+
+bool ClientManager::supportsLockWorkstation(const QString& connectionId) const
+{
+    auto it = m_connections.find(connectionId);
+    if (it == m_connections.end())
+        return false;
+    return it.value().supportsLockWorkstation;
+}
+
 int ClientManager::connectionCount() const
 {
     return m_connections.size();
@@ -468,6 +501,8 @@ void ClientManager::onMessageReceived(const QJsonObject& message)
         handleVideoLayoutChanged(message);
     } else if (type == "routeChanged") {
         handleRouteChanged(message);
+    } else if (type == "hostCapabilities") {
+        handleHostCapabilities(message);
     } else if (type == "setFramerateResponse" || type == "setResolutionResponse" || type == "setFramerateBoostResponse" || type == "setBitrateResponse") {
         // Acknowledgement responses - just log success/failure
         bool success = message["success"].toBool();
@@ -988,6 +1023,24 @@ void ClientManager::setIceConfig(const QJsonObject& iceConfig)
 QJsonObject ClientManager::getIceConfig() const
 {
     return m_iceConfig;
+}
+
+void ClientManager::handleHostCapabilities(const QJsonObject& message)
+{
+    QString connectionId = message["connectionId"].toString();
+    bool supportsSAS = message["supportsSendAttentionSequence"].toBool();
+    bool supportsLock = message["supportsLockWorkstation"].toBool();
+
+    auto it = m_connections.find(connectionId);
+    if (it != m_connections.end()) {
+        it->supportsSendAttentionSequence = supportsSAS;
+        it->supportsLockWorkstation = supportsLock;
+    }
+
+    LOG_INFO("Host capabilities for {}: SAS={} Lock={}",
+             connectionId.toStdString(), supportsSAS, supportsLock);
+
+    emit hostCapabilitiesChanged(connectionId, supportsSAS, supportsLock);
 }
 
 } // namespace quickdesk

@@ -18,8 +18,14 @@ export class DataChannelHandler extends EventTarget {
         
         this.controlChannel = null;
         this.eventChannel = null;
+        this.actionsChannel = null;
         this._controlReady = false;
         this._eventReady = false;
+        this._actionsReady = false;
+
+        this._hostCapabilities = '';
+        this.supportsSendAttentionSequence = false;
+        this.supportsLockWorkstation = false;
     }
 
     /**
@@ -136,6 +142,7 @@ export class DataChannelHandler extends EventTarget {
             this.dispatchEvent(new CustomEvent('clipboardEvent', { detail: message.clipboardEvent }));
         }
         if (message.capabilities) {
+            this._onHostCapabilities(message.capabilities.capabilities || '');
             this.dispatchEvent(new CustomEvent('capabilities', { detail: message.capabilities }));
         }
         if (message.videoLayout) {
@@ -275,6 +282,85 @@ export class DataChannelHandler extends EventTarget {
     }
 
     /**
+     * Set the RTCPeerConnection for creating outgoing data channels.
+     * Must be called before capabilities negotiation.
+     * @param {RTCPeerConnection} pc 
+     */
+    setPeerConnection(pc) {
+        this._pc = pc;
+    }
+
+    /**
+     * Send a remote action (Ctrl+Alt+Del or Lock Screen).
+     * @param {'sendAttentionSequence'|'lockWorkstation'} action 
+     */
+    sendAction(action) {
+        if (!this._actionsReady) {
+            console.warn('[DataChannel] Actions channel not ready');
+            return;
+        }
+        const actionEnum = action === 'sendAttentionSequence' ? 1 : 2;
+        const requestId = this._nextActionRequestId++;
+        const bytes = [0x08, actionEnum, 0x10, ...this._encodeVarint(requestId)];
+        this.actionsChannel.send(new Uint8Array(bytes).buffer);
+        console.log(`[DataChannel] Sent action: ${action} (request_id=${requestId})`);
+    }
+
+    /**
+     * Encode an unsigned integer as a protobuf varint.
+     * @private
+     */
+    _encodeVarint(value) {
+        const bytes = [];
+        while (value > 0x7F) {
+            bytes.push((value & 0x7F) | 0x80);
+            value >>>= 7;
+        }
+        bytes.push(value & 0x7F);
+        return bytes;
+    }
+
+    /**
+     * Handle host capabilities and create actions channel if supported.
+     * @private
+     */
+    _onHostCapabilities(hostCaps) {
+        this._hostCapabilities = hostCaps;
+        const hostSet = new Set(hostCaps.split(' ').filter(Boolean));
+
+        this.supportsSendAttentionSequence = hostSet.has('sendAttentionSequenceAction');
+        this.supportsLockWorkstation = hostSet.has('lockWorkstationAction');
+
+        console.log(`[DataChannel] Host caps: SAS=${this.supportsSendAttentionSequence} Lock=${this.supportsLockWorkstation}`);
+
+        // Create "actions" outgoing data channel if any action is supported.
+        if ((this.supportsSendAttentionSequence || this.supportsLockWorkstation) && this._pc) {
+            this.actionsChannel = this._pc.createDataChannel('actions', { ordered: true });
+            this.actionsChannel.binaryType = 'arraybuffer';
+            this.actionsChannel.onopen = () => {
+                this._actionsReady = true;
+                console.log('[DataChannel] Actions channel opened');
+                this.dispatchEvent(new CustomEvent('actionsReady'));
+            };
+            this.actionsChannel.onclose = () => {
+                this._actionsReady = false;
+                console.log('[DataChannel] Actions channel closed');
+            };
+            this.actionsChannel.onmessage = (event) => {
+                console.log('[DataChannel] Actions response received');
+            };
+            this._nextActionRequestId = 1;
+        }
+
+        this.dispatchEvent(new CustomEvent('hostCapabilities', {
+            detail: {
+                supportsSendAttentionSequence: this.supportsSendAttentionSequence,
+                supportsLockWorkstation: this.supportsLockWorkstation,
+            }
+        }));
+    }
+
+    /**
      * 检查是否就绪
      */
     isReady() {
@@ -293,7 +379,12 @@ export class DataChannelHandler extends EventTarget {
             this.eventChannel.close();
             this.eventChannel = null;
         }
+        if (this.actionsChannel) {
+            this.actionsChannel.close();
+            this.actionsChannel = null;
+        }
         this._controlReady = false;
         this._eventReady = false;
+        this._actionsReady = false;
     }
 }

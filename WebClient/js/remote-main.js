@@ -111,6 +111,9 @@ class RemoteDesktopApp {
 
             this.session.addEventListener('datachannel', (e) => {
                 this.dcHandler.handleDataChannel(e.detail.channel);
+                if (!this.dcHandler._pc && this.session.pc) {
+                    this.dcHandler.setPeerConnection(this.session.pc);
+                }
             });
 
             this.dcHandler.addEventListener('cursorShape', (e) => {
@@ -132,6 +135,15 @@ class RemoteDesktopApp {
 
             this.dcHandler.addEventListener('capabilities', (e) => {
                 this._log(`Host 能力: ${e.detail.capabilities || '(empty)'}`);
+            });
+
+            this.dcHandler.addEventListener('hostCapabilities', (e) => {
+                const { supportsSendAttentionSequence, supportsLockWorkstation } = e.detail;
+                this._log(`Negotiated actions: SAS=${supportsSendAttentionSequence} Lock=${supportsLockWorkstation}`);
+                if (this.floatingToolbar) {
+                    this.floatingToolbar.setActionSupport(
+                        supportsSendAttentionSequence, supportsLockWorkstation);
+                }
             });
 
             await this.session.connect(deviceId, accessCode);
@@ -312,7 +324,8 @@ class RemoteDesktopApp {
     }
 
     _sendInitialConfig() {
-        this.dcHandler.sendCapabilities('');
+        this.dcHandler.sendCapabilities(
+            'sendAttentionSequenceAction lockWorkstationAction');
         this.dcHandler.sendAudioControl({ enable: true });
         this._log('已发送初始配置');
     }
@@ -332,6 +345,18 @@ class RemoteDesktopApp {
                 break;
             case 'toggleLogs':
                 this._toggleLogDrawer();
+                break;
+            case 'sendAttentionSequence':
+                if (this.dcHandler) {
+                    this.dcHandler.sendAction('sendAttentionSequence');
+                    this._log('Sent Ctrl+Alt+Del');
+                }
+                break;
+            case 'lockWorkstation':
+                if (this.dcHandler) {
+                    this.dcHandler.sendAction('lockWorkstation');
+                    this._log('Sent Lock Screen');
+                }
                 break;
         }
     }

@@ -39,6 +39,10 @@ struct ConnectionInfo {
     int signalingRetryCount = 0;
     int signalingNextRetryIn = 0;
     QString signalingError;
+
+    // Negotiated host capabilities
+    bool supportsSendAttentionSequence = false;
+    bool supportsLockWorkstation = false;
 };
 
 /**
@@ -92,6 +96,11 @@ public:
 
     // Audio control
     Q_INVOKABLE void setAudioEnabled(const QString& connectionId, bool enabled);
+
+    // Remote actions (Ctrl+Alt+Del, Lock Screen)
+    Q_INVOKABLE void sendAction(const QString& connectionId, const QString& action);
+    Q_INVOKABLE bool supportsSendAttentionSequence(const QString& connectionId) const;
+    Q_INVOKABLE bool supportsLockWorkstation(const QString& connectionId) const;
 
     // State getters
     int connectionCount() const;
@@ -159,6 +168,11 @@ signals:
     void routeChanged(const QString& connectionId,
                       const QVariantMap& routeInfo);
 
+    // Host capabilities negotiated
+    void hostCapabilitiesChanged(const QString& connectionId,
+                                 bool supportsSendAttentionSequence,
+                                 bool supportsLockWorkstation);
+
 private slots:
     void onMessageReceived(const QJsonObject& message);
     void onMessagingError(const QString& error);
@@ -192,6 +206,7 @@ private:
     void handlePerformanceStatsUpdate(const QJsonObject& message);
     void handleVideoLayoutChanged(const QJsonObject& message);
     void handleRouteChanged(const QJsonObject& message);
+    void handleHostCapabilities(const QJsonObject& message);
     
     void sendMouseEvent(const QString& connectionId, const QString& eventType,
                         int x, int y, int button,
