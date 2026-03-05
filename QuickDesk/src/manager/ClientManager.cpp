@@ -11,7 +11,10 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QDateTime>
+#include <QClipboard>
 #include <QDesktopServices>
+#include <QGuiApplication>
+#include <QMimeData>
 #include <QStandardPaths>
 #include <QUrl>
 
@@ -466,6 +469,27 @@ void ClientManager::openContainingFolder(const QString& filePath)
 bool ClientManager::deleteDownloadedFile(const QString& filePath)
 {
     return QFile::remove(filePath);
+}
+
+bool ClientManager::pasteFilesFromClipboard(const QString& connectionId)
+{
+    const QMimeData* mimeData = QGuiApplication::clipboard()->mimeData();
+    if (!mimeData || !mimeData->hasUrls()) {
+        return false;
+    }
+
+    QList<QUrl> urls = mimeData->urls();
+    bool anyStarted = false;
+    for (const QUrl& url : urls) {
+        if (url.isLocalFile()) {
+            QFileInfo fi(url.toLocalFile());
+            if (fi.exists() && fi.isFile()) {
+                startFileUpload(connectionId, url);
+                anyStarted = true;
+            }
+        }
+    }
+    return anyStarted;
 }
 
 bool ClientManager::supportsFileTransfer(const QString& connectionId) const

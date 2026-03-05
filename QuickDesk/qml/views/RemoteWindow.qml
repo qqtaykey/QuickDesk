@@ -357,6 +357,26 @@ Window {
                         active: delegateItem.index === remoteWindow.currentTabIndex
                         inputEnabled: !delegateItem.isSelfConnection  // Disable input for self-connection
                         
+                        onFilesDropped: function(urls) {
+                            var connId = delegateItem.connectionId
+                            if (!connId || !remoteWindow.clientManager) return
+                            for (var i = 0; i < urls.length; i++) {
+                                remoteWindow.clientManager.startFileUpload(connId, urls[i])
+                                var fname = urls[i].toString().split('/').pop()
+                                transferModel.append({
+                                    transferId: "",
+                                    connectionId: connId,
+                                    filename: decodeURIComponent(fname),
+                                    progress: 0,
+                                    status: "uploading",
+                                    errorMessage: "",
+                                    direction: "upload",
+                                    savePath: ""
+                                })
+                            }
+                            fileTransferDrawer.open()
+                        }
+
                         // Monitor video size changes (frameRate and ping updated from PerformanceTracker)
                         onFrameWidthChanged: {
                             if (frameWidth > 0 && frameHeight > 0) {

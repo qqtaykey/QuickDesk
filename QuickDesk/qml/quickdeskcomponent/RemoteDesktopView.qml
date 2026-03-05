@@ -28,6 +28,8 @@ Rectangle {
     property bool inputEnabled: true  // Enable/disable input capture
     property alias fillMode: videoOutput.fillMode
     
+    signal filesDropped(var urls)
+    
     // Read-only properties
     readonly property int frameWidth: frameProvider.frameSize.width
     readonly property int frameHeight: frameProvider.frameSize.height
@@ -182,11 +184,71 @@ Rectangle {
         }
     }
     
+    // File drag-and-drop support
+    DropArea {
+        anchors.fill: parent
+        keys: ["text/uri-list"]
+
+        onEntered: function(drag) {
+            if (drag.hasUrls) {
+                drag.accepted = true
+                dropOverlay.visible = true
+            }
+        }
+        onExited: {
+            dropOverlay.visible = false
+        }
+        onDropped: function(drop) {
+            dropOverlay.visible = false
+            if (drop.hasUrls && drop.urls.length > 0) {
+                root.filesDropped(drop.urls)
+            }
+        }
+    }
+
+    Rectangle {
+        id: dropOverlay
+        anchors.fill: parent
+        visible: false
+        color: "#60000000"
+        z: 50
+        border.width: 3
+        border.color: Theme.primary
+        radius: 8
+
+        Column {
+            anchors.centerIn: parent
+            spacing: 12
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: FluentIconGlyph.uploadGlyph
+                font.family: "Segoe Fluent Icons"
+                font.pixelSize: 48
+                color: Theme.primary
+            }
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: qsTr("Drop files here to upload")
+                font.pixelSize: 16
+                font.weight: Font.Medium
+                color: "#ffffff"
+            }
+        }
+    }
+
     // Keyboard event handling — passes nativeScanCode directly.
     // The C++ client converts it to USB HID keycode via Chromium's
     // KeycodeConverter::NativeKeycodeToUsbKeycode().
     Keys.onPressed: function(event) {
         if (!root.inputEnabled || !root.clientManager) return;
+
+        // Intercept Ctrl+V: if clipboard contains files, upload them instead
+        if (event.key === Qt.Key_V && (event.modifiers & Qt.ControlModifier)) {
+            if (root.clientManager.pasteFilesFromClipboard(root.connectionId)) {
+                event.accepted = true
+                return
+            }
+        }
 
         root.clientManager.sendKeyPress(
             root.connectionId, KeyboardStateTracker.getLastNativeKeycode(),

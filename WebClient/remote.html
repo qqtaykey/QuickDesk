@@ -231,6 +231,21 @@
         }
         .transfer-panel-clear:hover { background: rgba(255,255,255,0.08); color: var(--text-primary); }
 
+        /* Drop overlay */
+        .drop-overlay {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.6);
+            border: 3px dashed var(--accent);
+            border-radius: var(--radius);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 200; pointer-events: none;
+        }
+        .drop-overlay-content {
+            text-align: center; color: var(--text-primary);
+        }
+        .drop-overlay-content .drop-icon { font-size: 48px; margin-bottom: 12px; }
+        .drop-overlay-content .drop-text { font-size: 16px; font-weight: 500; }
+
         /* Log panel - right side drawer (PC) / bottom sheet (mobile) */
         #logDrawer {
             display: none;
@@ -412,6 +427,6 @@
         </div>
     </div>
 
-    <script type="module" src="js/remote-main.js?v=3"></script>
+    <script type="module" src="js/remote-main.js?v=4"></script>
 </body>
 </html>

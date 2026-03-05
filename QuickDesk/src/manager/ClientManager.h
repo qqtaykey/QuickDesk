@@ -118,6 +118,9 @@ public:
     Q_INVOKABLE void openContainingFolder(const QString& filePath);
     Q_INVOKABLE bool deleteDownloadedFile(const QString& filePath);
 
+    // Clipboard file paste (returns true if clipboard contained files and upload was started)
+    Q_INVOKABLE bool pasteFilesFromClipboard(const QString& connectionId);
+
     // State getters
     int connectionCount() const;
     QString activeConnectionId() const;

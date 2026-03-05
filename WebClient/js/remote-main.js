@@ -176,7 +176,9 @@ class RemoteDesktopApp {
             this.dcHandler.addEventListener('fileDownloadComplete', (e) => {
                 this._updateTransferStatus(e.detail.transferId, 'complete');
                 this._log(`Download complete: ${e.detail.filename}`);
-                this._triggerBrowserDownload(e.detail.blob, e.detail.filename);
+                if (e.detail.blob && !e.detail.streaming) {
+                    this._triggerBrowserDownload(e.detail.blob, e.detail.filename);
+                }
             });
 
             this.dcHandler.addEventListener('fileDownloadError', (e) => {
@@ -260,7 +262,19 @@ class RemoteDesktopApp {
         combinedStream.addTrack(track);
         video.srcObject = combinedStream;
 
-        video.play().catch(e => this._log(`视频自动播放失败: ${e.message}`));
+        video.play().catch(e => {
+            this._log(`视频自动播放失败: ${e.message}`, 'warning');
+            // Browser autoplay policy blocked playback (usually because
+            // the stream contains an audio track and the user hasn't
+            // interacted with the page yet).  Try muted playback first;
+            // if that works, show an overlay so the user can unmute.
+            video.muted = true;
+            video.play().then(() => {
+                this._showClickToUnmute(video);
+            }).catch(() => {
+                this._showClickToPlay(video);
+            });
+        });
 
         video.onloadedmetadata = () => {
             this._log(`视频分辨率: ${video.videoWidth}x${video.videoHeight}`);
@@ -270,6 +284,37 @@ class RemoteDesktopApp {
             }
             this._setupInputHandlers();
         };
+    }
+
+    _showClickToUnmute(video) {
+        const overlay = document.getElementById('unmuteOverlay');
+        if (!overlay) return;
+        overlay.textContent = 'Click to enable audio';
+        overlay.style.display = 'block';
+        const handler = () => {
+            video.muted = false;
+            overlay.style.display = 'none';
+            overlay.removeEventListener('click', handler);
+            document.removeEventListener('click', handler);
+        };
+        overlay.addEventListener('click', handler);
+        document.addEventListener('click', handler, { once: true });
+    }
+
+    _showClickToPlay(video) {
+        const overlay = document.getElementById('unmuteOverlay');
+        if (!overlay) return;
+        overlay.textContent = 'Click to start video';
+        overlay.style.display = 'block';
+        const handler = () => {
+            video.muted = false;
+            video.play().catch(() => {});
+            overlay.style.display = 'none';
+            overlay.removeEventListener('click', handler);
+            document.removeEventListener('click', handler);
+        };
+        overlay.addEventListener('click', handler);
+        document.addEventListener('click', handler, { once: true });
     }
 
     _onVideoLayout(layout) {
@@ -345,6 +390,9 @@ class RemoteDesktopApp {
 
         this.cursorRenderer = new CursorRenderer(videoContainer || video);
 
+        this._setupDragDrop(videoContainer || video);
+        this._setupPasteUpload(videoContainer || video);
+
         if (this._isMobile) {
             this._enableMobileKeyboard();
         } else {
@@ -400,15 +448,113 @@ class RemoteDesktopApp {
                 this._triggerFileUpload();
                 break;
             case 'downloadFile':
-                if (this.dcHandler) {
-                    this.dcHandler.startFileDownload();
-                    this._log('Requested file download from host');
-                }
+                this._onDownloadFromHost();
                 break;
             case 'showTransfers':
                 this._toggleTransferPanel();
                 break;
         }
+    }
+
+    _setupDragDrop(target) {
+        if (!target) return;
+        let dragCounter = 0;
+
+        target.addEventListener('dragenter', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dragCounter++;
+            if (dragCounter === 1) this._showDropOverlay(target);
+        });
+
+        target.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        });
+
+        target.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dragCounter--;
+            if (dragCounter <= 0) {
+                dragCounter = 0;
+                this._hideDropOverlay(target);
+            }
+        });
+
+        target.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dragCounter = 0;
+            this._hideDropOverlay(target);
+            if (e.dataTransfer?.files?.length > 0) {
+                this._uploadFiles(e.dataTransfer.files);
+            }
+        });
+    }
+
+    _showDropOverlay(target) {
+        if (this._dropOverlay) return;
+        const overlay = document.createElement('div');
+        overlay.className = 'drop-overlay';
+        overlay.innerHTML = `<div class="drop-overlay-content">
+            <div class="drop-icon">📤</div>
+            <div class="drop-text">Drop files here to upload</div>
+        </div>`;
+        target.style.position = 'relative';
+        target.appendChild(overlay);
+        this._dropOverlay = overlay;
+    }
+
+    _hideDropOverlay(target) {
+        if (this._dropOverlay) {
+            this._dropOverlay.remove();
+            this._dropOverlay = null;
+        }
+    }
+
+    _uploadFiles(fileList) {
+        if (!this.dcHandler || !fileList || fileList.length === 0) return;
+        for (const file of fileList) {
+            this._log(`Uploading file: ${file.name} (${file.size} bytes)`);
+            this.dcHandler.startFileUpload(file);
+        }
+        this._showTransferPanel();
+    }
+
+    _setupPasteUpload(target) {
+        if (!target) return;
+        target.addEventListener('paste', (e) => {
+            const files = e.clipboardData?.files;
+            if (files && files.length > 0) {
+                e.preventDefault();
+                this._uploadFiles(files);
+            }
+        });
+    }
+
+    async _onDownloadFromHost() {
+        if (!this.dcHandler) return;
+
+        let fileHandle = null;
+        if (window.showSaveFilePicker) {
+            try {
+                fileHandle = await window.showSaveFilePicker({
+                    suggestedName: 'download',
+                });
+            } catch (err) {
+                if (err.name === 'AbortError') {
+                    this._log('Download cancelled by user');
+                    return;
+                }
+                this._log(`Save picker error: ${err.message}`, 'warning');
+            }
+        }
+
+        this.dcHandler.startFileDownload(fileHandle);
+        this._log(fileHandle
+            ? 'Requested file download (streaming to disk)'
+            : 'Requested file download (buffered)');
     }
 
     _triggerFileUpload() {
@@ -417,13 +563,7 @@ class RemoteDesktopApp {
         input.multiple = true;
         input.style.display = 'none';
         input.addEventListener('change', () => {
-            if (input.files && input.files.length > 0 && this.dcHandler) {
-                for (const file of input.files) {
-                    this._log(`Uploading file: ${file.name} (${file.size} bytes)`);
-                    this.dcHandler.startFileUpload(file);
-                }
-                this._showTransferPanel();
-            }
+            this._uploadFiles(input.files);
             input.remove();
         });
         document.body.appendChild(input);

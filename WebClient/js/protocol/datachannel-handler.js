@@ -415,11 +415,14 @@ export class DataChannelHandler extends EventTarget {
 
     /**
      * Request a file download from the remote host.
-     * Host will show a file chooser dialog; the selected file is sent back
-     * and accumulated as a Blob for browser download.
+     *
+     * @param {FileSystemFileHandle|null} fileHandle - If provided (from
+     *   showSaveFilePicker), data is streamed directly to disk via the
+     *   File System Access API.  Otherwise falls back to buffering all
+     *   chunks in memory and producing a Blob.
      * @returns {string|null} transferId or null on failure
      */
-    startFileDownload() {
+    startFileDownload(fileHandle = null) {
         if (!this._pc) {
             console.warn('[DataChannel] No PeerConnection for file download');
             return null;
@@ -434,16 +437,33 @@ export class DataChannelHandler extends EventTarget {
         const channel = this._pc.createDataChannel(channelName, { ordered: true });
         channel.binaryType = 'arraybuffer';
 
+        const streaming = !!fileHandle;
         const state = {
             transferId, filename: '', totalBytes: 0,
             bytesReceived: 0, cancelled: false, channel,
-            chunks: [], metadataReceived: false
+            chunks: streaming ? null : [],
+            metadataReceived: false,
+            streaming,
+            fileHandle,
+            writable: null,
+            writeQueue: Promise.resolve(),
         };
         this._activeDownloads.set(transferId, state);
 
-        channel.onopen = () => {
+        channel.onopen = async () => {
             if (state.cancelled) return;
             console.log(`[DataChannel] Download channel opened: ${channelName}, sending RequestTransfer`);
+
+            if (state.streaming) {
+                try {
+                    state.writable = await state.fileHandle.createWritable();
+                } catch (err) {
+                    console.error('[DataChannel] Failed to create writable stream:', err);
+                    this._failDownload(state, 'Failed to open file for writing');
+                    return;
+                }
+            }
+
             const reqMsg = this._encodeFileTransfer({ requestTransfer: {} });
             channel.send(reqMsg);
         };
@@ -461,8 +481,22 @@ export class DataChannelHandler extends EventTarget {
                     detail: { transferId, filename: state.filename, totalBytes: state.totalBytes }
                 }));
             } else if (msg.data) {
-                state.chunks.push(msg.data);
                 state.bytesReceived += msg.data.byteLength;
+
+                if (state.streaming && state.writable) {
+                    state.writeQueue = state.writeQueue.then(async () => {
+                        if (state.cancelled) return;
+                        try {
+                            await state.writable.write(msg.data);
+                        } catch (err) {
+                            console.error('[DataChannel] Stream write error:', err);
+                            this._failDownload(state, 'Disk write error');
+                        }
+                    });
+                } else if (state.chunks) {
+                    state.chunks.push(msg.data);
+                }
+
                 this.dispatchEvent(new CustomEvent('fileDownloadProgress', {
                     detail: {
                         transferId, filename: state.filename,
@@ -474,18 +508,30 @@ export class DataChannelHandler extends EventTarget {
                 const successMsg = this._encodeFileTransfer({ success: {} });
                 channel.send(successMsg);
 
-                const blob = new Blob(state.chunks);
-                this.dispatchEvent(new CustomEvent('fileDownloadComplete', {
-                    detail: { transferId, filename: state.filename, blob }
-                }));
-                this._activeDownloads.delete(transferId);
+                if (state.streaming && state.writable) {
+                    state.writeQueue = state.writeQueue.then(async () => {
+                        if (state.cancelled) return;
+                        try {
+                            await state.writable.close();
+                        } catch (err) {
+                            console.error('[DataChannel] Stream close error:', err);
+                        }
+                        this.dispatchEvent(new CustomEvent('fileDownloadComplete', {
+                            detail: { transferId, filename: state.filename, blob: null, streaming: true }
+                        }));
+                        this._activeDownloads.delete(transferId);
+                    });
+                } else {
+                    const blob = new Blob(state.chunks);
+                    this.dispatchEvent(new CustomEvent('fileDownloadComplete', {
+                        detail: { transferId, filename: state.filename, blob, streaming: false }
+                    }));
+                    this._activeDownloads.delete(transferId);
+                }
             } else if (msg.error) {
                 const errMsg = `Host error type=${msg.error.type}`;
                 console.error(`[DataChannel] Download error: ${errMsg}`);
-                this.dispatchEvent(new CustomEvent('fileDownloadError', {
-                    detail: { transferId, errorMessage: errMsg }
-                }));
-                this._activeDownloads.delete(transferId);
+                this._failDownload(state, errMsg);
             }
         };
 
@@ -495,13 +541,24 @@ export class DataChannelHandler extends EventTarget {
 
         channel.onerror = (event) => {
             console.error(`[DataChannel] Download channel error:`, event);
-            this.dispatchEvent(new CustomEvent('fileDownloadError', {
-                detail: { transferId, errorMessage: 'Channel error' }
-            }));
-            this._activeDownloads.delete(transferId);
+            this._failDownload(state, 'Channel error');
         };
 
         return transferId;
+    }
+
+    /** @private */
+    async _failDownload(state, errorMessage) {
+        if (state.cancelled) return;
+        state.cancelled = true;
+        if (state.writable) {
+            try { await state.writable.abort(); } catch (_) {}
+            state.writable = null;
+        }
+        this.dispatchEvent(new CustomEvent('fileDownloadError', {
+            detail: { transferId: state.transferId, errorMessage }
+        }));
+        this._activeDownloads.delete(state.transferId);
     }
 
     /**
@@ -515,6 +572,10 @@ export class DataChannelHandler extends EventTarget {
             return;
         }
         state.cancelled = true;
+        if (state.writable) {
+            state.writable.abort().catch(() => {});
+            state.writable = null;
+        }
         if (state.channel && state.channel.readyState === 'open') {
             try {
                 const errMsg = this._encodeFileTransfer({ error: { type: 1 } });  // CANCELED
