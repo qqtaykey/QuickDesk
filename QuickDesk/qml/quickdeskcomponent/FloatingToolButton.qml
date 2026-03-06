@@ -493,10 +493,10 @@ Item {
 
         QDMenuItem {
             visible: root.supportsFileTransfer
-            text: qsTr("Download from Host")
+            text: qsTr("Download File")
             iconText: FluentIconGlyph.downloadGlyph
             onTriggered: {
-                console.log("Download file from host for:", root.connectionId)
+                console.log("Download file for:", root.connectionId)
                 root.downloadFileRequested()
             }
         }
