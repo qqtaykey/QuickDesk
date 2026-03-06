@@ -23,7 +23,7 @@ The `quickdesk-mcp` binary acts as a bridge: it speaks MCP over stdio to AI clie
 
 ### 1. Start QuickDesk
 
-Launch QuickDesk normally. The WebSocket API server starts automatically on `ws://127.0.0.1:9800`.
+Launch QuickDesk normally. The WebSocket API server starts automatically on `ws://127.0.0.1:9600`.
 
 ### 2. Configure Your AI Client
 
@@ -66,12 +66,12 @@ Edit `claude_desktop_config.json`:
 `quickdesk-mcp` is a standard MCP stdio server. Any client that supports `stdio` transport can use it:
 
 ```bash
-quickdesk-mcp [--ws-url ws://127.0.0.1:9800] [--token YOUR_TOKEN]
+quickdesk-mcp [--ws-url ws://127.0.0.1:9600] [--token YOUR_TOKEN]
 ```
 
 | Argument | Default | Description |
 |----------|---------|-------------|
-| `--ws-url` | `ws://127.0.0.1:9800` | QuickDesk WebSocket API URL |
+| `--ws-url` | `ws://127.0.0.1:9600` | QuickDesk WebSocket API URL |
 | `--token` | (none) | Full-control auth token |
 | `--readonly-token` | (none) | Read-only auth token (screenshot + status only, no input) |
 | `--allowed-devices` | (none) | Comma-separated device ID whitelist |
@@ -307,7 +307,7 @@ All dependencies are managed by Cargo. Key crates:
 
 ### "Connection refused" on startup
 
-Make sure QuickDesk is running. The WebSocket API server must be active at `ws://127.0.0.1:9800`.
+Make sure QuickDesk is running. The WebSocket API server must be active at `ws://127.0.0.1:9600`.
 
 ### Screenshot returns empty
 

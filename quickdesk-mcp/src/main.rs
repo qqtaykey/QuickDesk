@@ -10,7 +10,7 @@ use tracing_subscriber::EnvFilter;
 #[command(name = "quickdesk-mcp", about = "MCP bridge for QuickDesk remote desktop")]
 struct Cli {
     /// QuickDesk WebSocket server URL
-    #[arg(long, default_value = "ws://127.0.0.1:9800")]
+    #[arg(long, default_value = "ws://127.0.0.1:9600")]
     ws_url: String,
 
     /// Authentication token for full-control access

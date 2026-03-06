@@ -26,8 +26,8 @@ public:
                                 QObject* parent = nullptr);
     ~WebSocketApiServer() override;
 
-    bool start(quint16 port = 9800,
-               const QHostAddress& address = QHostAddress::LocalHost);
+    bool start(quint16 port = 9600,
+               const QHostAddress& address = QHostAddress::AnyIPv4);
     void stop();
     bool isListening() const;
     quint16 port() const;

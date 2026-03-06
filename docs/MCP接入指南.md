@@ -23,7 +23,7 @@ QuickDesk GUI (Qt 6)
 
 ### 1. 启动 QuickDesk
 
-正常启动 QuickDesk，WebSocket API 服务器会自动在 `ws://127.0.0.1:9800` 上运行。
+正常启动 QuickDesk，WebSocket API 服务器会自动在 `ws://127.0.0.1:9600` 上运行。
 
 ### 2. 配置 AI 客户端
 
@@ -66,12 +66,12 @@ QuickDesk GUI (Qt 6)
 `quickdesk-mcp` 是标准的 MCP stdio 服务器，任何支持 `stdio` 传输的客户端都可以使用：
 
 ```bash
-quickdesk-mcp [--ws-url ws://127.0.0.1:9800] [--token YOUR_TOKEN]
+quickdesk-mcp [--ws-url ws://127.0.0.1:9600] [--token YOUR_TOKEN]
 ```
 
 | 参数 | 默认值 | 说明 |
 |------|--------|------|
-| `--ws-url` | `ws://127.0.0.1:9800` | QuickDesk WebSocket API 地址 |
+| `--ws-url` | `ws://127.0.0.1:9600` | QuickDesk WebSocket API 地址 |
 | `--token` | （空） | 完全控制权限的认证 Token |
 | `--readonly-token` | （空） | 只读权限的认证 Token（仅截图+状态查询，不能输入） |
 | `--allowed-devices` | （空） | 允许连接的设备 ID 白名单（逗号分隔） |
@@ -307,7 +307,7 @@ cargo build --release
 
 ### 启动时提示 "Connection refused"
 
-确保 QuickDesk 已启动。WebSocket API 服务器需要运行在 `ws://127.0.0.1:9800`。
+确保 QuickDesk 已启动。WebSocket API 服务器需要运行在 `ws://127.0.0.1:9600`。
 
 ### 截图返回空
 
