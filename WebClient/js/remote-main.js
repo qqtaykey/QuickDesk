@@ -249,6 +249,7 @@ class RemoteDesktopApp {
                 this._setConnectionState('connected', t('status.connected'));
                 if (this.floatingToolbar) this.floatingToolbar.setVisible(true);
                 if (this.videoStats) this.videoStats.setPeerConnection(this.session.pc);
+                this._startConnBarStats();
                 if (window.opener && !window.opener.closed) {
                     try {
                         window.opener.postMessage({
@@ -874,6 +875,89 @@ class RemoteDesktopApp {
             else if (state === 'failed') dot.classList.add('failed');
         }
         if (statusEl) statusEl.textContent = text;
+        if (state !== 'connected') {
+            this._stopConnBarStats();
+            const routeEl = document.getElementById('connRoute');
+            const pingEl = document.getElementById('connPing');
+            if (routeEl) routeEl.style.display = 'none';
+            if (pingEl) pingEl.style.display = 'none';
+        }
+    }
+
+    _startConnBarStats() {
+        if (this._connBarInterval) return;
+        this._connBarInterval = setInterval(() => this._updateConnBarStats(), 2000);
+        this._updateConnBarStats();
+    }
+
+    _stopConnBarStats() {
+        if (this._connBarInterval) {
+            clearInterval(this._connBarInterval);
+            this._connBarInterval = null;
+        }
+    }
+
+    async _updateConnBarStats() {
+        if (!this.session?.pc || this.session.pc.connectionState === 'closed') return;
+        try {
+            const stats = await this.session.pc.getStats();
+            let rtt = 0;
+            let localId = null;
+            let remoteId = null;
+
+            stats.forEach(report => {
+                if (report.type === 'candidate-pair' && report.state === 'succeeded') {
+                    if (!localId || report.nominated) {
+                        rtt = Math.round((report.currentRoundTripTime || 0) * 1000);
+                        localId = report.localCandidateId;
+                        remoteId = report.remoteCandidateId;
+                    }
+                }
+            });
+
+            let localType = '';
+            let remoteType = '';
+            if (localId) {
+                const lc = stats.get(localId);
+                if (lc) localType = lc.candidateType || '';
+            }
+            if (remoteId) {
+                const rc = stats.get(remoteId);
+                if (rc) remoteType = rc.candidateType || '';
+            }
+
+            // Route type
+            const routeEl = document.getElementById('connRoute');
+            const routeDot = document.getElementById('connRouteDot');
+            const routeLabel = document.getElementById('connRouteLabel');
+            if (routeEl && localType) {
+                let label, color;
+                if (localType === 'relay' || remoteType === 'relay') {
+                    label = 'Relay'; color = '#FFA726';
+                } else if (localType === 'srflx' || localType === 'prflx' ||
+                           remoteType === 'srflx' || remoteType === 'prflx') {
+                    label = 'STUN'; color = '#66BB6A';
+                } else {
+                    label = 'P2P'; color = '#66BB6A';
+                }
+                routeDot.style.background = color;
+                routeLabel.textContent = label;
+                routeEl.style.display = 'inline-flex';
+            }
+
+            // Ping
+            const pingEl = document.getElementById('connPing');
+            const pingDot = document.getElementById('connPingDot');
+            const pingValue = document.getElementById('connPingValue');
+            if (pingEl && rtt > 0) {
+                const pingColor = rtt < 50 ? '#4caf50' : rtt < 100 ? '#ffc107' : '#f44336';
+                pingDot.style.background = pingColor;
+                pingValue.textContent = rtt + ' ms';
+                pingEl.style.display = 'inline-flex';
+            }
+        } catch (e) {
+            // ignore
+        }
     }
 
     _initLogDrawer() {
