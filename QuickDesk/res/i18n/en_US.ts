@@ -425,32 +425,32 @@
         <translation>Restarting</translation>
     </message>
     <message>
-        <location filename="../../qml/views/MainWindow.qml" line="662"/>
-        <source>AI: Off</source>
-        <translation>AI: Off</translation>
-    </message>
-    <message>
         <location filename="../../qml/views/MainWindow.qml" line="664"/>
-        <source>AI: %1 agent(s)</source>
-        <translation>AI: %1 agent(s)</translation>
+        <source>AI [%1]: Off</source>
+        <translation>AI [%1]: Off</translation>
     </message>
     <message>
-        <location filename="../../qml/views/MainWindow.qml" line="665"/>
-        <source>AI: Ready</source>
-        <translation>AI: Ready</translation>
+        <location filename="../../qml/views/MainWindow.qml" line="666"/>
+        <source>AI [%1]: %2 agent(s)</source>
+        <translation>AI [%1]: %2 agent(s)</translation>
     </message>
     <message>
-        <location filename="../../qml/views/MainWindow.qml" line="686"/>
+        <location filename="../../qml/views/MainWindow.qml" line="667"/>
+        <source>AI [%1]: Ready</source>
+        <translation>AI [%1]: Ready</translation>
+    </message>
+    <message>
+        <location filename="../../qml/views/MainWindow.qml" line="688"/>
         <source>Click to configure AI integration</source>
         <translation>Click to configure AI integration</translation>
     </message>
     <message>
-        <location filename="../../qml/views/MainWindow.qml" line="737"/>
+        <location filename="../../qml/views/MainWindow.qml" line="739"/>
         <source>Server Connection Error</source>
         <translation>Server Connection Error</translation>
     </message>
     <message>
-        <location filename="../../qml/views/MainWindow.qml" line="745"/>
+        <location filename="../../qml/views/MainWindow.qml" line="747"/>
         <source>Upgrade Required</source>
         <translation>Upgrade Required</translation>
     </message>
@@ -488,84 +488,109 @@
 <context>
     <name>McpConfigPopup</name>
     <message>
-        <location filename="../../qml/pages/McpConfigPopup.qml" line="58"/>
+        <location filename="../../qml/pages/McpConfigPopup.qml" line="67"/>
         <source>AI Integration (MCP)</source>
         <translation>AI Integration (MCP)</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/McpConfigPopup.qml" line="76"/>
-        <source>MCP Service</source>
-        <translation>MCP Service</translation>
-    </message>
-    <message>
-        <location filename="../../qml/pages/McpConfigPopup.qml" line="84"/>
-        <source>Service is off. AI agents cannot connect.</source>
-        <translation>Service is off. AI agents cannot connect.</translation>
-    </message>
-    <message>
-        <location filename="../../qml/pages/McpConfigPopup.qml" line="88"/>
-        <source>Port %1 · %2 agent(s) connected</source>
-        <translation>Port %1 · %2 agent(s) connected</translation>
-    </message>
-    <message>
-        <location filename="../../qml/pages/McpConfigPopup.qml" line="89"/>
-        <source>Port %1 · Waiting for AI agent</source>
-        <translation>Port %1 · Waiting for AI agent</translation>
-    </message>
-    <message>
-        <location filename="../../qml/pages/McpConfigPopup.qml" line="114"/>
+        <location filename="../../qml/pages/McpConfigPopup.qml" line="119"/>
         <source>Configure AI Client</source>
         <translation>Configure AI Client</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/McpConfigPopup.qml" line="121"/>
-        <source>Generate MCP config for your AI client and paste it into the config file.</source>
-        <translation>Generate MCP config for your AI client and paste it into the config file.</translation>
+        <location filename="../../qml/pages/McpConfigPopup.qml" line="79"/>
+        <source>Connection Mode</source>
+        <translation>Connection Mode</translation>
+    </message>
+    <message>
+        <location filename="../../qml/pages/McpConfigPopup.qml" line="89"/>
+        <source>stdio</source>
+        <translation>stdio</translation>
+    </message>
+    <message>
+        <location filename="../../qml/pages/McpConfigPopup.qml" line="90"/>
+        <source>HTTP/SSE</source>
+        <translation>HTTP/SSE</translation>
+    </message>
+    <message>
+        <location filename="../../qml/pages/McpConfigPopup.qml" line="102"/>
+        <source>HTTP/SSE mode: QuickDesk runs the MCP server. AI clients connect via network.</source>
+        <translation>HTTP/SSE mode: QuickDesk runs the MCP server. AI clients connect via network.</translation>
+    </message>
+    <message>
+        <location filename="../../qml/pages/McpConfigPopup.qml" line="103"/>
+        <source>stdio mode: AI client launches the MCP process automatically.</source>
+        <translation>stdio mode: AI client launches the MCP process automatically.</translation>
+    </message>
+    <message>
+        <location filename="../../qml/pages/McpConfigPopup.qml" line="126"/>
+        <source>Auto-configure or copy the config for your AI client.</source>
+        <translation>Auto-configure or copy the config for your AI client.</translation>
+    </message>
+    <message>
+        <location filename="../../qml/pages/McpConfigPopup.qml" line="190"/>
+        <source>%1 configured! Restart to apply.</source>
+        <translation>%1 configured! Restart to apply.</translation>
+    </message>
+    <message>
+        <location filename="../../qml/pages/McpConfigPopup.qml" line="193"/>
+        <source>Failed to write config. Copy manually.</source>
+        <translation>Failed to write config. Copy manually.</translation>
     </message>
     <message>
         <location filename="../../qml/pages/McpConfigPopup.qml" line="198"/>
-        <source>%1 config copied to clipboard</source>
-        <translation>%1 config copied to clipboard</translation>
+        <source>Auto-configure %1</source>
+        <translation>Auto-configure %1</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/McpConfigPopup.qml" line="205"/>
-        <source>Copy %1 MCP config to clipboard</source>
-        <translation>Copy %1 MCP config to clipboard</translation>
+        <location filename="../../qml/pages/McpConfigPopup.qml" line="209"/>
+        <source>%1 config copied</source>
+        <translation>%1 config copied</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/McpConfigPopup.qml" line="214"/>
-        <source>Auto-configure Claude Desktop</source>
-        <translation>Auto-configure Claude Desktop</translation>
+        <location filename="../../qml/pages/McpConfigPopup.qml" line="213"/>
+        <source>Copy %1 config</source>
+        <translation>Copy %1 config</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/McpConfigPopup.qml" line="223"/>
-        <source>Claude Desktop configured! Restart Claude to apply.</source>
-        <translation>Claude Desktop configured! Restart Claude to apply.</translation>
-    </message>
-    <message>
-        <location filename="../../qml/pages/McpConfigPopup.qml" line="227"/>
-        <source>Claude Desktop not found. Please install it first.</source>
-        <translation>Claude Desktop not found. Please install it first.</translation>
-    </message>
-    <message>
-        <location filename="../../qml/pages/McpConfigPopup.qml" line="231"/>
-        <source>Failed to write config. Copy and paste manually.</source>
-        <translation>Failed to write config. Copy and paste manually.</translation>
-    </message>
-    <message>
-        <location filename="../../qml/pages/McpConfigPopup.qml" line="241"/>
+        <location filename="../../qml/pages/McpConfigPopup.qml" line="225"/>
         <source>MCP Binary Path</source>
         <translation>MCP Binary Path</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/McpConfigPopup.qml" line="279"/>
+        <location filename="../../qml/pages/McpConfigPopup.qml" line="264"/>
         <source>Path copied</source>
         <translation>Path copied</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/McpConfigPopup.qml" line="285"/>
+        <location filename="../../qml/pages/McpConfigPopup.qml" line="270"/>
         <source>Copy path</source>
         <translation>Copy path</translation>
+    </message>
+    <message>
+        <location filename="../../qml/pages/McpConfigPopup.qml" line="286"/>
+        <source>MCP HTTP Service</source>
+        <translation>MCP HTTP Service</translation>
+    </message>
+    <message>
+        <location filename="../../qml/pages/McpConfigPopup.qml" line="295"/>
+        <source>Starting...</source>
+        <translation>Starting...</translation>
+    </message>
+    <message>
+        <location filename="../../qml/pages/McpConfigPopup.qml" line="296"/>
+        <source>Running</source>
+        <translation>Running</translation>
+    </message>
+    <message>
+        <location filename="../../qml/pages/McpConfigPopup.qml" line="345"/>
+        <source>URL copied</source>
+        <translation>URL copied</translation>
+    </message>
+    <message>
+        <location filename="../../qml/pages/McpConfigPopup.qml" line="350"/>
+        <source>Copy endpoint URL</source>
+        <translation>Copy endpoint URL</translation>
     </message>
 </context>
 <context>
@@ -1132,45 +1157,45 @@
 <context>
     <name>quickdesk::MainController</name>
     <message>
-        <location filename="../../src/controller/MainController.cpp" line="301"/>
+        <location filename="../../src/controller/MainController.cpp" line="304"/>
         <source>Device ID: %1
 Access Code: %2</source>
         <translation>Device ID: %1
 Access Code: %2</translation>
     </message>
     <message>
-        <location filename="../../src/controller/MainController.cpp" line="378"/>
+        <location filename="../../src/controller/MainController.cpp" line="381"/>
         <source>Connected</source>
         <translation>Connected</translation>
     </message>
     <message>
-        <location filename="../../src/controller/MainController.cpp" line="380"/>
+        <location filename="../../src/controller/MainController.cpp" line="383"/>
         <source>Connecting...</source>
         <translation>Connecting...</translation>
     </message>
     <message>
-        <location filename="../../src/controller/MainController.cpp" line="382"/>
+        <location filename="../../src/controller/MainController.cpp" line="385"/>
         <source>Disconnected</source>
         <translation>Disconnected</translation>
     </message>
     <message>
-        <location filename="../../src/controller/MainController.cpp" line="384"/>
+        <location filename="../../src/controller/MainController.cpp" line="387"/>
         <source>Connection failed</source>
         <translation>Connection failed</translation>
     </message>
     <message>
-        <location filename="../../src/controller/MainController.cpp" line="390"/>
+        <location filename="../../src/controller/MainController.cpp" line="393"/>
         <source>Reconnecting (attempt %1)</source>
         <translation>Reconnecting (attempt %1)</translation>
     </message>
     <message>
-        <location filename="../../src/controller/MainController.cpp" line="392"/>
+        <location filename="../../src/controller/MainController.cpp" line="395"/>
         <source>, retry in %1s</source>
         <translation>, retry in %1s</translation>
     </message>
     <message>
-        <location filename="../../src/controller/MainController.cpp" line="427"/>
-        <location filename="../../src/controller/MainController.cpp" line="431"/>
+        <location filename="../../src/controller/MainController.cpp" line="430"/>
+        <location filename="../../src/controller/MainController.cpp" line="434"/>
         <source>Never</source>
         <translation>Never</translation>
     </message>

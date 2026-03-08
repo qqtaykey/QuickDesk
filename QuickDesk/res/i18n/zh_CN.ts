@@ -425,32 +425,32 @@
         <translation>重启中</translation>
     </message>
     <message>
-        <location filename="../../qml/views/MainWindow.qml" line="662"/>
-        <source>AI: Off</source>
-        <translation>AI: 关闭</translation>
-    </message>
-    <message>
         <location filename="../../qml/views/MainWindow.qml" line="664"/>
-        <source>AI: %1 agent(s)</source>
-        <translation>AI: %1 agent(s)</translation>
+        <source>AI [%1]: Off</source>
+        <translation>AI [%1]：已关闭</translation>
     </message>
     <message>
-        <location filename="../../qml/views/MainWindow.qml" line="665"/>
-        <source>AI: Ready</source>
-        <translation>AI: 就绪</translation>
+        <location filename="../../qml/views/MainWindow.qml" line="666"/>
+        <source>AI [%1]: %2 agent(s)</source>
+        <translation>AI [%1]：%2 个代理</translation>
     </message>
     <message>
-        <location filename="../../qml/views/MainWindow.qml" line="686"/>
+        <location filename="../../qml/views/MainWindow.qml" line="667"/>
+        <source>AI [%1]: Ready</source>
+        <translation>AI [%1]：就绪</translation>
+    </message>
+    <message>
+        <location filename="../../qml/views/MainWindow.qml" line="688"/>
         <source>Click to configure AI integration</source>
         <translation>点击配置AI集成</translation>
     </message>
     <message>
-        <location filename="../../qml/views/MainWindow.qml" line="737"/>
+        <location filename="../../qml/views/MainWindow.qml" line="739"/>
         <source>Server Connection Error</source>
         <translation>服务器连接错误</translation>
     </message>
     <message>
-        <location filename="../../qml/views/MainWindow.qml" line="745"/>
+        <location filename="../../qml/views/MainWindow.qml" line="747"/>
         <source>Upgrade Required</source>
         <translation>要求升级</translation>
     </message>
@@ -488,84 +488,109 @@
 <context>
     <name>McpConfigPopup</name>
     <message>
-        <location filename="../../qml/pages/McpConfigPopup.qml" line="58"/>
+        <location filename="../../qml/pages/McpConfigPopup.qml" line="67"/>
         <source>AI Integration (MCP)</source>
         <translation>AI集成(MCP)</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/McpConfigPopup.qml" line="76"/>
-        <source>MCP Service</source>
-        <translation>MCP服务</translation>
-    </message>
-    <message>
-        <location filename="../../qml/pages/McpConfigPopup.qml" line="84"/>
-        <source>Service is off. AI agents cannot connect.</source>
-        <translation>服务关闭，AI agents不能连接。</translation>
-    </message>
-    <message>
-        <location filename="../../qml/pages/McpConfigPopup.qml" line="88"/>
-        <source>Port %1 · %2 agent(s) connected</source>
-        <translation>端口 %1 · %2 agent(s) 已连接</translation>
-    </message>
-    <message>
-        <location filename="../../qml/pages/McpConfigPopup.qml" line="89"/>
-        <source>Port %1 · Waiting for AI agent</source>
-        <translation>端口%1 · 等待AI agent</translation>
-    </message>
-    <message>
-        <location filename="../../qml/pages/McpConfigPopup.qml" line="114"/>
+        <location filename="../../qml/pages/McpConfigPopup.qml" line="119"/>
         <source>Configure AI Client</source>
         <translation>配置AI客户端</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/McpConfigPopup.qml" line="121"/>
-        <source>Generate MCP config for your AI client and paste it into the config file.</source>
-        <translation>为您的AI客户端生成MCP配置，并将其粘贴到配置文件中。</translation>
+        <location filename="../../qml/pages/McpConfigPopup.qml" line="79"/>
+        <source>Connection Mode</source>
+        <translation>连接模式</translation>
+    </message>
+    <message>
+        <location filename="../../qml/pages/McpConfigPopup.qml" line="89"/>
+        <source>stdio</source>
+        <translation>stdio</translation>
+    </message>
+    <message>
+        <location filename="../../qml/pages/McpConfigPopup.qml" line="90"/>
+        <source>HTTP/SSE</source>
+        <translation>HTTP/SSE</translation>
+    </message>
+    <message>
+        <location filename="../../qml/pages/McpConfigPopup.qml" line="102"/>
+        <source>HTTP/SSE mode: QuickDesk runs the MCP server. AI clients connect via network.</source>
+        <translation>HTTP/SSE 模式：QuickDesk 运行 MCP 服务器，AI 客户端通过网络连接。</translation>
+    </message>
+    <message>
+        <location filename="../../qml/pages/McpConfigPopup.qml" line="103"/>
+        <source>stdio mode: AI client launches the MCP process automatically.</source>
+        <translation>stdio 模式：AI 客户端自动启动 MCP 进程。</translation>
+    </message>
+    <message>
+        <location filename="../../qml/pages/McpConfigPopup.qml" line="126"/>
+        <source>Auto-configure or copy the config for your AI client.</source>
+        <translation>自动配置或复制配置到你的 AI 客户端。</translation>
+    </message>
+    <message>
+        <location filename="../../qml/pages/McpConfigPopup.qml" line="190"/>
+        <source>%1 configured! Restart to apply.</source>
+        <translation>%1 已配置！重启后生效。</translation>
+    </message>
+    <message>
+        <location filename="../../qml/pages/McpConfigPopup.qml" line="193"/>
+        <source>Failed to write config. Copy manually.</source>
+        <translation>写入配置失败，请手动复制。</translation>
     </message>
     <message>
         <location filename="../../qml/pages/McpConfigPopup.qml" line="198"/>
-        <source>%1 config copied to clipboard</source>
-        <translation>%1配置已经写入剪切板</translation>
+        <source>Auto-configure %1</source>
+        <translation>自动配置 %1</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/McpConfigPopup.qml" line="205"/>
-        <source>Copy %1 MCP config to clipboard</source>
-        <translation>复制%1 MCP配置到剪切板</translation>
+        <location filename="../../qml/pages/McpConfigPopup.qml" line="209"/>
+        <source>%1 config copied</source>
+        <translation>%1 配置已复制</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/McpConfigPopup.qml" line="214"/>
-        <source>Auto-configure Claude Desktop</source>
-        <translation>自动配置Claude Desktop</translation>
+        <location filename="../../qml/pages/McpConfigPopup.qml" line="213"/>
+        <source>Copy %1 config</source>
+        <translation>复制 %1 配置</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/McpConfigPopup.qml" line="223"/>
-        <source>Claude Desktop configured! Restart Claude to apply.</source>
-        <translation>Claude Desktop已配置！重启Claude生效。</translation>
-    </message>
-    <message>
-        <location filename="../../qml/pages/McpConfigPopup.qml" line="227"/>
-        <source>Claude Desktop not found. Please install it first.</source>
-        <translation>Claude Desktop没有发现。请先安装。</translation>
-    </message>
-    <message>
-        <location filename="../../qml/pages/McpConfigPopup.qml" line="231"/>
-        <source>Failed to write config. Copy and paste manually.</source>
-        <translation>写入配置失败。请手动复制粘贴。</translation>
-    </message>
-    <message>
-        <location filename="../../qml/pages/McpConfigPopup.qml" line="241"/>
+        <location filename="../../qml/pages/McpConfigPopup.qml" line="225"/>
         <source>MCP Binary Path</source>
         <translation>MCP二进制路径</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/McpConfigPopup.qml" line="279"/>
+        <location filename="../../qml/pages/McpConfigPopup.qml" line="264"/>
         <source>Path copied</source>
         <translation>路径已复制</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/McpConfigPopup.qml" line="285"/>
+        <location filename="../../qml/pages/McpConfigPopup.qml" line="270"/>
         <source>Copy path</source>
         <translation>复制路径</translation>
+    </message>
+    <message>
+        <location filename="../../qml/pages/McpConfigPopup.qml" line="286"/>
+        <source>MCP HTTP Service</source>
+        <translation>MCP HTTP 服务</translation>
+    </message>
+    <message>
+        <location filename="../../qml/pages/McpConfigPopup.qml" line="295"/>
+        <source>Starting...</source>
+        <translation>启动中...</translation>
+    </message>
+    <message>
+        <location filename="../../qml/pages/McpConfigPopup.qml" line="296"/>
+        <source>Running</source>
+        <translation>运行中</translation>
+    </message>
+    <message>
+        <location filename="../../qml/pages/McpConfigPopup.qml" line="345"/>
+        <source>URL copied</source>
+        <translation>URL 已复制</translation>
+    </message>
+    <message>
+        <location filename="../../qml/pages/McpConfigPopup.qml" line="350"/>
+        <source>Copy endpoint URL</source>
+        <translation>复制端点 URL</translation>
     </message>
 </context>
 <context>
@@ -1132,45 +1157,45 @@
 <context>
     <name>quickdesk::MainController</name>
     <message>
-        <location filename="../../src/controller/MainController.cpp" line="301"/>
+        <location filename="../../src/controller/MainController.cpp" line="304"/>
         <source>Device ID: %1
 Access Code: %2</source>
         <translation>设备ID：%1
 访问码：%2</translation>
     </message>
     <message>
-        <location filename="../../src/controller/MainController.cpp" line="378"/>
+        <location filename="../../src/controller/MainController.cpp" line="381"/>
         <source>Connected</source>
         <translation>已连接</translation>
     </message>
     <message>
-        <location filename="../../src/controller/MainController.cpp" line="380"/>
+        <location filename="../../src/controller/MainController.cpp" line="383"/>
         <source>Connecting...</source>
         <translation>连接中...</translation>
     </message>
     <message>
-        <location filename="../../src/controller/MainController.cpp" line="382"/>
+        <location filename="../../src/controller/MainController.cpp" line="385"/>
         <source>Disconnected</source>
         <translation>未连接</translation>
     </message>
     <message>
-        <location filename="../../src/controller/MainController.cpp" line="384"/>
+        <location filename="../../src/controller/MainController.cpp" line="387"/>
         <source>Connection failed</source>
         <translation>连接失败</translation>
     </message>
     <message>
-        <location filename="../../src/controller/MainController.cpp" line="390"/>
+        <location filename="../../src/controller/MainController.cpp" line="393"/>
         <source>Reconnecting (attempt %1)</source>
         <translation>重连中（第 %1 次尝试）</translation>
     </message>
     <message>
-        <location filename="../../src/controller/MainController.cpp" line="392"/>
+        <location filename="../../src/controller/MainController.cpp" line="395"/>
         <source>, retry in %1s</source>
         <translation>，%1秒后重试</translation>
     </message>
     <message>
-        <location filename="../../src/controller/MainController.cpp" line="427"/>
-        <location filename="../../src/controller/MainController.cpp" line="431"/>
+        <location filename="../../src/controller/MainController.cpp" line="430"/>
+        <location filename="../../src/controller/MainController.cpp" line="434"/>
         <source>Never</source>
         <translation>从不</translation>
     </message>
