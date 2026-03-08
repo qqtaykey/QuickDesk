@@ -307,7 +307,7 @@ Item {
                         
                         // TURN/STUN Servers Section (hidden - ICE config is always fetched from signaling server)
                         Column {
-                            visible: false
+                            visible: true
                             width: parent.width
                             spacing: Theme.spacingMedium
 
