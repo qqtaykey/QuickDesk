@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 
@@ -193,6 +194,14 @@ func main() {
 
 	// Admin UI (embedded Vue frontend)
 	handler.RegisterAdminUI(router, signaling.WebDistFS)
+
+	// Root redirect to admin panel
+	router.GET("/", func(c *gin.Context) {
+		c.Redirect(http.StatusFound, "/admin/")
+	})
+
+	// WebClient static files (remote.html, /js/*, /images/*, /assets/*)
+	handler.RegisterWebClientUI(router)
 
 	// Start server
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
