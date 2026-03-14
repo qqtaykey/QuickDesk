@@ -436,7 +436,7 @@ After deployment, the following URLs are available:
 - **API**: `https://your-domain.com/api/v1/devices/register`
 - **Admin Dashboard**: `https://your-domain.com/admin/` (devices, users, admin accounts, system settings)
 - **User Portal**: `https://your-domain.com/user-login` (user registration, login, device binding)
-- **WebClient**: `https://your-domain.com/webclient/remote.html` (browser-based remote desktop)
+- **WebClient**: `https://your-domain.com/remote.html` (browser-based remote desktop)
 
 ## Performance Tuning
 

@@ -386,6 +386,7 @@ func (a *UserAuth) AuthRequired() gin.HandlerFunc {
 
 		a.mu.RLock()
 		expiry, ok := a.tokens[token]
+		userID := a.tokenUsers[token]
 		a.mu.RUnlock()
 
 		if !ok || time.Now().After(expiry) {
@@ -393,6 +394,7 @@ func (a *UserAuth) AuthRequired() gin.HandlerFunc {
 			return
 		}
 
+		c.Set("authed_user_id", userID)
 		c.Next()
 	}
 }

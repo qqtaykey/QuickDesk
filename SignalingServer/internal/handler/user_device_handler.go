@@ -23,7 +23,6 @@ func NewUserDeviceHandler(db *gorm.DB) *UserDeviceHandler {
 // Creates or updates a user-device binding after a successful connection.
 func (h *UserDeviceHandler) BindDevice(c *gin.Context) {
 	var req struct {
-		UserID     uint   `json:"user_id" binding:"required"`
 		DeviceID   string `json:"device_id" binding:"required"`
 		DeviceName string `json:"device_name"`
 		BindType   string `json:"bind_type"`
@@ -32,9 +31,11 @@ func (h *UserDeviceHandler) BindDevice(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	userIDVal, _ := c.Get("authed_user_id")
+	authedUserID := userIDVal.(uint)
 
 	var user models.User
-	if result := h.db.First(&user, req.UserID); result.Error != nil {
+	if result := h.db.First(&user, authedUserID); result.Error != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "用户不存在"})
 		return
 	}
@@ -46,12 +47,12 @@ func (h *UserDeviceHandler) BindDevice(c *gin.Context) {
 	}
 
 	var existing models.UserDevice
-	result := h.db.Where("user_id = ? AND device_id = ? AND status = ?", req.UserID, req.DeviceID, true).First(&existing)
+	result := h.db.Where("user_id = ? AND device_id = ? AND status = ?", authedUserID, req.DeviceID, true).First(&existing)
 	if result.Error == nil {
 		existing.LastConnect = time.Now()
 		existing.ConnectCount++
 		h.db.Save(&existing)
-		h.logConnection(req.UserID, req.DeviceID, existing.DeviceName, "success", "", c.ClientIP())
+		h.logConnection(authedUserID, req.DeviceID, existing.DeviceName, "success", "", c.ClientIP())
 		c.JSON(http.StatusOK, gin.H{"message": "设备已绑定，更新连接记录", "binding": existing})
 		return
 	}
@@ -66,7 +67,7 @@ func (h *UserDeviceHandler) BindDevice(c *gin.Context) {
 	}
 
 	binding := models.UserDevice{
-		UserID:       req.UserID,
+		UserID:       authedUserID,
 		DeviceID:     req.DeviceID,
 		DeviceName:   deviceName,
 		BindType:     bindType,
@@ -79,8 +80,8 @@ func (h *UserDeviceHandler) BindDevice(c *gin.Context) {
 		return
 	}
 
-	h.db.Model(&models.User{}).Where("id = ?", req.UserID).Update("device_count", gorm.Expr("device_count + 1"))
-	h.logConnection(req.UserID, req.DeviceID, deviceName, "success", "", c.ClientIP())
+	h.db.Model(&models.User{}).Where("id = ?", authedUserID).Update("device_count", gorm.Expr("device_count + 1"))
+	h.logConnection(authedUserID, req.DeviceID, deviceName, "success", "", c.ClientIP())
 
 	c.JSON(http.StatusOK, gin.H{"message": "设备绑定成功", "binding": binding})
 }
@@ -88,23 +89,24 @@ func (h *UserDeviceHandler) BindDevice(c *gin.Context) {
 // UnbindDevice handles POST /api/v1/user/devices/unbind
 func (h *UserDeviceHandler) UnbindDevice(c *gin.Context) {
 	var req struct {
-		UserID   uint   `json:"user_id" binding:"required"`
 		DeviceID string `json:"device_id" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	userIDVal, _ := c.Get("authed_user_id")
+	authedUserID := userIDVal.(uint)
 
 	var binding models.UserDevice
-	if result := h.db.Where("user_id = ? AND device_id = ? AND status = ?", req.UserID, req.DeviceID, true).First(&binding); result.Error != nil {
+	if result := h.db.Where("user_id = ? AND device_id = ? AND status = ?", authedUserID, req.DeviceID, true).First(&binding); result.Error != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "绑定记录不存在"})
 		return
 	}
 
 	binding.Status = false
 	h.db.Save(&binding)
-	h.db.Model(&models.User{}).Where("id = ?", req.UserID).Update("device_count", gorm.Expr("device_count - 1"))
+	h.db.Model(&models.User{}).Where("id = ?", authedUserID).Update("device_count", gorm.Expr("device_count - 1"))
 
 	c.JSON(http.StatusOK, gin.H{"message": "设备解绑成功"})
 }
@@ -112,11 +114,7 @@ func (h *UserDeviceHandler) UnbindDevice(c *gin.Context) {
 // GetUserDevices handles GET /api/v1/user/devices
 // Returns all devices bound to a user (from the devices table).
 func (h *UserDeviceHandler) GetUserDevices(c *gin.Context) {
-	userID := c.Query("user_id")
-	if userID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "用户ID不能为空"})
-		return
-	}
+	userID, _ := c.Get("authed_user_id")
 
 	var devices []models.Device
 	if result := h.db.Where("user_id = ?", userID).Find(&devices); result.Error != nil {
@@ -130,11 +128,7 @@ func (h *UserDeviceHandler) GetUserDevices(c *gin.Context) {
 // GetUserDeviceLogs handles GET /api/v1/user/devices/logs
 // Returns connection history for a user over the last 3 days.
 func (h *UserDeviceHandler) GetUserDeviceLogs(c *gin.Context) {
-	userID := c.Query("user_id")
-	if userID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "用户ID不能为空"})
-		return
-	}
+	userID, _ := c.Get("authed_user_id")
 
 	threeDaysAgo := time.Now().AddDate(0, 0, -3)
 	var logs []models.ConnectionHistory
@@ -151,10 +145,10 @@ func (h *UserDeviceHandler) GetUserDeviceLogs(c *gin.Context) {
 
 // CheckDeviceBinding handles GET /api/v1/user/devices/check
 func (h *UserDeviceHandler) CheckDeviceBinding(c *gin.Context) {
-	userID := c.Query("user_id")
+	userID, _ := c.Get("authed_user_id")
 	deviceID := c.Query("device_id")
-	if userID == "" || deviceID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "用户ID和设备ID不能为空"})
+	if deviceID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "设备ID不能为空"})
 		return
 	}
 
@@ -167,7 +161,6 @@ func (h *UserDeviceHandler) CheckDeviceBinding(c *gin.Context) {
 // Binds a device to a user by updating the devices table entry directly.
 func (h *UserDeviceHandler) QuickConnectBind(c *gin.Context) {
 	var req struct {
-		UserID     uint   `json:"user_id" binding:"required"`
 		DeviceID   string `json:"device_id" binding:"required"`
 		DeviceName string `json:"device_name"`
 		AccessCode string `json:"access_code"`
@@ -176,9 +169,11 @@ func (h *UserDeviceHandler) QuickConnectBind(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	userIDVal, _ := c.Get("authed_user_id")
+	authedUserID := userIDVal.(uint)
 
 	var user models.User
-	if result := h.db.First(&user, req.UserID); result.Error != nil {
+	if result := h.db.First(&user, authedUserID); result.Error != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "用户不存在"})
 		return
 	}
@@ -189,7 +184,7 @@ func (h *UserDeviceHandler) QuickConnectBind(c *gin.Context) {
 		return
 	}
 
-	updates := map[string]interface{}{"user_id": req.UserID}
+	updates := map[string]interface{}{"user_id": authedUserID}
 	if req.DeviceName != "" {
 		updates["device_name"] = req.DeviceName
 	} else if device.DeviceName == "" {
@@ -211,7 +206,6 @@ func (h *UserDeviceHandler) QuickConnectBind(c *gin.Context) {
 // Called by WebClient after a connection attempt to persist its result.
 func (h *UserDeviceHandler) RecordConnection(c *gin.Context) {
 	var req struct {
-		UserID   uint   `json:"user_id" binding:"required"`
 		DeviceID string `json:"device_id" binding:"required"`
 		Duration int    `json:"duration"` // seconds
 		Status   string `json:"status"`   // success / failed / timeout
@@ -221,12 +215,14 @@ func (h *UserDeviceHandler) RecordConnection(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	userIDVal, _ := c.Get("authed_user_id")
+	authedUserID := userIDVal.(uint)
 
-	h.logConnection(req.UserID, req.DeviceID, "", req.Status, req.ErrorMsg, c.ClientIP())
+	h.logConnection(authedUserID, req.DeviceID, "", req.Status, req.ErrorMsg, c.ClientIP())
 
 	if req.Status == "success" {
 		h.db.Model(&models.UserDevice{}).
-			Where("user_id = ? AND device_id = ? AND status = ?", req.UserID, req.DeviceID, true).
+			Where("user_id = ? AND device_id = ? AND status = ?", authedUserID, req.DeviceID, true).
 			Updates(map[string]interface{}{
 				"last_connect":  time.Now(),
 				"connect_count": gorm.Expr("connect_count + 1"),

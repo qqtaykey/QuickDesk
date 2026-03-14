@@ -119,7 +119,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Monitor, Refresh } from '@element-plus/icons-vue'
-import { getUserDevices, unbindDevice as unbindDeviceAPI } from '../api/device.js'
+import { getUserDevices, unbindDevice as unbindDeviceAPI, quickConnectBind } from '../api/device.js'
 
 const router = useRouter()
 
@@ -133,7 +133,7 @@ const quickConnectForm = ref({
   accessCode: ''
 })
 
-// 获取当前用户ID
+// 获取当前用户ID（仅保留给 viewDeviceInfo 等只读展示逻辑使用）
 function getCurrentUserId() {
   const userInfo = localStorage.getItem('userInfo')
   if (!userInfo) return null
@@ -147,28 +147,12 @@ function getCurrentUserId() {
 
 // 加载用户设备列表
 async function loadDevices() {
-  const userId = getCurrentUserId()
-  if (!userId) {
-    ElMessage.error('无法获取用户信息')
-    return
-  }
-
   loading.value = true
   try {
     const result = await getUserDevices()
 
     if (result.devices) {
-      // 获取设备在线状态
-      const devicesWithStatus = await Promise.all(
-        result.devices.map(async (device) => {
-          const status = await getDeviceOnlineStatus(device.device_id)
-          return {
-            ...device,
-            online: status.online
-          }
-        })
-      )
-      devices.value = devicesWithStatus
+      devices.value = result.devices
     } else if (result.error) {
       ElMessage.error(result.error)
     }
@@ -184,13 +168,8 @@ async function loadDevices() {
 
 // 加载连接历史（近3天）
 async function loadConnectionHistory() {
-  const userId = getCurrentUserId()
-  if (!userId) {
-    return
-  }
-
   try {
-    const response = await fetch(`/api/v1/user/devices/logs?user_id=${userId}`, {
+    const response = await fetch(`/api/v1/user/devices/logs`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('quickdesk_token')}`,
@@ -208,7 +187,7 @@ async function loadConnectionHistory() {
   }
 }
 
-// 获取设备在线状态
+// 获取设备在线状态（从设备列表已含 online 字段，此函数仅备用）
 async function getDeviceOnlineStatus(deviceId) {
   try {
     const response = await fetch(`/api/v1/devices/${deviceId}/status`)
@@ -289,14 +268,7 @@ async function unbindDevice(device) {
       }
     )
 
-    const userId = getCurrentUserId()
-    if (!userId) {
-      ElMessage.error('无法获取用户信息')
-      return
-    }
-
     const result = await unbindDeviceAPI({
-      user_id: userId,
       device_id: device.device_id
     })
 
@@ -336,29 +308,13 @@ async function quickConnect() {
     return
   }
 
-  const userId = getCurrentUserId()
-  if (!userId) {
-    ElMessage.error('无法获取用户信息')
-    return
-  }
-
-  // 绑定设备名称、访问码和用户ID到devices表
+  // 绑定设备名称、访问码到devices表
   try {
-    const bindResponse = await fetch('/api/v1/user/devices/quick-connect', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('quickdesk_token')}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        user_id: userId,
-        device_id: deviceId,
-        device_name: deviceName,
-        access_code: accessCode
-      })
+    const bindResult = await quickConnectBind({
+      device_id: deviceId,
+      device_name: deviceName,
+      access_code: accessCode
     })
-
-    const bindResult = await bindResponse.json()
     if (bindResult.error) {
       ElMessage.error('绑定设备失败: ' + bindResult.error)
       return
