@@ -7,56 +7,81 @@ use tokio_tungstenite::{connect_async, tungstenite::Message};
 
 use crate::event_bus::{Event, EventBus};
 
-type PendingRequests = Arc<Mutex<HashMap<String, oneshot::Sender<Result<Value, String>>>>>;
+type PendingMap = HashMap<String, oneshot::Sender<Result<Value, String>>>;
 
-#[derive(Clone)]
-pub struct WsClient {
-    sender: Arc<Mutex<futures_util::stream::SplitSink<
+/// Live connection state — replaced atomically on reconnect.
+struct WsInner {
+    sender: futures_util::stream::SplitSink<
         tokio_tungstenite::WebSocketStream<
             tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
         >,
         Message,
-    >>>,
-    pending: PendingRequests,
-    req_counter: Arc<Mutex<u64>>,
+    >,
+    pending: Arc<Mutex<PendingMap>>,
+    req_counter: u64,
+}
+
+/// Auto-reconnecting WebSocket client.
+///
+/// On every `request()` call, if the underlying connection is gone
+/// (dropped by the remote or due to a send error) it transparently
+/// reconnects before retrying the request once.
+#[derive(Clone)]
+pub struct WsClient {
+    url: Arc<String>,
+    token: Arc<Option<String>>,
+    /// `None` means the connection is currently down.
+    inner: Arc<Mutex<Option<WsInner>>>,
     event_bus: EventBus,
 }
 
 impl WsClient {
     pub async fn connect(url: &str, token: Option<&str>, event_bus: EventBus) -> Result<Self, String> {
-        let (ws_stream, _) = connect_async(url)
+        let client = Self {
+            url: Arc::new(url.to_string()),
+            token: Arc::new(token.map(str::to_string)),
+            inner: Arc::new(Mutex::new(None)),
+            event_bus,
+        };
+        client.do_connect().await?;
+        Ok(client)
+    }
+
+    /// Establish (or re-establish) the WebSocket connection.
+    /// Must be called with `self.inner` lock NOT held.
+    async fn do_connect(&self) -> Result<(), String> {
+        let (ws_stream, _) = connect_async(self.url.as_str())
             .await
             .map_err(|e| format!("WebSocket connect failed: {e}"))?;
 
         let (write, read) = ws_stream.split();
-        let pending: PendingRequests = Arc::new(Mutex::new(HashMap::new()));
+        let pending: Arc<Mutex<PendingMap>> = Arc::new(Mutex::new(HashMap::new()));
 
-        let client = Self {
-            sender: Arc::new(Mutex::new(write)),
-            pending: pending.clone(),
-            req_counter: Arc::new(Mutex::new(0)),
-            event_bus: event_bus.clone(),
-        };
+        // Spawn the reader; it clears `inner` when the connection closes.
+        tokio::spawn(Self::reader_loop(
+            read,
+            pending.clone(),
+            self.inner.clone(),
+            self.event_bus.clone(),
+        ));
 
-        // Spawn reader task to dispatch responses and events
-        tokio::spawn(Self::reader_loop(read, pending, event_bus));
+        let mut guard = self.inner.lock().await;
+        *guard = Some(WsInner { sender: write, pending, req_counter: 0 });
+        drop(guard);
 
-        // Authenticate if token provided
-        if let Some(token) = token {
-            client.authenticate(token).await?;
+        // Authenticate if a token was provided.
+        if let Some(ref tok) = *self.token {
+            self.authenticate(tok).await?;
         }
 
-        Ok(client)
+        tracing::info!("WsClient connected to {}", self.url);
+        Ok(())
     }
 
     async fn authenticate(&self, token: &str) -> Result<(), String> {
         let resp = self
-            .request(
-                "auth",
-                serde_json::json!({ "token": token }),
-            )
+            .try_request("auth", serde_json::json!({ "token": token }))
             .await?;
-
         if resp.get("authenticated").and_then(|v| v.as_bool()) == Some(true) {
             Ok(())
         } else {
@@ -65,32 +90,46 @@ impl WsClient {
     }
 
     pub async fn request(&self, method: &str, params: Value) -> Result<Value, String> {
-        let id = {
-            let mut counter = self.req_counter.lock().await;
-            *counter += 1;
-            format!("req_{}", *counter)
-        };
-
-        let msg = serde_json::json!({
-            "id": id,
-            "method": method,
-            "params": params,
-        });
-
-        let (tx, rx) = oneshot::channel();
-        {
-            self.pending.lock().await.insert(id.clone(), tx);
+        // Try once; if the connection is down, reconnect and try again.
+        match self.try_request(method, params.clone()).await {
+            Ok(v) => Ok(v),
+            Err(e) => {
+                tracing::warn!("WsClient request '{}' failed ({}), reconnecting…", method, e);
+                self.do_connect().await?;
+                self.try_request(method, params).await
+            }
         }
+    }
 
-        {
+    async fn try_request(&self, method: &str, params: Value) -> Result<Value, String> {
+        // Allocate an ID and register the pending slot — all under the lock
+        // so that the reader can never deliver the response before we register.
+        let (id, rx) = {
+            let mut guard = self.inner.lock().await;
+            let inner = guard.as_mut().ok_or("Not connected")?;
+
+            inner.req_counter += 1;
+            let id = format!("req_{}", inner.req_counter);
+
+            let (tx, rx) = oneshot::channel();
+            inner.pending.lock().await.insert(id.clone(), tx);
+
+            let msg = serde_json::json!({ "id": id, "method": method, "params": params });
             let text = serde_json::to_string(&msg).unwrap();
-            self.sender
-                .lock()
-                .await
+
+            inner
+                .sender
                 .send(Message::Text(text.into()))
                 .await
-                .map_err(|e| format!("WebSocket send failed: {e}"))?;
-        }
+                .map_err(|e| {
+                    // Remove the pending entry on send failure.
+                    // (The pending lock is already dropped here so this is fine.)
+                    format!("WebSocket send failed: {e}")
+                })?;
+
+            (id, rx)
+        };
+        let _ = id; // suppress unused-variable warning
 
         rx.await.map_err(|_| "Response channel closed".to_string())?
     }
@@ -101,14 +140,18 @@ impl WsClient {
                 tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
             >,
         >,
-        pending: PendingRequests,
+        pending: Arc<Mutex<PendingMap>>,
+        inner: Arc<Mutex<Option<WsInner>>>,
         event_bus: EventBus,
     ) {
         while let Some(msg) = read.next().await {
             let msg = match msg {
                 Ok(Message::Text(t)) => t,
                 Ok(Message::Close(_)) => break,
-                Err(_) => break,
+                Err(e) => {
+                    tracing::warn!("WsClient reader error: {e}");
+                    break;
+                }
                 _ => continue,
             };
 
@@ -117,7 +160,6 @@ impl WsClient {
                 Err(_) => continue,
             };
 
-            // Handle responses with "id" field (request-response pattern)
             if let Some(id) = parsed.get("id").and_then(|v| v.as_str()) {
                 let mut map = pending.lock().await;
                 if let Some(tx) = map.remove(id) {
@@ -133,9 +175,7 @@ impl WsClient {
                         let _ = tx.send(Ok(parsed));
                     }
                 }
-            }
-            // Handle event pushes (messages with "event" field, no "id")
-            else if let Some(event_name) = parsed.get("event").and_then(|v| v.as_str()) {
+            } else if let Some(event_name) = parsed.get("event").and_then(|v| v.as_str()) {
                 let data = parsed.get("data").cloned().unwrap_or(Value::Null);
                 let timestamp = std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
@@ -143,19 +183,21 @@ impl WsClient {
                     .as_millis() as u64;
 
                 tracing::debug!("Received event: {} data={}", event_name, data);
-
-                event_bus
-                    .publish(Event {
-                        event: event_name.to_string(),
-                        data,
-                        timestamp,
-                    })
-                    .await;
+                event_bus.publish(Event { event: event_name.to_string(), data, timestamp }).await;
             }
         }
+
+        // Connection closed — mark inner as None so the next request triggers reconnect.
+        tracing::info!("WsClient connection closed, will reconnect on next request");
+        // Fail any in-flight requests.
+        let mut map = pending.lock().await;
+        for (_, tx) in map.drain() {
+            let _ = tx.send(Err("Connection closed".to_string()));
+        }
+        drop(map);
+        *inner.lock().await = None;
     }
 
-    /// Get a reference to the event bus
     pub fn event_bus(&self) -> &EventBus {
         &self.event_bus
     }
