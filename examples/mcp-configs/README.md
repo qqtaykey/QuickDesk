@@ -27,6 +27,12 @@ QuickDesk supports two transport modes:
 | `vscode-http.json` | VS Code — HTTP transport (type: http) |
 | `remote-http.json` | Connect to QuickDesk on a remote machine via HTTP |
 
+### Agent tool call examples
+
+| File | Description |
+|------|-------------|
+| `agent-usage.json` | Example MCP tool call payloads for Agent tools (`agent_exec`, `agent_list_tools`) |
+
 ## Usage
 
 ### stdio mode

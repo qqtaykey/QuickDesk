@@ -53,7 +53,7 @@ void AgentManager::setHostManager(HostManager* hostManager)
     });
 }
 
-void AgentManager::startAgent(const QString& agentPath, const QString& skillsDir)
+void AgentManager::startAgent(const QString& agentPath, const QStringList& skillsDirs)
 {
     if (m_agentProcess && m_agentProcess->state() != QProcess::NotRunning) {
         LOG_WARN("AgentManager: agent already running");
@@ -63,7 +63,14 @@ void AgentManager::startAgent(const QString& agentPath, const QString& skillsDir
     delete m_agentProcess;
     m_agentProcess = new QProcess(this);
     m_agentProcess->setProgram(agentPath);
-    m_agentProcess->setArguments({"--skills-dir", skillsDir});
+
+    QStringList args;
+    for (const auto& dir : skillsDirs) {
+        if (!dir.isEmpty()) {
+            args << "--skills-dir" << dir;
+        }
+    }
+    m_agentProcess->setArguments(args);
 
     connect(m_agentProcess, &QProcess::readyReadStandardOutput,
             this, &AgentManager::onAgentStdout);

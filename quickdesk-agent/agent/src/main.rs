@@ -23,9 +23,9 @@ use tracing::{error, info, warn};
 #[derive(Parser, Debug)]
 #[command(about = "QuickDesk host agent")]
 struct Args {
-    /// Directory containing skill sub-directories with SKILL.md files
+    /// Directories containing skill sub-directories with SKILL.md files (can be specified multiple times)
     #[arg(long, default_value = "skills")]
-    skills_dir: String,
+    skills_dir: Vec<String>,
 }
 
 #[tokio::main]
@@ -40,7 +40,7 @@ async fn main() -> anyhow::Result<()> {
 
     let args = Args::parse();
 
-    info!("quickdesk-agent starting, skills_dir={}", args.skills_dir);
+    info!("quickdesk-agent starting, skills_dirs={:?}", args.skills_dir);
 
     let mut registry = skill_registry::SkillRegistry::new(&args.skills_dir);
     registry.load().await;

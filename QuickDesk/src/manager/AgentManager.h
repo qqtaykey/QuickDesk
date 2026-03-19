@@ -43,8 +43,8 @@ public:
     void setHostManager(HostManager* hostManager);
 
     // Start the agent subprocess.  agentPath is the path to the quickdesk-agent
-    // binary; skillsDir is the directory containing skill SKILL.md files.
-    void startAgent(const QString& agentPath, const QString& skillsDir);
+    // binary; skillsDirs are the directories containing skill SKILL.md files.
+    void startAgent(const QString& agentPath, const QStringList& skillsDirs);
 
     // Stop the agent subprocess gracefully.
     void stopAgent();

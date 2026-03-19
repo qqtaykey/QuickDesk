@@ -72,21 +72,13 @@ if not exist "!dest_dir!" mkdir "!dest_dir!"
 copy /Y "!cargo_out!\quickdesk-agent.exe" "!dest_dir!\" >nul
 echo [*] copied quickdesk-agent.exe to !dest_dir!
 
-:: copy skill binaries to output/skills/
-if not exist "!dest_dir!\skills" mkdir "!dest_dir!\skills"
-copy /Y "!cargo_out!\sys-info.exe" "!dest_dir!\skills\" >nul
-echo [*] copied sys-info.exe to !dest_dir!\skills
-copy /Y "!cargo_out!\file-ops.exe" "!dest_dir!\skills\" >nul
-echo [*] copied file-ops.exe to !dest_dir!\skills
-copy /Y "!cargo_out!\shell-runner.exe" "!dest_dir!\skills\" >nul
-echo [*] copied shell-runner.exe to !dest_dir!\skills
-
-:: copy SKILL.md files
+:: copy skill binaries and SKILL.md into per-skill subdirectories
 set skills_src=%agent_dir%\skills
 for %%s in (sys-info file-ops shell-runner) do (
     if not exist "!dest_dir!\skills\%%s" mkdir "!dest_dir!\skills\%%s"
+    copy /Y "!cargo_out!\%%s.exe" "!dest_dir!\skills\%%s\" >nul
     copy /Y "!skills_src!\%%s\SKILL.md" "!dest_dir!\skills\%%s\" >nul
-    echo [*] copied %%s/SKILL.md
+    echo [*] copied %%s/%%s.exe + SKILL.md
 )
 
 echo=

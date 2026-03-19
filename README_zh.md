@@ -113,11 +113,15 @@ AI配置
 ### AI 集成（MCP Server）
 - 内置 MCP Server —— AI Agent 通过标准协议连接，支持 Cursor、Claude Desktop、VS Code 等所有 MCP 客户端
 - 双传输模式：stdio（AI 客户端启动进程）或 HTTP/SSE（QuickDesk 管理 MCP 服务器，多个 AI 客户端同时连接）
-- 20+ 远程控制工具：截图、鼠标点击/拖拽/滚动、键盘输入/快捷键、按键按下/释放、剪贴板读写、屏幕分辨率查询
+- MCP 传输模式持久化 —— 记住 stdio/HTTP 选择，重启后自动恢复
+- 40+ MCP 工具：截图、鼠标点击/拖拽/滚动、键盘输入/快捷键、剪贴板、OCR 文字识别、UI 元素检测、屏幕验证等
+- 主机端 AI Agent，内置技能（系统信息、文件操作、Shell 执行）—— 在远程机器上运行结构化工具
+- 可插拔技能架构 —— 支持添加自定义 skills 目录，技能自动加载并同步给已连接客户端
+- 设置中的 AI Agent 开关 —— 启用/禁用 Agent 进程，持久化配置
 - MCP Resources：实时设备状态、连接信息、主机详情
 - 9 个 MCP Prompts：操作指南、服务器健康检查、批量自动化、故障诊断、屏幕分析、多设备编排、SOP 文档生成
-- 实时事件推送：连接状态变化、剪贴板更新、性能统计
-- 事件驱动工具：wait_for_event、wait_for_connection_state、wait_for_clipboard_change，支持响应式自动化
+- 实时事件推送：连接状态变化、剪贴板更新、屏幕变化、性能统计
+- 事件驱动工具：wait_for_event、wait_for_connection_state、wait_for_clipboard_change、wait_for_screen_change，支持响应式自动化
 - 后台自动化模式：`show_window=false` 无界面批量操作
 - 截图缩放：可调分辨率，加速 AI 处理
 
@@ -349,6 +353,13 @@ QuickDesk/
 │       ├── main.rs               # 入口、命令行参数、MCP Server 启动
 │       ├── server.rs             # MCP 工具、提示词模板、资源
 │       └── ws_client.rs          # 连接 Qt API 的 WebSocket 客户端
+├── quickdesk-agent/              # Rust 主机端 AI Agent（Cargo workspace）
+│   ├── agent/                    # Agent 主程序
+│   ├── mcp-server-common/        # MCP Server 通用框架
+│   └── skills/                   # 内置技能 MCP 服务器
+│       ├── sys-info/             # 系统信息技能
+│       ├── file-ops/             # 文件操作技能
+│       └── shell-runner/         # Shell 执行技能
 ├── SignalingServer/              # Go 信令服务器
 │   ├── cmd/signaling/            # 程序入口
 │   └── internal/                 # 业务逻辑
@@ -374,6 +385,10 @@ QuickDesk/
 - [x] **MCP Server —— AI Agent 操控远程桌面**
 - [x] **20+ MCP 工具（截图、点击、输入、拖拽、快捷键、剪贴板等）**
 - [x] **MCP Resources & Prompts**
+- [x] **主机端 AI Agent，内置技能（sys-info、file-ops、shell-runner）**
+- [x] **基于 OCR 的 UI 分析工具（get_ui_state、find_element、screen_diff_summary 等）**
+- [x] **MCP 传输模式和 AI Agent 设置持久化**
+- [x] **多目录 Skills 加载，支持用户自定义路径**
 - [ ] Linux 支持
 - [ ] 文件传输
 - [ ] 音频传输

@@ -219,6 +219,17 @@ void MainController::initialize()
     if (!m_wsApiServer->start()) {
         LOG_WARN("WebSocket API server failed to start, MCP bridge will not work");
     }
+
+    // Restore persisted MCP transport mode
+    QString savedMode = core::LocalConfigCenter::instance().mcpTransportMode();
+    if (savedMode != m_mcpTransportMode) {
+        m_mcpTransportMode = savedMode;
+        if (savedMode == "http") {
+            startMcpHttpProcess();
+        }
+        emit mcpTransportModeChanged();
+        emit mcpServiceRunningChanged();
+    }
 }
 
 void MainController::shutdown()
@@ -461,14 +472,20 @@ void MainController::onHostProcessStarted()
     QJsonObject iceConfig = m_turnServerManager->getEffectiveIceConfig();
     m_hostManager->setIceConfig(iceConfig);
 
-    // Start quickdesk-agent (alongside quickdesk-mcp in the same directory)
-    QString agentPath = getAgentBinaryPath();
-    if (QFile::exists(agentPath)) {
-        QString skillsDir = QCoreApplication::applicationDirPath() + "/skills";
-        m_agentManager->startAgent(agentPath, skillsDir);
+    // Start quickdesk-agent if enabled
+    if (core::LocalConfigCenter::instance().agentEnabled()) {
+        QString agentPath = getAgentBinaryPath();
+        if (QFile::exists(agentPath)) {
+            QStringList skillsDirs;
+            skillsDirs << QCoreApplication::applicationDirPath() + "/skills";
+            skillsDirs << extraSkillsDirs();
+            m_agentManager->startAgent(agentPath, skillsDirs);
+        } else {
+            LOG_WARN("quickdesk-agent not found at {}, agent features disabled",
+                     agentPath.toStdString());
+        }
     } else {
-        LOG_WARN("quickdesk-agent not found at {}, agent features disabled",
-                 agentPath.toStdString());
+        LOG_INFO("AI Agent disabled in settings, skipping agent start");
     }
     
     // Send hello to verify communication and connect to signaling server
@@ -918,13 +935,11 @@ QString MainController::mcpTransportMode() const {
 
 void MainController::setMcpTransportMode(const QString& mode) {
     if (m_mcpTransportMode == mode) return;
-    // Only stop the HTTP process when switching away from HTTP mode.
-    // m_wsApiServer stays running — both modes depend on it.
     if (m_mcpTransportMode == "http") {
         stopMcpHttpProcess();
     }
     m_mcpTransportMode = mode;
-    // Auto-start the HTTP process when switching to HTTP mode.
+    core::LocalConfigCenter::instance().setMcpTransportMode(mode);
     if (mode == "http") {
         startMcpHttpProcess();
     }
@@ -1189,6 +1204,86 @@ int MainController::writeMcpConfig(const QString& clientType) {
     file.close();
     LOG_INFO("MCP config written to: {}", configPath.toStdString());
     return 0;
+}
+
+// AI Agent control
+bool MainController::agentEnabled() const {
+    return core::LocalConfigCenter::instance().agentEnabled();
+}
+
+void MainController::setAgentEnabled(bool enabled) {
+    if (agentEnabled() == enabled) return;
+    core::LocalConfigCenter::instance().setAgentEnabled(enabled);
+
+    if (enabled) {
+        QString agentPath = getAgentBinaryPath();
+        if (QFile::exists(agentPath)) {
+            QStringList skillsDirs;
+            skillsDirs << QCoreApplication::applicationDirPath() + "/skills";
+            skillsDirs << extraSkillsDirs();
+            m_agentManager->startAgent(agentPath, skillsDirs);
+        }
+    } else {
+        m_agentManager->stopAgent();
+        // Notify clients that agent capabilities are gone
+        if (m_hostManager) {
+            QJsonObject msg;
+            msg["type"] = QStringLiteral("capabilitiesChanged");
+            msg["tools"] = QJsonArray();
+            QByteArray bytes = QJsonDocument(msg).toJson(QJsonDocument::Compact);
+            m_hostManager->sendAgentBridgeSend(QString::fromUtf8(bytes));
+        }
+    }
+    emit agentEnabledChanged();
+}
+
+QStringList MainController::extraSkillsDirs() const {
+    QString json = core::LocalConfigCenter::instance().extraSkillsDirs();
+    if (json.isEmpty()) return {};
+    QJsonDocument doc = QJsonDocument::fromJson(json.toUtf8());
+    QStringList dirs;
+    for (const auto& v : doc.array()) {
+        QString d = v.toString();
+        if (!d.isEmpty()) dirs << d;
+    }
+    return dirs;
+}
+
+void MainController::setExtraSkillsDirs(const QStringList& dirs) {
+    QJsonArray arr;
+    for (const auto& d : dirs) arr.append(d);
+    QString json = QString::fromUtf8(QJsonDocument(arr).toJson(QJsonDocument::Compact));
+    core::LocalConfigCenter::instance().setExtraSkillsDirs(json);
+
+    // Restart agent to pick up new directories
+    if (agentEnabled() && m_agentManager->isRunning()) {
+        m_agentManager->stopAgent();
+        QTimer::singleShot(500, this, [this]() {
+            if (!agentEnabled()) return;
+            QString agentPath = getAgentBinaryPath();
+            if (QFile::exists(agentPath)) {
+                QStringList skillsDirs;
+                skillsDirs << QCoreApplication::applicationDirPath() + "/skills";
+                skillsDirs << extraSkillsDirs();
+                m_agentManager->startAgent(agentPath, skillsDirs);
+            }
+        });
+    }
+    emit extraSkillsDirsChanged();
+}
+
+void MainController::addSkillsDir(const QString& dir) {
+    QStringList dirs = extraSkillsDirs();
+    if (dirs.contains(dir)) return;
+    dirs.append(dir);
+    setExtraSkillsDirs(dirs);
+}
+
+void MainController::removeSkillsDir(int index) {
+    QStringList dirs = extraSkillsDirs();
+    if (index < 0 || index >= dirs.size()) return;
+    dirs.removeAt(index);
+    setExtraSkillsDirs(dirs);
 }
 
 } // namespace quickdesk

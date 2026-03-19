@@ -986,3 +986,61 @@ quickdesk-mcp --token SECRET --session-timeout 3600
   }
 }
 ```
+
+---
+
+## 主机端 AI Agent
+
+QuickDesk 包含一个主机端 AI Agent（`quickdesk-agent`），可在远程机器上直接执行结构化工具，与基于屏幕的 MCP 工具互补。
+
+### 内置技能
+
+| 技能 | 二进制 | 工具 |
+|------|--------|------|
+| **系统信息** | `sys-info` | `get_system_info`、`list_processes` |
+| **文件操作** | `file-ops` | `read_file`、`write_file`、`list_directory`、`create_directory`、`move_file`、`get_file_info` |
+| **Shell 执行** | `shell-runner` | `run_command` |
+
+### Agent MCP 工具
+
+两个 MCP 工具将 AI 客户端桥接到主机 Agent：
+
+| 工具 | 说明 |
+|------|------|
+| `agent_exec` | 在远程主机 Agent 上执行工具。参数：`connection_id`、`tool_name`、`arguments` |
+| `agent_list_tools` | 列出远程主机 Agent 上所有可用工具。参数：`connection_id` |
+
+### 示例：通过 Agent 执行 Shell 命令
+
+```json
+{
+  "name": "agent_exec",
+  "arguments": {
+    "connection_id": "conn_1",
+    "tool_name": "run_command",
+    "arguments": {
+      "command": "systeminfo"
+    }
+  }
+}
+```
+
+### 自定义技能
+
+技能从 `skills/` 目录下的子目录加载：
+
+```
+skills/
+  sys-info/
+    sys-info.exe
+    SKILL.md
+  file-ops/
+    file-ops.exe
+    SKILL.md
+```
+
+用户可以在 **设置 > AI > Skills 目录** 中添加自定义技能目录。每个技能目录必须包含带 OpenClaw 兼容 frontmatter 的 `SKILL.md` 和对应的二进制文件。
+
+### Agent 开关
+
+AI Agent 可以在 **设置 > AI > AI Agent** 中启用或禁用。此设置持久化保存，控制 `quickdesk-agent` 进程是否随主机启动。禁用时不会向已连接客户端上报 Agent 能力。

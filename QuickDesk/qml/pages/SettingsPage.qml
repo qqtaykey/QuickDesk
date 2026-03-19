@@ -672,6 +672,158 @@ Item {
                 }
                 
                 
+                // AI Settings
+                QDAccordion {
+                    x: Theme.spacingXLarge
+                    width: parent.width - Theme.spacingXLarge * 2
+                    title: qsTr("AI")
+                    iconSource: FluentIconGlyph.robotGlyph
+                    expanded: false
+                    
+                    Column {
+                        width: parent.width
+                        spacing: Theme.spacingMedium
+                        
+                        // AI Agent Toggle
+                        Row {
+                            width: parent.width
+                            spacing: Theme.spacingMedium
+                            
+                            Column {
+                                width: parent.width - agentSwitch.width - parent.spacing
+                                spacing: Theme.spacingXSmall
+                                anchors.verticalCenter: parent.verticalCenter
+                                
+                                Text {
+                                    text: qsTr("AI Agent")
+                                    font.pixelSize: Theme.fontSizeMedium
+                                    color: Theme.text
+                                }
+                                
+                                Text {
+                                    text: qsTr("Enable host-side AI agent for remote tool execution")
+                                    font.pixelSize: Theme.fontSizeSmall
+                                    color: Theme.textSecondary
+                                    wrapMode: Text.WordWrap
+                                    width: parent.width
+                                }
+                            }
+                            
+                            QDSwitch {
+                                id: agentSwitch
+                                anchors.verticalCenter: parent.verticalCenter
+                                checked: mainController ? mainController.agentEnabled : true
+                                
+                                onToggled: {
+                                    if (mainController) {
+                                        mainController.agentEnabled = checked
+                                        root.showToast(checked ? qsTr("AI Agent enabled") : qsTr("AI Agent disabled"), QDToast.Type.Info)
+                                    }
+                                }
+                            }
+                        }
+                        
+                        Rectangle { width: parent.width; height: 1; color: Theme.border }
+                        
+                        // Skills Directories
+                        Column {
+                            width: parent.width
+                            spacing: Theme.spacingSmall
+                            
+                            Text {
+                                text: qsTr("Skills Directories")
+                                font.pixelSize: Theme.fontSizeLarge
+                                font.weight: Font.DemiBold
+                                color: Theme.text
+                            }
+                            
+                            Text {
+                                text: qsTr("Built-in skills are loaded from the installation directory. Add extra directories below.")
+                                font.pixelSize: Theme.fontSizeSmall
+                                color: Theme.textSecondary
+                                wrapMode: Text.WordWrap
+                                width: parent.width
+                            }
+                            
+                            // List of extra directories
+                            Column {
+                                width: parent.width
+                                spacing: Theme.spacingSmall
+                                
+                                Repeater {
+                                    id: skillsDirRepeater
+                                    model: mainController ? mainController.extraSkillsDirs : []
+                                    
+                                    delegate: QDCard {
+                                        width: parent.width
+                                        height: 44
+                                        
+                                        RowLayout {
+                                            anchors.fill: parent
+                                            anchors.margins: Theme.spacingSmall
+                                            spacing: Theme.spacingSmall
+                                            
+                                            Text {
+                                                Layout.fillWidth: true
+                                                text: modelData
+                                                font.pixelSize: Theme.fontSizeSmall
+                                                color: Theme.text
+                                                elide: Text.ElideMiddle
+                                            }
+                                            
+                                            QDIconButton {
+                                                Layout.preferredWidth: 28
+                                                Layout.preferredHeight: 28
+                                                iconSource: FluentIconGlyph.deleteGlyph
+                                                onClicked: {
+                                                    mainController.removeSkillsDir(index)
+                                                    root.showToast(qsTr("Skills directory removed"), QDToast.Type.Info)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                Text {
+                                    visible: skillsDirRepeater.count === 0
+                                    text: qsTr("No extra directories configured")
+                                    font.pixelSize: Theme.fontSizeSmall
+                                    color: Theme.textSecondary
+                                    horizontalAlignment: Text.AlignHCenter
+                                    width: parent.width
+                                }
+                            }
+                            
+                            // Add directory input
+                            Row {
+                                width: parent.width
+                                spacing: Theme.spacingSmall
+                                
+                                QDTextField {
+                                    id: skillsDirField
+                                    width: parent.width - addSkillsDirBtn.width - parent.spacing
+                                    placeholderText: qsTr("C:\\path\\to\\skills")
+                                }
+                                
+                                QDButton {
+                                    id: addSkillsDirBtn
+                                    text: qsTr("Add")
+                                    iconText: FluentIconGlyph.addGlyph
+                                    buttonType: QDButton.Type.Primary
+                                    enabled: skillsDirField.text.length > 0
+                                    
+                                    onClicked: {
+                                        if (!mainController) return
+                                        mainController.addSkillsDir(skillsDirField.text.trim())
+                                        skillsDirField.text = ""
+                                        root.showToast(qsTr("Skills directory added. Agent will reload."), QDToast.Type.Success)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
                 // Bottom padding
                 Item { width: 1; height: Theme.spacingXLarge }
             }

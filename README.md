@@ -110,11 +110,15 @@ AI Config
 ### AI Integration (MCP Server)
 - Built-in MCP Server — AI agents connect via standard protocol, works with Cursor, Claude Desktop, VS Code, and any MCP client
 - Dual transport: stdio (AI client launches process) or HTTP/SSE (QuickDesk manages MCP server, multiple AI clients connect)
-- 20+ remote control tools: screenshot, mouse click/drag/scroll, keyboard type/hotkey, key press/release, clipboard read/write, screen size query
+- Persistent MCP transport mode — remembers your stdio/HTTP choice across restarts
+- 40+ MCP tools: screenshot, mouse click/drag/scroll, keyboard type/hotkey, clipboard, OCR text recognition, UI element detection, screen verification, and more
+- Host-side AI Agent with built-in skills (system info, file operations, shell execution) — run structured tools on the remote machine
+- Pluggable skills architecture — add custom skill directories, skills auto-load and sync to connected clients
+- AI Agent toggle in Settings — enable/disable the agent process with persistent configuration
 - MCP Resources: real-time device status, connection info, host details
 - 9 MCP Prompts: operation guide, server health check, batch automation, system diagnosis, screen analysis, multi-device orchestration, SOP documentation
-- Real-time event streaming: connection state changes, clipboard updates, performance stats
-- Event-driven tools: wait_for_event, wait_for_connection_state, wait_for_clipboard_change for reactive automation
+- Real-time event streaming: connection state changes, clipboard updates, screen changes, performance stats
+- Event-driven tools: wait_for_event, wait_for_connection_state, wait_for_clipboard_change, wait_for_screen_change for reactive automation
 - Background automation mode: `show_window=false` for headless batch operations
 - Screenshot scaling: adjustable resolution for faster AI processing
 
@@ -346,6 +350,13 @@ QuickDesk/
 │       ├── main.rs               # Entry point, CLI args, MCP server startup
 │       ├── server.rs             # MCP tools, prompts, resources
 │       └── ws_client.rs          # WebSocket client for Qt API
+├── quickdesk-agent/              # Rust host-side AI Agent (Cargo workspace)
+│   ├── agent/                    # Agent main binary
+│   ├── mcp-server-common/        # Shared MCP server framework
+│   └── skills/                   # Built-in skill MCP servers
+│       ├── sys-info/             # System information skill
+│       ├── file-ops/             # File operations skill
+│       └── shell-runner/         # Shell execution skill
 ├── SignalingServer/              # Go signaling server
 │   ├── cmd/signaling/            # Entry point
 │   └── internal/                 # Business logic
@@ -371,6 +382,10 @@ QuickDesk/
 - [x] **MCP Server — AI agents can control remote desktops**
 - [x] **20+ MCP tools (screenshot, click, type, drag, hotkey, clipboard, etc.)**
 - [x] **MCP Resources & Prompts**
+- [x] **Host-side AI Agent with built-in skills (sys-info, file-ops, shell-runner)**
+- [x] **OCR-based UI analysis tools (get_ui_state, find_element, screen_diff_summary, etc.)**
+- [x] **Persistent MCP transport mode and AI Agent settings**
+- [x] **Multi-directory skills loading with user-configurable paths**
 - [ ] Linux support
 - [ ] File transfer
 - [ ] Audio streaming

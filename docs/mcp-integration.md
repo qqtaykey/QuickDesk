@@ -988,3 +988,61 @@ All API operations are logged to `logs/quickdesk_audit.log` (rotating, 10MB x 5 
   }
 }
 ```
+
+---
+
+## Host-Side AI Agent
+
+QuickDesk includes a host-side AI Agent (`quickdesk-agent`) that runs structured tools directly on the remote machine, complementing the screen-based MCP tools.
+
+### Built-in Skills
+
+| Skill | Binary | Tools |
+|-------|--------|-------|
+| **System Info** | `sys-info` | `get_system_info`, `list_processes` |
+| **File Operations** | `file-ops` | `read_file`, `write_file`, `list_directory`, `create_directory`, `move_file`, `get_file_info` |
+| **Shell Runner** | `shell-runner` | `run_command` |
+
+### Agent MCP Tools
+
+Two MCP tools bridge AI clients to the host agent:
+
+| Tool | Description |
+|------|-------------|
+| `agent_exec` | Execute a tool on the remote host agent. Parameters: `connection_id`, `tool_name`, `arguments` |
+| `agent_list_tools` | List all tools available on the remote host agent. Parameters: `connection_id` |
+
+### Example: Run a shell command via agent
+
+```json
+{
+  "name": "agent_exec",
+  "arguments": {
+    "connection_id": "conn_1",
+    "tool_name": "run_command",
+    "arguments": {
+      "command": "systeminfo"
+    }
+  }
+}
+```
+
+### Custom Skills
+
+Skills are loaded from per-skill subdirectories under the `skills/` directory:
+
+```
+skills/
+  sys-info/
+    sys-info.exe
+    SKILL.md
+  file-ops/
+    file-ops.exe
+    SKILL.md
+```
+
+Users can add custom skills directories in **Settings > AI > Skills Directories**. Each skill directory must contain a `SKILL.md` with OpenClaw-compatible frontmatter and the corresponding binary.
+
+### Agent Toggle
+
+The AI Agent can be enabled or disabled in **Settings > AI > AI Agent**. This setting is persisted and controls whether the `quickdesk-agent` process starts with the host. When disabled, no agent capabilities are reported to connected clients.

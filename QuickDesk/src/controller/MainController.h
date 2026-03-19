@@ -64,6 +64,10 @@ class MainController : public QObject {
     Q_PROPERTY(int mcpHttpPort READ mcpHttpPort WRITE setMcpHttpPort NOTIFY mcpHttpPortChanged)
     Q_PROPERTY(QString mcpHttpUrl READ mcpHttpUrl NOTIFY mcpServiceRunningChanged)
 
+    // AI Agent
+    Q_PROPERTY(bool agentEnabled READ agentEnabled WRITE setAgentEnabled NOTIFY agentEnabledChanged)
+    Q_PROPERTY(QStringList extraSkillsDirs READ extraSkillsDirs WRITE setExtraSkillsDirs NOTIFY extraSkillsDirsChanged)
+
     // Signaling state properties (convenience for QML)
     Q_PROPERTY(QString signalingState READ signalingState NOTIFY signalingStateChanged)
     Q_PROPERTY(int signalingRetryCount READ signalingRetryCount NOTIFY signalingStateChanged)
@@ -162,6 +166,14 @@ public:
 
     Q_INVOKABLE void showRemoteWindowForConnection(const QString& connectionId, const QString& deviceId);
 
+    // AI Agent control
+    bool agentEnabled() const;
+    void setAgentEnabled(bool enabled);
+    QStringList extraSkillsDirs() const;
+    void setExtraSkillsDirs(const QStringList& dirs);
+    Q_INVOKABLE void addSkillsDir(const QString& dir);
+    Q_INVOKABLE void removeSkillsDir(int index);
+
     // MCP Service control
     Q_INVOKABLE void startMcpService();
     Q_INVOKABLE void stopMcpService();
@@ -193,6 +205,8 @@ signals:
     void mcpConnectedClientsChanged();
     void mcpTransportModeChanged();
     void mcpHttpPortChanged();
+    void agentEnabledChanged();
+    void extraSkillsDirsChanged();
 
 private slots:
     void onHostProcessStarted();

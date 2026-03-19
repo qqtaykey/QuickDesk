@@ -74,21 +74,13 @@ mkdir -p "$dest_dir"
 cp "$cargo_out/quickdesk-agent" "$dest_dir/"
 echo "[*] copied quickdesk-agent to $dest_dir"
 
-# copy skill binaries
-mkdir -p "$dest_dir/skills"
-cp "$cargo_out/sys-info" "$dest_dir/skills/"
-echo "[*] copied sys-info to $dest_dir/skills"
-cp "$cargo_out/file-ops" "$dest_dir/skills/"
-echo "[*] copied file-ops to $dest_dir/skills"
-cp "$cargo_out/shell-runner" "$dest_dir/skills/"
-echo "[*] copied shell-runner to $dest_dir/skills"
-
-# copy SKILL.md files
+# copy skill binaries and SKILL.md into per-skill subdirectories
 skills_src="$agent_dir/skills"
 for skill in sys-info file-ops shell-runner; do
     mkdir -p "$dest_dir/skills/$skill"
+    cp "$cargo_out/$skill" "$dest_dir/skills/$skill/"
     cp "$skills_src/$skill/SKILL.md" "$dest_dir/skills/$skill/"
-    echo "[*] copied $skill/SKILL.md"
+    echo "[*] copied $skill/$skill + SKILL.md"
 done
 
 echo

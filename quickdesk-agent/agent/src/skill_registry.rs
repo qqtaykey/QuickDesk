@@ -69,84 +69,91 @@ pub struct SkillLoadError {
 }
 
 pub struct SkillRegistry {
-    skills_dir: PathBuf,
+    skills_dirs: Vec<PathBuf>,
     skills: HashMap<String, LoadedSkill>,
     load_errors: Vec<SkillLoadError>,
 }
 
 impl SkillRegistry {
-    pub fn new(skills_dir: &str) -> Self {
+    pub fn new(skills_dirs: &[String]) -> Self {
         Self {
-            skills_dir: PathBuf::from(skills_dir),
+            skills_dirs: skills_dirs.iter().map(PathBuf::from).collect(),
             skills: HashMap::new(),
             load_errors: Vec::new(),
         }
     }
 
-    /// Scan the skills directory and start each applicable skill's MCP server.
+    /// Scan all skills directories and start each applicable skill's MCP server.
     pub async fn load(&mut self) {
-        let dir = self.skills_dir.clone();
-        if !dir.exists() {
-            warn!("skills directory not found: {}", dir.display());
-            return;
-        }
-
-        let entries = match std::fs::read_dir(&dir) {
-            Ok(e) => e,
-            Err(e) => {
-                warn!("cannot read skills directory: {}", e);
-                return;
-            }
-        };
-
-        for entry in entries.flatten() {
-            let skill_dir = entry.path();
-            if !skill_dir.is_dir() {
-                continue;
-            }
-            let skill_md = skill_dir.join("SKILL.md");
-            if !skill_md.exists() {
+        for dir in self.skills_dirs.clone() {
+            if !dir.exists() {
+                warn!("skills directory not found: {}", dir.display());
                 continue;
             }
 
-            match self.load_skill(&skill_dir, &skill_md).await {
-                Ok(name) => info!("Loaded skill: {}", name),
-                Err(e) => warn!(
-                    "Failed to load skill at {}: {}",
-                    skill_dir.display(),
-                    e
-                ),
+            let entries = match std::fs::read_dir(&dir) {
+                Ok(e) => e,
+                Err(e) => {
+                    warn!("cannot read skills directory {}: {}", dir.display(), e);
+                    continue;
+                }
+            };
+
+            for entry in entries.flatten() {
+                let skill_dir = entry.path();
+                if !skill_dir.is_dir() {
+                    continue;
+                }
+                let skill_md = skill_dir.join("SKILL.md");
+                if !skill_md.exists() {
+                    continue;
+                }
+
+                if self.skills.contains_key(&skill_dir.file_name()
+                    .unwrap_or_default().to_string_lossy().to_string())
+                {
+                    continue;
+                }
+
+                match self.load_skill(&skill_dir, &skill_md).await {
+                    Ok(name) => info!("Loaded skill: {}", name),
+                    Err(e) => warn!(
+                        "Failed to load skill at {}: {}",
+                        skill_dir.display(),
+                        e
+                    ),
+                }
             }
         }
     }
 
     /// Reload a single skill by name (used after user installs dependencies).
     pub async fn reload_skill(&mut self, skill_name: &str) -> Result<(), String> {
-        // Remove existing loaded skill if present
         self.skills.remove(skill_name);
         self.load_errors.retain(|e| e.skill_name != skill_name);
 
-        // Search for the skill in the skills directory
-        let dir = self.skills_dir.clone();
-        let skill_dir = dir.join(skill_name);
-        let skill_md = skill_dir.join("SKILL.md");
-
-        if !skill_md.exists() {
-            // Also check user skills directory
-            let user_dir = get_user_skills_dir();
-            let user_skill_dir = user_dir.join(skill_name);
-            let user_skill_md = user_skill_dir.join("SKILL.md");
-            if user_skill_md.exists() {
-                return self.load_skill(&user_skill_dir, &user_skill_md).await
+        // Search all configured directories
+        for dir in &self.skills_dirs {
+            let skill_dir = dir.join(skill_name);
+            let skill_md = skill_dir.join("SKILL.md");
+            if skill_md.exists() {
+                return self.load_skill(&skill_dir, &skill_md).await
                     .map(|_| ())
                     .map_err(|e| e.to_string());
             }
-            return Err(format!("skill '{}' not found", skill_name));
         }
 
-        self.load_skill(&skill_dir, &skill_md).await
-            .map(|_| ())
-            .map_err(|e| e.to_string())
+        // Fallback: user skills directory
+        let user_dir = get_user_skills_dir();
+        let user_skill_dir = user_dir.join(skill_name);
+        let user_skill_md = user_skill_dir.join("SKILL.md");
+        if user_skill_md.exists() {
+            return self.load_skill(&user_skill_dir, &user_skill_md).await
+                .map(|_| ())
+                .map_err(|e| e.to_string());
+        }
+
+        Err(format!("skill '{}' not found", skill_name))
     }
 
     /// Return a flat list of all tools from all running skill servers.
@@ -278,49 +285,57 @@ fn parse_frontmatter(content: &str) -> anyhow::Result<SkillMeta> {
 }
 
 /// Resolve the path to a binary skill executable.
-/// Looks in `<agent_exe_dir>/skills/<package>(.exe)`.
-fn resolve_binary_path(package: &str) -> anyhow::Result<PathBuf> {
-    let exe_dir = std::env::current_exe()
-        .map_err(|e| anyhow::anyhow!("cannot determine agent executable path: {}", e))?
-        .parent()
-        .ok_or_else(|| anyhow::anyhow!("agent executable has no parent directory"))?
-        .to_path_buf();
-
-    let skills_dir = exe_dir.join("skills");
-
+/// Search order:
+///   1. `<skill_dir>/<package>(.exe)` — the skill's own subdirectory
+///   2. `<agent_exe_dir>/skills/<package>/<package>(.exe)` — installed layout
+///   3. `<agent_exe_dir>/skills/<package>(.exe)` — legacy flat layout
+///   4. `<agent_exe_dir>/<package>(.exe)` — fallback
+fn resolve_binary_path(package: &str, skill_dir: &Path) -> anyhow::Result<PathBuf> {
     let bin_name = if cfg!(target_os = "windows") {
         format!("{}.exe", package)
     } else {
         package.to_string()
     };
 
-    let bin_path = skills_dir.join(&bin_name);
-    if bin_path.exists() {
-        return Ok(bin_path);
+    // 1. Look inside the skill directory (covers both built-in and user-added skills)
+    let in_skill = skill_dir.join(&bin_name);
+    if in_skill.exists() {
+        return Ok(in_skill);
     }
 
-    // Fallback: look in the same directory as the agent executable
-    let fallback = exe_dir.join(&bin_name);
-    if fallback.exists() {
-        return Ok(fallback);
+    // 2-4. Fallback via agent executable directory
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(exe_dir) = exe.parent() {
+            let sub = exe_dir.join("skills").join(package).join(&bin_name);
+            if sub.exists() {
+                return Ok(sub);
+            }
+            let flat = exe_dir.join("skills").join(&bin_name);
+            if flat.exists() {
+                return Ok(flat);
+            }
+            let beside = exe_dir.join(&bin_name);
+            if beside.exists() {
+                return Ok(beside);
+            }
+        }
     }
 
     anyhow::bail!(
-        "binary '{}' not found at '{}' or '{}'",
+        "binary '{}' not found in '{}' or agent directory",
         bin_name,
-        bin_path.display(),
-        fallback.display()
+        skill_dir.display()
     )
 }
 
 /// Build the command to start the MCP server from the install step.
 fn build_start_command(
     step: &InstallStep,
-    _skill_dir: &Path,
+    skill_dir: &Path,
 ) -> anyhow::Result<Vec<String>> {
     match step.kind.as_str() {
         "binary" => {
-            let bin_path = resolve_binary_path(&step.package)?;
+            let bin_path = resolve_binary_path(&step.package, skill_dir)?;
             Ok(vec![bin_path.to_string_lossy().to_string()])
         }
         "npm" => {
