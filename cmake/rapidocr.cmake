@@ -49,19 +49,20 @@ message(STATUS "[rapidocr] Found at: ${rapidocr_path}")
 # -------------------------------------------------------------------------
 set(rapidocr_lib_path "${rapidocr_path}/lib")
 set(rapidocr_bin_path "${rapidocr_path}/bin")
-
-# 链接目录（供 target_link_directories 使用）
-set(RAPIDOCR_LINK_DIRS "${rapidocr_lib_path}")
     
 # 链接库名（不含路径，由 LINK_DIRS 解析）
 set(RAPIDOCR_LIB_NAME "RapidOcrOnnx")
 
-if(WIN32)    
+if(WIN32)
+    # 链接目录（供 target_link_directories 使用）
+    set(RAPIDOCR_LINK_DIRS "${rapidocr_lib_path}")
     # 需要 POST_BUILD 部署的 DLL
     set(RAPIDOCR_DLLS "${rapidocr_bin_path}/RapidOcrOnnx.dll")
 
 elseif(APPLE)
-    set(RAPIDOCR_DLLS "${rapidocr_bin_path}/RapidOcrOnnx.dylib")
+    # 链接目录（供 target_link_directories 使用）
+    set(RAPIDOCR_LINK_DIRS "${rapidocr_bin_path}")
+    set(RAPIDOCR_DLLS "${rapidocr_bin_path}/libRapidOcrOnnx.dylib")
 endif()
 
 # -------------------------------------------------------------------------

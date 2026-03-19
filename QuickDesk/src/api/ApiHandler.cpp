@@ -60,7 +60,7 @@ ApiHandler::ApiHandler(MainController* controller, QObject* parent)
             });
 
     // 在后台初始化 OCR 引擎（加载 ONNX 模型，约 500ms~1s）
-    QMetaObject::invokeMethod(this, [this]() {
+    QMetaObject::invokeMethod(this, []() {
         if (!OcrEngine::instance().initialize()) {
             LOG_WARN("ApiHandler: OCR engine initialization failed. "
                      "getScreenText/findElement will return error until models are present.");

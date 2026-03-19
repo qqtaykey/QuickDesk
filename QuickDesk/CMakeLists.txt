@@ -300,14 +300,14 @@ if(RAPIDOCR_FOUND)
     if(WIN32)
         add_custom_command(TARGET QuickDesk POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                "${RAPIDOCR_DLLS}>"
+                "${RAPIDOCR_DLLS}"
                 "$<TARGET_FILE_DIR:QuickDesk>/"
             COMMENT "Deploying RapidOcrOnnx.dll"
         )
     elseif(APPLE)
         add_custom_command(TARGET QuickDesk POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                "${RAPIDOCR_DLLS}>"
+            COMMAND mkdir -p "$<TARGET_FILE_DIR:QuickDesk>/../Frameworks" && ${CMAKE_COMMAND} -E copy_if_different
+                "${RAPIDOCR_DLLS}"
                 "$<TARGET_FILE_DIR:QuickDesk>/../Frameworks/"
             COMMENT "Deploying RapidOcrOnnx.dylib"
         )

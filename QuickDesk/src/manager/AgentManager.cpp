@@ -80,7 +80,7 @@ void AgentManager::startAgent(const QString& agentPath, const QStringList& skill
     connect(m_agentProcess, &QProcess::started, this, [this]() {
         LOG_INFO("AgentManager: agent started (pid={})", m_agentProcess->processId());
     });
-    connect(m_agentProcess, &QProcess::errorOccurred, this, [this, agentPath](QProcess::ProcessError err) {
+    connect(m_agentProcess, &QProcess::errorOccurred, this, [agentPath](QProcess::ProcessError err) {
         if (err == QProcess::FailedToStart) {
             LOG_ERROR("AgentManager: failed to start agent at {}", agentPath.toStdString());
         }
