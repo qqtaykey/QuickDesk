@@ -640,7 +640,7 @@ func (h *WSHandler) NotifyDeviceOnlineStatus(deviceID string, online bool) {
 	if err := h.db.Where("device_id = ?", deviceID).First(&device).Error; err != nil {
 		return
 	}
-	if device.UserID == 0 {
+	if device.UserID == nil || *device.UserID == 0 {
 		return
 	}
 
@@ -649,7 +649,7 @@ func (h *WSHandler) NotifyDeviceOnlineStatus(deviceID string, online bool) {
 		msgType = "device_online"
 	}
 
-	h.NotifyUserSync(device.UserID, map[string]interface{}{
+	h.NotifyUserSync(*device.UserID, map[string]interface{}{
 		"type":      msgType,
 		"device_id": deviceID,
 	})

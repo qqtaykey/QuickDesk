@@ -16,6 +16,7 @@ class CloudDeviceManager : public QObject {
     Q_OBJECT
     Q_PROPERTY(QVariantList myDevices READ myDevices NOTIFY myDevicesChanged)
     Q_PROPERTY(QVariantList myFavorites READ myFavorites NOTIFY myFavoritesChanged)
+    Q_PROPERTY(QVariantList connectionLogs READ connectionLogs NOTIFY connectionLogsChanged)
 
 public:
     explicit CloudDeviceManager(ServerManager* serverManager, AuthManager* authManager, QObject* parent = nullptr);
@@ -29,6 +30,11 @@ public:
     Q_INVOKABLE void syncAccessCode(const QString& deviceId, const QString& accessCode);
     Q_INVOKABLE QString getDeviceAccessCode(const QString& deviceId) const;
 
+    // Connection record
+    Q_INVOKABLE void recordConnection(const QString& deviceId, int duration,
+                                       const QString& status, const QString& errorMsg = QString());
+    Q_INVOKABLE void fetchConnectionLogs();
+
     // My Favorites
     Q_INVOKABLE void fetchFavorites();
     Q_INVOKABLE void addFavorite(const QString& deviceId, const QString& name, const QString& password);
@@ -41,10 +47,12 @@ public:
 
     QVariantList myDevices() const;
     QVariantList myFavorites() const;
+    QVariantList connectionLogs() const;
 
 signals:
     void myDevicesChanged();
     void myFavoritesChanged();
+    void connectionLogsChanged();
     void syncMessage(const QJsonObject& msg);
 
 private slots:
@@ -61,6 +69,7 @@ private:
     QWebSocket* m_syncSocket = nullptr;
     QVariantList m_myDevices;
     QVariantList m_myFavorites;
+    QVariantList m_connectionLogs;
 };
 
 } // namespace quickdesk

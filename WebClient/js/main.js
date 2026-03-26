@@ -16,6 +16,7 @@ class QuickDeskApp {
         this._currentPage = 'remote';
         this._myDevices = [];
         this._myFavorites = [];
+        this._connectionLogs = [];
     }
 
     init() {
@@ -331,10 +332,12 @@ class QuickDeskApp {
         userSync.disconnect();
         this._myDevices = [];
         this._myFavorites = [];
+        this._connectionLogs = [];
         this._updateUserUI();
         this._updateDevicePageVisibility();
         this._renderMyDevices();
         this._renderMyFavorites();
+        this._renderConnectionLogs();
         this._showToast(t('user.logoutSuccess') || '已退出登录', 'info');
     }
 
@@ -383,7 +386,7 @@ class QuickDeskApp {
     }
 
     async _refreshCloudData() {
-        await Promise.all([this._fetchMyDevices(), this._fetchMyFavorites()]);
+        await Promise.all([this._fetchMyDevices(), this._fetchMyFavorites(), this._fetchConnectionLogs()]);
     }
 
     async _fetchMyDevices() {
@@ -485,6 +488,15 @@ class QuickDeskApp {
                 userApi.removeFavorite(deviceId).then(() => this._fetchMyFavorites());
             });
 
+            // Right-click to edit favorite name/password
+            item.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                const newName = prompt(t('devices.setRemark') || '设置备注名:', name);
+                if (newName !== null && newName !== name) {
+                    userApi.updateFavorite(deviceId, newName, fav.access_password || '').then(() => this._fetchMyFavorites());
+                }
+            });
+
             container.appendChild(item);
         }
     }
@@ -518,6 +530,53 @@ class QuickDeskApp {
 
     _isFavorite(deviceId) {
         return this._myFavorites.some(f => f.device_id === deviceId);
+    }
+
+    async _fetchConnectionLogs() {
+        const result = await userApi.fetchConnectionLogs();
+        if (result.ok && result.data) {
+            this._connectionLogs = result.data.logs || [];
+            this._renderConnectionLogs();
+        }
+    }
+
+    _renderConnectionLogs() {
+        const container = document.getElementById('connectionLogsList');
+        if (!container) return;
+
+        if (!this._connectionLogs || this._connectionLogs.length === 0) {
+            container.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><p>${t('devices.noLogs')}</p></div>`;
+            return;
+        }
+
+        container.innerHTML = '';
+        for (const log of this._connectionLogs.slice(0, 20)) {
+            const item = document.createElement('div');
+            item.className = 'device-item';
+            const isSuccess = log.status === 'success';
+            const deviceId = log.device_id || '';
+            const time = log.created_at ? new Date(log.created_at).toLocaleString() : '';
+            const duration = log.duration ? `${Math.floor(log.duration / 60)}m${log.duration % 60}s` : '';
+
+            item.innerHTML = `
+                <div class="device-status ${isSuccess ? 'online' : 'offline'}"></div>
+                <div class="device-info">
+                    <div class="device-name">${this._escapeHtml(deviceId)}</div>
+                    <div class="device-id">${this._escapeHtml(time)}${duration ? ' · ' + duration : ''}${log.error_msg ? ' · ' + this._escapeHtml(log.error_msg) : ''}</div>
+                </div>
+                <div class="device-actions">
+                    <button class="btn btn-primary btn-sm" data-action="connect">${t('devices.connect')}</button>
+                </div>`;
+
+            item.querySelector('[data-action="connect"]')?.addEventListener('click', () => {
+                const deviceIdInput = document.getElementById('deviceId');
+                if (deviceIdInput) deviceIdInput.value = deviceId;
+                this._switchPage('remote');
+                document.getElementById('accessCode')?.focus();
+            });
+
+            container.appendChild(item);
+        }
     }
 
     // ==================== Connection History ====================

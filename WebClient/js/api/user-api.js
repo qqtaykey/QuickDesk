@@ -166,6 +166,19 @@ class UserApi {
     );
   }
 
+  async recordConnection(deviceId, duration, status, errorMsg) {
+    return this._request('POST', '/api/v1/user/devices/record', {
+      device_id: deviceId,
+      duration: duration || 0,
+      status: status || 'success',
+      error_msg: errorMsg || '',
+    });
+  }
+
+  async fetchConnectionLogs() {
+    return this._request('GET', '/api/v1/user/devices/logs');
+  }
+
   // ---------------------------------------------------------------------------
   // Favorite methods
   // ---------------------------------------------------------------------------

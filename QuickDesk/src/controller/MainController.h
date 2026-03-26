@@ -301,6 +301,13 @@ private:
     };
     QHash<QString, ScreenChangeState> m_screenChangeState;
     QMutex m_screenChangeMutex;
+
+    // Connection tracking for record API
+    struct ConnectionTrack {
+        QString deviceId;
+        qint64 startTimeMs = 0;
+    };
+    QHash<QString, ConnectionTrack> m_connectionTracks;
 };
 
 } // namespace quickdesk

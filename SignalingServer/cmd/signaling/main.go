@@ -118,11 +118,8 @@ func main() {
 		{
 			userAPI.GET("/me", userAuth.GetMe)
 			userAPI.GET("/devices", userDeviceHandler.GetUserDevices)
-			userAPI.POST("/devices/bind", userDeviceHandler.BindDevice)
 			userAPI.POST("/devices/unbind", userDeviceHandler.UnbindDevice)
 			userAPI.POST("/devices/auto-bind", userDeviceHandler.AutoBindDevice)
-			userAPI.POST("/devices/quick-connect", userDeviceHandler.QuickConnectBind)
-			userAPI.GET("/devices/check", userDeviceHandler.CheckDeviceBinding)
 			userAPI.POST("/devices/record", userDeviceHandler.RecordConnection)
 			userAPI.GET("/devices/logs", userDeviceHandler.GetUserDeviceLogs)
 			userAPI.PUT("/devices/:device_id/access-code", userDeviceHandler.UpdateAccessCode)

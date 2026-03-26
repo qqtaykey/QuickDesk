@@ -236,6 +236,8 @@ const zh = {
     'devices.offline': '离线',
     'devices.unbind': '解绑',
     'devices.editFavorite': '编辑',
+    'devices.connectionLogs': '连接记录',
+    'devices.noLogs': '暂无连接记录',
 };
 
 const en = {
@@ -468,6 +470,8 @@ const en = {
     'devices.offline': 'Offline',
     'devices.unbind': 'Unbind',
     'devices.editFavorite': 'Edit',
+    'devices.connectionLogs': 'Connection Logs',
+    'devices.noLogs': 'No connection logs',
 };
 
 const dictionaries = { 'zh-CN': zh, 'en-US': en };

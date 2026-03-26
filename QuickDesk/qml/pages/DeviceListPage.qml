@@ -271,6 +271,94 @@ Item {
                 }
             }
 
+            // Separator
+            Rectangle {
+                Layout.fillWidth: true
+                height: 1
+                color: Theme.border
+            }
+
+            // ---- Connection Logs Section ----
+            Text {
+                text: qsTr("Connection Logs")
+                font.pixelSize: Theme.fontSizeLarge
+                font.weight: Font.Bold
+                color: Theme.text
+            }
+
+            Text {
+                visible: logsRepeater.count === 0
+                text: qsTr("No connection logs")
+                font.pixelSize: Theme.fontSizeSmall
+                color: Theme.textSecondary
+            }
+
+            Repeater {
+                id: logsRepeater
+                model: {
+                    var logs = root.mainController && root.mainController.cloudDeviceManager
+                              ? root.mainController.cloudDeviceManager.connectionLogs : []
+                    return logs.length > 20 ? logs.slice(0, 20) : logs
+                }
+
+                delegate: Rectangle {
+                    required property var modelData
+                    required property int index
+
+                    Layout.fillWidth: true
+                    height: 48
+                    radius: Theme.radiusSmall
+                    color: Theme.surfaceVariant
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: Theme.spacingMedium
+                        anchors.rightMargin: Theme.spacingMedium
+                        spacing: Theme.spacingSmall
+
+                        // Status indicator
+                        Rectangle {
+                            width: 10
+                            height: 10
+                            radius: 5
+                            color: modelData.status === "success" ? Theme.success : Theme.error
+                        }
+
+                        // Device ID + time
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 2
+
+                            Text {
+                                text: modelData.device_id || ""
+                                font.pixelSize: Theme.fontSizeMedium
+                                color: Theme.text
+                                elide: Text.ElideRight
+                                Layout.fillWidth: true
+                            }
+
+                            Text {
+                                text: {
+                                    var parts = []
+                                    if (modelData.created_at) parts.push(new Date(modelData.created_at).toLocaleString())
+                                    if (modelData.duration > 0) {
+                                        var m = Math.floor(modelData.duration / 60)
+                                        var s = modelData.duration % 60
+                                        parts.push(m + "m" + s + "s")
+                                    }
+                                    if (modelData.error_msg) parts.push(modelData.error_msg)
+                                    return parts.join(" · ")
+                                }
+                                font.pixelSize: Theme.fontSizeSmall
+                                color: Theme.textSecondary
+                                elide: Text.ElideRight
+                                Layout.fillWidth: true
+                            }
+                        }
+                    }
+                }
+            }
+
             // Bottom spacer
             Item { Layout.preferredHeight: Theme.spacingLarge }
         }

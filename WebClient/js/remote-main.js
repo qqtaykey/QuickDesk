@@ -18,6 +18,7 @@ import { FloatingToolbar } from './ui/floating-toolbar.js';
 import { IceConfigFetcher } from './ice-config-fetcher.js';
 import { IceServerStorage } from './storage/ice-server-storage.js';
 import { t, applyI18n, getLocale, setLocale } from './i18n.js';
+import { userApi } from './api/user-api.js';
 
 class RemoteDesktopApp {
     constructor() {
@@ -28,6 +29,9 @@ class RemoteDesktopApp {
         this.touchHandler = null;
         this.clipboardHandler = null;
         this._isMobile = this._detectMobile();
+        this._connectStartTime = 0;
+        this._deviceId = '';
+        this._connectionRecorded = false;
         this.cursorRenderer = null;
         this.videoStats = null;
         this.floatingToolbar = null;
@@ -132,6 +136,12 @@ class RemoteDesktopApp {
 
     async _connect(serverUrl, deviceId, accessCode, iceServers, preferredVideoCodec) {
         this._log(t('log.connectingTo', { deviceId }));
+        this._deviceId = deviceId;
+        this._connectStartTime = Date.now();
+        this._connectionRecorded = false;
+
+        // Set up userApi base URL for connection recording
+        userApi.setBaseUrl(serverUrl);
         if (preferredVideoCodec) {
             this._log(t('log.preferredCodec', { codec: preferredVideoCodec }));
         }
@@ -249,6 +259,7 @@ class RemoteDesktopApp {
         switch (newState) {
             case SessionState.CONNECTED:
                 this._setConnectionState('connected', t('status.connected'));
+                this._recordConnectionResult('success');
                 if (this.floatingToolbar) this.floatingToolbar.setVisible(true);
                 if (this.videoStats) this.videoStats.setPeerConnection(this.session.pc);
                 this._startConnBarStats();
@@ -264,11 +275,22 @@ class RemoteDesktopApp {
                 break;
             case SessionState.FAILED:
                 this._setConnectionState('failed', t('status.failed'));
+                this._recordConnectionResult('failed', 'Connection failed');
                 break;
             case SessionState.CLOSED:
                 this._setConnectionState('failed', t('status.closed'));
+                this._recordConnectionResult('success');
                 break;
         }
+    }
+
+    _recordConnectionResult(status, errorMsg) {
+        if (this._connectionRecorded && status === 'success') return; // Don't double-record success
+        if (!userApi.isLoggedIn() || !this._deviceId) return;
+        this._connectionRecorded = true;
+
+        const duration = Math.round((Date.now() - this._connectStartTime) / 1000);
+        userApi.recordConnection(this._deviceId, duration, status, errorMsg || '').catch(() => {});
     }
 
     _onTrack(detail) {

@@ -175,9 +175,10 @@ MainController::MainController(QObject* parent)
         }
         // Start sync WebSocket
         m_cloudDeviceManager->startSync();
-        // Fetch device list + favorites
+        // Fetch device list + favorites + connection logs
         m_cloudDeviceManager->fetchMyDevices();
         m_cloudDeviceManager->fetchFavorites();
+        m_cloudDeviceManager->fetchConnectionLogs();
         // Sync current access code
         QString code = m_hostManager->accessCode();
         if (!deviceId.isEmpty() && !code.isEmpty()) {
@@ -312,7 +313,13 @@ QString MainController::connectToRemoteHost(const QString& deviceId,
 {
     QString url = serverUrl.isEmpty() ? getDefaultServerUrl() : serverUrl;
     LOG_INFO("Connecting to remote host: {} on {}", deviceId.toStdString(), url.toStdString());
-    return m_clientManager->connectToHost(deviceId, accessCode, url);
+    QString connId = m_clientManager->connectToHost(deviceId, accessCode, url);
+
+    // Track connection for record API
+    if (!connId.isEmpty()) {
+        m_connectionTracks[connId] = { deviceId, QDateTime::currentMSecsSinceEpoch() };
+    }
+    return connId;
 }
 
 void MainController::disconnectFromRemoteHost(const QString& connectionId)
@@ -687,17 +694,34 @@ void MainController::onClientSignalingStateChanged(const QString& connectionId,
 {
     Q_UNUSED(retryCount);
     Q_UNUSED(nextRetryIn);
-    Q_UNUSED(error);
-    
+
     LOG_INFO("Client signaling state changed: connection={}, state={}",
              connectionId.toStdString(), state.toStdString());
-    
+
+    // Record connection result to server
+    if (state == "connected" || state == "failed" || state == "disconnected") {
+        auto it = m_connectionTracks.find(connectionId);
+        if (it != m_connectionTracks.end()) {
+            int durationSec = 0;
+            if (state == "disconnected" && it->startTimeMs > 0) {
+                durationSec = static_cast<int>((QDateTime::currentMSecsSinceEpoch() - it->startTimeMs) / 1000);
+            }
+            QString status = (state == "connected") ? "success" : "failed";
+            if (state == "disconnected") status = "success";  // disconnected means session ended normally
+            m_cloudDeviceManager->recordConnection(it->deviceId, durationSec, status, error);
+
+            if (state == "failed" || state == "disconnected") {
+                m_connectionTracks.erase(it);
+            }
+        }
+    }
+
     // If this is the first connection, set it as primary
     if (m_primaryConnectionId.isEmpty() && !connectionId.isEmpty()) {
         m_primaryConnectionId = connectionId;
         LOG_INFO("Set primary connection for client signaling status: {}", connectionId.toStdString());
     }
-    
+
     // Only update global client server status if it's the primary connection
     if (connectionId == m_primaryConnectionId) {
         if (state == "connected") {

@@ -20,73 +20,6 @@ func NewUserDeviceHandler(db *gorm.DB) *UserDeviceHandler {
 	return &UserDeviceHandler{db: db}
 }
 
-// BindDevice handles POST /api/v1/user/devices/bind
-// Creates or updates a user-device binding after a successful connection.
-func (h *UserDeviceHandler) BindDevice(c *gin.Context) {
-	var req struct {
-		DeviceID   string `json:"device_id" binding:"required"`
-		DeviceName string `json:"device_name"`
-		BindType   string `json:"bind_type"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	userIDVal, _ := c.Get("authed_user_id")
-	authedUserID := userIDVal.(uint)
-
-	var user models.User
-	if result := h.db.First(&user, authedUserID); result.Error != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "用户不存在"})
-		return
-	}
-
-	var device models.Device
-	if result := h.db.Where("device_id = ?", req.DeviceID).First(&device); result.Error != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "设备不存在"})
-		return
-	}
-
-	var existing models.UserDevice
-	result := h.db.Where("user_id = ? AND device_id = ? AND status = ?", authedUserID, req.DeviceID, true).First(&existing)
-	if result.Error == nil {
-		existing.LastConnect = time.Now()
-		existing.ConnectCount++
-		h.db.Save(&existing)
-		h.logConnection(authedUserID, req.DeviceID, existing.DeviceName, "success", "", c.ClientIP())
-		c.JSON(http.StatusOK, gin.H{"message": "设备已绑定，更新连接记录", "binding": existing})
-		return
-	}
-
-	bindType := req.BindType
-	if bindType == "" {
-		bindType = "auto"
-	}
-	deviceName := req.DeviceName
-	if deviceName == "" {
-		deviceName = "设备-" + req.DeviceID
-	}
-
-	binding := models.UserDevice{
-		UserID:       authedUserID,
-		DeviceID:     req.DeviceID,
-		DeviceName:   deviceName,
-		BindType:     bindType,
-		Status:       true,
-		LastConnect:  time.Now(),
-		ConnectCount: 1,
-	}
-	if result := h.db.Create(&binding); result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "绑定设备失败: " + result.Error.Error()})
-		return
-	}
-
-	recomputeDeviceCount(h.db, authedUserID)
-	h.logConnection(authedUserID, req.DeviceID, deviceName, "success", "", c.ClientIP())
-
-	c.JSON(http.StatusOK, gin.H{"message": "设备绑定成功", "binding": binding})
-}
-
 // UnbindDevice handles POST /api/v1/user/devices/unbind
 func (h *UserDeviceHandler) UnbindDevice(c *gin.Context) {
 	var req struct {
@@ -165,65 +98,6 @@ func (h *UserDeviceHandler) GetUserDeviceLogs(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"logs": logs, "count": len(logs)})
-}
-
-// CheckDeviceBinding handles GET /api/v1/user/devices/check
-func (h *UserDeviceHandler) CheckDeviceBinding(c *gin.Context) {
-	userID, _ := c.Get("authed_user_id")
-	deviceID := c.Query("device_id")
-	if deviceID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "设备ID不能为空"})
-		return
-	}
-
-	var binding models.UserDevice
-	result := h.db.Where("user_id = ? AND device_id = ? AND status = ?", userID, deviceID, true).First(&binding)
-	c.JSON(http.StatusOK, gin.H{"is_bound": result.Error == nil, "binding": binding})
-}
-
-// QuickConnectBind handles POST /api/v1/user/devices/quick-connect
-// Binds a device to a user by updating the devices table entry directly.
-func (h *UserDeviceHandler) QuickConnectBind(c *gin.Context) {
-	var req struct {
-		DeviceID   string `json:"device_id" binding:"required"`
-		DeviceName string `json:"device_name"`
-		AccessCode string `json:"access_code"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	userIDVal, _ := c.Get("authed_user_id")
-	authedUserID := userIDVal.(uint)
-
-	var user models.User
-	if result := h.db.First(&user, authedUserID); result.Error != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "用户不存在"})
-		return
-	}
-
-	var device models.Device
-	if result := h.db.Where("device_id = ?", req.DeviceID).First(&device); result.Error != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "设备不存在"})
-		return
-	}
-
-	updates := map[string]interface{}{"user_id": authedUserID}
-	if req.DeviceName != "" {
-		updates["device_name"] = req.DeviceName
-	} else if device.DeviceName == "" {
-		updates["device_name"] = "设备-" + req.DeviceID
-	}
-	if req.AccessCode != "" {
-		updates["access_code"] = req.AccessCode
-	}
-
-	if result := h.db.Model(&models.Device{}).Where("device_id = ?", req.DeviceID).Updates(updates); result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "绑定设备失败: " + result.Error.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "设备绑定成功", "device": device})
 }
 
 // RecordConnection handles POST /api/v1/user/devices/record
@@ -325,13 +199,13 @@ func (h *UserDeviceHandler) AutoBindDevice(c *gin.Context) {
 		return
 	}
 
-	if device.UserID != 0 && device.UserID != authedUserID {
+	if device.UserID != nil && *device.UserID != 0 && *device.UserID != authedUserID {
 		c.JSON(http.StatusConflict, gin.H{"error": "设备已绑定其他用户"})
 		return
 	}
 
 	// Update device ownership
-	device.UserID = authedUserID
+	device.UserID = &authedUserID
 	h.db.Save(&device)
 
 	// Upsert UserDevice: reactivate if exists but inactive, create otherwise
@@ -384,7 +258,7 @@ func (h *UserDeviceHandler) UpdateAccessCode(c *gin.Context) {
 		return
 	}
 
-	if device.UserID != 0 && device.UserID != authedUserID {
+	if device.UserID != nil && *device.UserID != 0 && *device.UserID != authedUserID {
 		c.JSON(http.StatusForbidden, gin.H{"error": "无权操作此设备"})
 		return
 	}

@@ -198,6 +198,64 @@ QString CloudDeviceManager::getDeviceAccessCode(const QString& deviceId) const
     return QString();
 }
 
+// ---- Connection Record ----
+
+void CloudDeviceManager::recordConnection(const QString& deviceId, int duration,
+                                           const QString& status, const QString& errorMsg)
+{
+    if (!m_authManager->isLoggedIn() || deviceId.isEmpty()) return;
+
+    QUrl url(httpBaseUrl() + "api/v1/user/devices/record");
+    auto headers = authHeaders();
+    QJsonObject body;
+    body["device_id"] = deviceId;
+    body["duration"] = duration;
+    body["status"] = status;
+    if (!errorMsg.isEmpty()) body["error_msg"] = errorMsg;
+    QString bodyData = QString::fromUtf8(QJsonDocument(body).toJson(QJsonDocument::Compact));
+
+    infra::HttpRequest::instance().sendPostRequest(
+        url, headers, bodyData, kRequestTimeoutMs,
+        [this, deviceId, status](int statusCode, const std::string& errorMsg, const std::string& data) {
+            Q_UNUSED(data);
+            QMetaObject::invokeMethod(this, [this, statusCode, errorMsg, deviceId, status]() {
+                if (statusCode != 200 || !errorMsg.empty()) {
+                    LOG_WARN("[CloudDeviceManager] recordConnection failed: {}", errorMsg);
+                    return;
+                }
+                LOG_INFO("[CloudDeviceManager] Connection recorded: device={}, status={}",
+                         deviceId.toStdString(), status.toStdString());
+            });
+        });
+}
+
+void CloudDeviceManager::fetchConnectionLogs()
+{
+    if (!m_authManager->isLoggedIn()) return;
+
+    QUrl url(httpBaseUrl() + "api/v1/user/devices/logs");
+    auto headers = authHeaders();
+
+    infra::HttpRequest::instance().sendGetRequest(
+        url, headers, kRequestTimeoutMs,
+        [this](int statusCode, const std::string& errorMsg, const std::string& data) {
+            QMetaObject::invokeMethod(this, [this, statusCode, errorMsg, data]() {
+                if (statusCode != 200 || !errorMsg.empty()) {
+                    LOG_WARN("[CloudDeviceManager] fetchConnectionLogs failed: {}", errorMsg);
+                    return;
+                }
+                QJsonDocument doc = QJsonDocument::fromJson(QByteArray::fromStdString(data));
+                QJsonArray logs = doc.object()["logs"].toArray();
+                m_connectionLogs.clear();
+                for (const auto& v : logs) {
+                    m_connectionLogs.append(v.toObject().toVariantMap());
+                }
+                LOG_INFO("[CloudDeviceManager] Fetched {} connection logs", m_connectionLogs.size());
+                emit connectionLogsChanged();
+            });
+        });
+}
+
 // ---- Favorites ----
 
 void CloudDeviceManager::fetchFavorites()
@@ -368,5 +426,6 @@ void CloudDeviceManager::handleSyncMessage(const QJsonObject& msg)
 
 QVariantList CloudDeviceManager::myDevices() const { return m_myDevices; }
 QVariantList CloudDeviceManager::myFavorites() const { return m_myFavorites; }
+QVariantList CloudDeviceManager::connectionLogs() const { return m_connectionLogs; }
 
 } // namespace quickdesk
