@@ -12,9 +12,15 @@ import (
 	"quickdesk/signaling/internal/middleware"
 	"quickdesk/signaling/internal/service"
 	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+)
+
+const (
+	pingPeriod = 60 * time.Second
+	pongWait   = 90 * time.Second
 )
 
 // WebSocket message types
@@ -208,13 +214,36 @@ func (h *WSHandler) HandleWebSocket(c *gin.Context) {
 	
 	log.Printf("WebSocket connected: device_id=%s, role=%s, connection_key=%s", deviceID, role, connectionKey)
 	if isClient {
-		// Log total connected clients
 		h.mu.RLock()
 		clientCount := len(h.deviceClients[deviceID])
 		h.mu.RUnlock()
 		log.Printf("Client %s connected successfully. Total clients for device %s: %d", clientID, deviceID, clientCount)
 	}
-	
+
+	conn.SetReadDeadline(time.Now().Add(pongWait))
+	conn.SetPongHandler(func(string) error {
+		conn.SetReadDeadline(time.Now().Add(pongWait))
+		return nil
+	})
+
+	done := make(chan struct{})
+	defer close(done)
+
+	go func() {
+		ticker := time.NewTicker(pingPeriod)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				if err := conn.WriteControl(websocket.PingMessage, nil, time.Now().Add(10*time.Second)); err != nil {
+					return
+				}
+			case <-done:
+				return
+			}
+		}
+	}()
+
 	// Message handling loop
 	for {
 		_, message, err := conn.ReadMessage()

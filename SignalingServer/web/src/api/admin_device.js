@@ -1,25 +1,15 @@
-function getApiBaseUrl() {
-  const apiServer = localStorage.getItem('quickdesk_api_server') || 'http://localhost:8000'
-  return `${apiServer}/api/v1`
-}
+import { authFetch } from './auth.js'
 
-function getAuthHeaders() {
-  const token = localStorage.getItem('quickdesk_admin_token')
-  return {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
-  }
-}
+const BASE_URL = '/api/v1/admin'
 
 export async function getDevices() {
-  const response = await fetch(`${getApiBaseUrl()}/admin/devices`, {
-    method: 'GET',
-    headers: getAuthHeaders()
-  })
-  return response.json()
+  const res = await authFetch(`${BASE_URL}/devices`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
 }
 
 export async function getDeviceStatus(deviceId) {
-  const response = await fetch(`${getApiBaseUrl()}/devices/${deviceId}/status`)
-  return response.json()
+  const res = await authFetch(`/api/v1/devices/${deviceId}/status`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
 }

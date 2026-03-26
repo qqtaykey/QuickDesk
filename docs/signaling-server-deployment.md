@@ -1,6 +1,78 @@
 # QuickDesk Signaling Server Deployment Guide
 
-## System Requirements
+## Quick Deploy (Recommended)
+
+Use the all-in-one Docker image (PostgreSQL + Redis + signaling server):
+
+```bash
+git clone git@github.com:barry-ran/QuickDesk.git
+cd QuickDesk/SignalingServer
+
+# Copy and edit your configuration
+cp .env .env.production
+vim .env.production
+
+Configuration reference:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SERVER_HOST` | 0.0.0.0 | Listen address |
+| `SERVER_PORT` | 8000 | Server port |
+| `DB_HOST` | localhost | Database host |
+| `DB_PORT` | 5432 | Database port |
+| `DB_USER` | quickdesk | Database user |
+| `DB_PASSWORD` | quickdesk123 | Database password |
+| `DB_NAME` | quickdesk | Database name |
+| `REDIS_HOST` | localhost | Redis host |
+| `REDIS_PORT` | 6379 | Redis port |
+| `REDIS_PASSWORD` | (empty) | Redis password |
+| `ADMIN_USER` | admin | Admin panel username |
+| `ADMIN_PASSWORD` | admin | Admin panel password |
+| `API_KEY` | (empty) | Client auth API key (empty=disabled) |
+| `ALLOWED_ORIGINS` | (empty) | WebClient origin whitelist (comma-separated) |
+| `TURN_URLS` | (empty) | TURN server URLs (comma-separated) |
+| `TURN_AUTH_SECRET` | (empty) | TURN shared secret |
+| `TURN_CREDENTIAL_TTL` | 86400 | TURN credential TTL in seconds |
+| `STUN_URLS` | (empty) | STUN server URLs (comma-separated) |
+
+---
+
+# One-click deploy with your config file
+chmod +x deploy.sh
+./deploy.sh --env .env.production
+
+# With domain and Nginx
+./deploy.sh --env .env.production --port 8000 --domain your-domain.com
+```
+
+Or manually:
+
+```bash
+# Build image
+docker build -t quickdesk-signaling .
+
+# Run with --env-file
+docker run -d \
+    --name quickdesk-signaling \
+    --restart=always \
+    -p 8000:8000 \
+    -v /data/quickdesk:/data \
+    --env-file .env.production \
+    quickdesk-signaling
+```
+
+To update configuration later, edit your `.env` file and re-deploy:
+
+```bash
+vim .env.production
+./deploy.sh --env .env.production
+```
+
+---
+
+## Manual Deployment (Step by Step)
+
+### System Requirements
 
 - CentOS 7/8/Stream or Rocky Linux 8+
 - 2GB+ RAM
@@ -85,10 +157,10 @@ npm --version
 > Reference SQL can be found in `SignalingServer/migrations/001_init.sql`.
 
 ```bash
-# Clone or upload the code to your server
-# Assuming the code is at /opt/quickdesk/SignalingServer
-
-cd /opt/quickdesk/SignalingServer
+# Clone the code to your server
+cd /opt
+git clone git@github.com:barry-ran/QuickDesk.git
+cd QuickDesk/SignalingServer
 
 # Build frontend (admin dashboard + user portal, Vue 3 + Element Plus)
 cd web
@@ -104,40 +176,19 @@ CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
   go build -a -ldflags="-s -w -extldflags '-static'" \
   -o quickdesk_signaling ./cmd/signaling
 
-# Create runtime directory
-sudo mkdir -p /opt/quickdesk/signaling
-sudo cp quickdesk_signaling /opt/quickdesk/signaling/
+# Create runtime directory and deploy
+sudo mkdir -p /opt/quickdesk-signaling
+sudo cp quickdesk_signaling /opt/quickdesk-signaling/
 ```
 
-## 6. Configure the Service
+## 6. Configure and Run
 
 ```bash
-# Create configuration file
-sudo cat > /opt/quickdesk/signaling/.env << 'EOF'
-SERVER_HOST=0.0.0.0
-SERVER_PORT=8000
-DB_HOST=localhost
-DB_PORT=5432
-DB_USER=quickdesk
-DB_PASSWORD=quickdesk123
-DB_NAME=quickdesk
-REDIS_HOST=localhost
-REDIS_PORT=6379
-REDIS_PASSWORD=
+# Copy configuration template to runtime directory
+sudo cp .env /opt/quickdesk-signaling/.env
 
-# API Key for client authentication (optional)
-# When set, only clients with the correct API Key can connect to this server.
-# Leave empty to disable API Key verification (any client can connect).
-# Clients pass this value via the X-API-Key header.
-API_KEY=
-
-# WebClient allowed origins (optional, comma-separated)
-# Browsers automatically send the Origin header which cannot be spoofed by JS.
-# When set, only WebClient pages loaded from these origins can access the server.
-# Native clients (Qt/Host/Client) use API Key; WebClient uses Origin whitelist.
-# Example: https://web.quickdesk.cc,https://quickdesk.example.com
-ALLOWED_ORIGINS=
-EOF
+# Edit configuration as needed (database, TURN, API key, etc.)
+sudo vim /opt/quickdesk-signaling/.env
 
 # Create systemd service
 sudo cat > /etc/systemd/system/quickdesk-signaling.service << 'EOF'
@@ -149,8 +200,8 @@ Requires=docker.service
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/opt/quickdesk/signaling
-ExecStart=/opt/quickdesk/signaling/signaling
+WorkingDirectory=/opt/quickdesk-signaling
+ExecStart=/opt/quickdesk-signaling/quickdesk_signaling
 Restart=always
 RestartSec=5
 
@@ -165,6 +216,15 @@ sudo systemctl enable quickdesk-signaling
 
 # Check service status
 sudo systemctl status quickdesk-signaling
+```
+
+The Go server automatically reads the `.env` file from its working directory.
+
+To update configuration later, edit the file and restart:
+
+```bash
+sudo vim /opt/quickdesk-signaling/.env
+sudo systemctl restart quickdesk-signaling
 ```
 
 ## 7. Configure Firewall
@@ -191,6 +251,12 @@ sudo systemctl enable nginx
 
 # Configure reverse proxy
 sudo cat > /etc/nginx/conf.d/quickdesk.conf << 'EOF'
+# Dynamic Connection header for WebSocket support
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
 upstream signaling {
     server 127.0.0.1:8000;
 }
@@ -201,17 +267,33 @@ server {
 
     client_max_body_size 100M;
 
-    location / {
+    # WebSocket endpoints (long-lived connections)
+    # The signaling server sends WebSocket Ping frames every 60s.
+    # Set proxy_read_timeout > ping interval; 300s (5 min) gives ample margin.
+    location /signal/ {
         proxy_pass http://signaling;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
+        proxy_set_header Connection $connection_upgrade;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+
         proxy_read_timeout 300s;
-        proxy_connect_timeout 75s;
+        proxy_send_timeout 300s;
+        proxy_buffering off;
+    }
+
+    # HTTP API and static files
+    location / {
+        proxy_pass http://signaling;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 30s;
     }
 }
 EOF
@@ -251,11 +333,23 @@ server {
     include /etc/letsencrypt/options-ssl-nginx.conf;
     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 
-    location / {
+    location /signal/ {
         proxy_pass http://127.0.0.1:8000;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
+        proxy_set_header Connection $connection_upgrade;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_buffering off;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -281,11 +375,11 @@ sudo systemctl status nginx
 sudo netstat -tlnp | grep -E '8000|80|443'
 
 # Test API (local)
-curl http://localhost:8000/api/v1/health
+curl http://localhost:8000/health
 
 # Test API (domain)
-curl http://your-domain.com/api/v1/health
-curl https://your-domain.com/api/v1/health  # HTTPS
+curl http://your-domain.com/health
+curl https://your-domain.com/health  # HTTPS
 ```
 
 ## 11. View Logs
@@ -379,13 +473,13 @@ docker logs quickdesk-postgres
 
 ## Security Recommendations
 
-1. **Change default passwords**: Update PostgreSQL and Redis passwords
+1. **Change default passwords**: Update PostgreSQL and Redis passwords in your `.env` file
 2. **Configure firewall**: Only open necessary ports (80, 443)
 3. **Enable HTTPS**: HTTPS is mandatory for production environments
 4. **Regular backups**: Set up scheduled database backups
 5. **Log monitoring**: Configure log collection and alerting
 6. **Rate limiting**: Configure request rate limiting in Nginx
-7. **Client authentication**: Set `API_KEY` to restrict native client access, set `ALLOWED_ORIGINS` to restrict WebClient access
+7. **Client authentication**: Set `API_KEY` in your `.env` to restrict native client access, set `ALLOWED_ORIGINS` to restrict WebClient access
 
 ```nginx
 # Nginx rate limiting example
@@ -418,12 +512,11 @@ docker run -d --name quickdesk-postgres \
   -v /data/quickdesk/postgres:/var/lib/postgresql/data \
   postgres:15
 
-# 2. Update configuration file
-sudo vi /opt/quickdesk/signaling/.env
-# Update DB_PASSWORD
+# 2. Update DB_PASSWORD in your .env file
+vim .env.production
 
-# 3. Restart service
-sudo systemctl restart quickdesk-signaling
+# 3. Re-deploy
+./deploy.sh --env .env.production
 ```
 
 ## Access URLs
@@ -436,7 +529,7 @@ After deployment, the following URLs are available:
 - **API**: `https://your-domain.com/api/v1/devices/register`
 - **Admin Dashboard**: `https://your-domain.com/admin/` (devices, users, admin accounts, system settings)
 - **User Portal**: `https://your-domain.com/user-login` (user registration, login, device binding)
-- **WebClient**: `https://your-domain.com/remote.html` (browser-based remote desktop)
+- **WebClient**: Deployed independently, not bundled with the signaling server
 
 ## Performance Tuning
 

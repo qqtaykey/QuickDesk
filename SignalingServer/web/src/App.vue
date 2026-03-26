@@ -76,7 +76,7 @@ const activeMenu = computed(() => {
   return route.path
 })
 const currentTitle = computed(() => route.meta?.title || '')
-const isLoginPage = computed(() => ['Login', 'UserLogin', 'Register', 'UserConsole', 'RemoteConsole', 'Profile'].includes(route.name))
+const isLoginPage = computed(() => route.name === 'Login')
 
 const isMobile = ref(window.innerWidth < 768)
 
