@@ -62,9 +62,9 @@ Popup {
             loginDialog.close()
         }
 
-        function onLoginFailed(errorMsg) {
+        function onLoginFailed(errorCode, errorMsg) {
             loginDialog.isLoading = false
-            loginDialog.errorMessage = errorMsg
+            loginDialog.errorMessage = loginDialog._translateError(errorCode, errorMsg)
         }
 
         function onRegisterSuccess() {
@@ -73,9 +73,9 @@ Popup {
             loginDialog.errorMessage = qsTr("Registration successful! Please login.")
         }
 
-        function onRegisterFailed(errorMsg) {
+        function onRegisterFailed(errorCode, errorMsg) {
             loginDialog.isLoading = false
-            loginDialog.errorMessage = errorMsg
+            loginDialog.errorMessage = loginDialog._translateError(errorCode, errorMsg)
         }
 
         function onSmsCodeSent() {
@@ -83,8 +83,8 @@ Popup {
             smsTimer.start()
         }
 
-        function onSmsCodeFailed(errorMsg) {
-            loginDialog.errorMessage = errorMsg
+        function onSmsCodeFailed(errorCode, errorMsg) {
+            loginDialog.errorMessage = loginDialog._translateError(errorCode, errorMsg)
         }
     }
 
@@ -194,6 +194,13 @@ Popup {
                 placeholderText: qsTr("Password")
                 echoMode: TextInput.Password
                 enabled: !loginDialog.isLoading
+            }
+
+            Text {
+                text: qsTr("At least 8 characters with letters and digits")
+                color: Theme.textSecondary
+                font.pixelSize: Theme.fontSizeSmall
+                Layout.fillWidth: true
             }
 
             // Phone + SMS code (required when SMS enabled, optional otherwise)
@@ -353,7 +360,47 @@ Popup {
                     }
                 }
             }
+
+            Text {
+                visible: loginDialog.mode === "login" || loginDialog.mode === "sms-login"
+                text: qsTr("Forgot password?")
+                color: Theme.primary
+                font.pixelSize: Theme.fontSizeSmall
+                Layout.alignment: Qt.AlignHCenter
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        var serverUrl = loginDialog.mainController.serverManager.serverUrl
+                        var httpUrl = serverUrl
+                        if (httpUrl.startsWith("wss://")) httpUrl = "https://" + httpUrl.substring(6)
+                        else if (httpUrl.startsWith("ws://")) httpUrl = "http://" + httpUrl.substring(5)
+                        Qt.openUrlExternally(httpUrl + "/#/account")
+                    }
+                }
+            }
         }
+    }
+
+    function _translateError(code, fallback) {
+        var map = {
+            "INVALID_CREDENTIALS": qsTr("Invalid username or password"),
+            "ACCOUNT_DISABLED": qsTr("Account is disabled"),
+            "USERNAME_EXISTS": qsTr("Username already exists"),
+            "PHONE_EXISTS": qsTr("Phone number already registered"),
+            "PHONE_NOT_FOUND": qsTr("Phone number not registered"),
+            "PHONE_INVALID": qsTr("Invalid phone number format"),
+            "PASSWORD_WEAK": qsTr("Password too weak: at least 8 characters with letters and digits"),
+            "SMS_DISABLED": qsTr("SMS service not enabled"),
+            "SMS_RATE_LIMIT": qsTr("Too many requests, please try again later"),
+            "SMS_DAILY_LIMIT": qsTr("Daily SMS limit reached"),
+            "SMS_CODE_INVALID": qsTr("Invalid verification code"),
+            "SMS_CODE_EXPIRED": qsTr("Verification code expired"),
+            "SMS_MAX_ATTEMPTS": qsTr("Too many verification attempts"),
+        }
+        if (code && map[code]) return map[code]
+        return fallback || qsTr("Unknown error")
     }
 
     function isFormValid() {

@@ -122,6 +122,8 @@ func main() {
 		v1.POST("/user/login", userAuth.Login)
 		v1.POST("/user/login-sms", userAuth.LoginWithSms)
 		v1.POST("/user/logout", userAuth.Logout)
+		v1.POST("/user/reset-password", userAuth.SendResetPasswordCode)
+		v1.PUT("/user/reset-password", userAuth.ResetPassword)
 
 		userDeviceHandler := handler.NewUserDeviceHandler(db)
 		userDeviceHandler.SetSyncNotifier(func(userID uint, msg interface{}) {
@@ -131,6 +133,10 @@ func main() {
 		userAPI.Use(userAuth.AuthRequired())
 		{
 			userAPI.GET("/me", userAuth.GetMe)
+			userAPI.PUT("/password", userAuth.ChangePassword)
+			userAPI.PUT("/username", userAuth.ChangeUsername)
+			userAPI.PUT("/phone", userAuth.ChangePhone)
+			userAPI.PUT("/email", userAuth.ChangeEmail)
 			userAPI.GET("/devices", userDeviceHandler.GetUserDevices)
 			userAPI.POST("/devices/unbind", userDeviceHandler.UnbindDevice)
 			userAPI.POST("/devices/auto-bind", userDeviceHandler.AutoBindDevice)

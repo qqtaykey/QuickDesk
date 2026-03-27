@@ -46,12 +46,12 @@ signals:
     void loginStateChanged();
     void smsEnabledChanged();
     void loginSuccess();
-    void loginFailed(const QString& errorMsg);
+    void loginFailed(const QString& errorCode, const QString& errorMsg);
     void registerSuccess();
-    void registerFailed(const QString& errorMsg);
+    void registerFailed(const QString& errorCode, const QString& errorMsg);
     void loggedOut();
     void smsCodeSent();
-    void smsCodeFailed(const QString& errorMsg);
+    void smsCodeFailed(const QString& errorCode, const QString& errorMsg);
 
 private:
     void clearSession();

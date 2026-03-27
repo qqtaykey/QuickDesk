@@ -7,6 +7,7 @@ on:
       - 'quickdesk-mcp/**'
       - 'cmake/**'
       - 'scripts/**'
+      - 'WebClient/**'
       - 'CMakeLists.txt'
       - '.github/workflows/quickdesk-windows.yml'
   pull_request:
@@ -15,6 +16,7 @@ on:
       - 'quickdesk-mcp/**'
       - 'cmake/**'
       - 'scripts/**'
+      - 'WebClient/**'
       - 'CMakeLists.txt'
       - '.github/workflows/quickdesk-windows.yml'
   workflow_dispatch:
@@ -83,6 +85,10 @@ jobs:
         shell: cmd
         run: call scripts\build_agent_win.bat Release
 
+      - name: Build WebClient
+        shell: cmd
+        run: call scripts\build_webclient_win.bat
+
       - name: Publish
         shell: cmd
         run: call scripts\publish_qd_win.bat Release
@@ -107,6 +113,12 @@ jobs:
         with:
           name: QuickDesk-win-x64-${{ steps.version.outputs.ref-name }}
           path: publish/QuickDesk-win-x64-setup.exe
+
+      - name: Upload WebClient artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: QuickDesk-WebClient-${{ steps.version.outputs.ref-name }}
+          path: WebClient/dist/
 
       - name: Upload to release
         if: startsWith(github.ref, 'refs/tags/')

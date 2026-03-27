@@ -4,12 +4,14 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"net/http"
 	"quickdesk/signaling/internal/models"
 	"quickdesk/signaling/internal/service"
 	"strconv"
 	"time"
+	"unicode"
 
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
@@ -27,11 +29,31 @@ func NewUserHandler(db *gorm.DB) *UserHandler {
 	return &UserHandler{db: db}
 }
 
+// validatePassword checks minimum password strength: ≥8 chars, has letter and digit.
+func validatePassword(p string) error {
+	if len(p) < 8 {
+		return errors.New("密码至少8位")
+	}
+	hasLetter, hasDigit := false, false
+	for _, r := range p {
+		if unicode.IsLetter(r) {
+			hasLetter = true
+		}
+		if unicode.IsDigit(r) {
+			hasDigit = true
+		}
+	}
+	if !hasLetter || !hasDigit {
+		return errors.New("密码必须包含字母和数字")
+	}
+	return nil
+}
+
 // GetUsers handles GET /admin/user-list
 func (h *UserHandler) GetUsers(c *gin.Context) {
 	var users []models.User
 	if result := h.db.Find(&users); result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
+		apiError(c, http.StatusInternalServerError, CodeInternalError, result.Error.Error())
 		return
 	}
 
@@ -55,7 +77,7 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 	id := c.Param("id")
 	var user models.User
 	if result := h.db.First(&user, id); result.Error != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "用户不存在"})
+		apiError(c, http.StatusNotFound, CodeUserNotFound, "用户不存在")
 		return
 	}
 	c.JSON(http.StatusOK, user)
@@ -73,19 +95,24 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apiErrorBadRequest(c, CodeInvalidRequest, err.Error())
 		return
 	}
 
 	var existing models.User
 	if result := h.db.Where("username = ?", req.Username).First(&existing); result.Error == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "用户名已存在"})
+		apiErrorBadRequest(c, CodeUsernameExists, "用户名已存在")
+		return
+	}
+
+	if err := validatePassword(req.Password); err != nil {
+		apiErrorBadRequest(c, CodePasswordWeak, err.Error())
 		return
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "密码加密失败"})
+		apiError(c, http.StatusInternalServerError, CodeInternalError, "密码加密失败")
 		return
 	}
 
@@ -109,7 +136,7 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 	}
 
 	if result := h.db.Create(&user); result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
+		apiError(c, http.StatusInternalServerError, CodeInternalError, result.Error.Error())
 		return
 	}
 
@@ -121,7 +148,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	id := c.Param("id")
 	var user models.User
 	if result := h.db.First(&user, id); result.Error != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "用户不存在"})
+		apiError(c, http.StatusNotFound, CodeUserNotFound, "用户不存在")
 		return
 	}
 
@@ -137,11 +164,16 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apiErrorBadRequest(c, CodeInvalidRequest, err.Error())
 		return
 	}
 
 	if req.Username != "" {
+		var existing models.User
+		if h.db.Where("username = ? AND id != ?", req.Username, id).First(&existing).Error == nil {
+			apiErrorBadRequest(c, CodeUsernameExists, "用户名已存在")
+			return
+		}
 		user.Username = req.Username
 	}
 	if req.Phone != "" {
@@ -151,9 +183,13 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		user.Email = req.Email
 	}
 	if req.Password != "" {
+		if err := validatePassword(req.Password); err != nil {
+			apiErrorBadRequest(c, CodePasswordWeak, err.Error())
+			return
+		}
 		hashed, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "密码加密失败"})
+			apiError(c, http.StatusInternalServerError, CodeInternalError, "密码加密失败")
 			return
 		}
 		user.Password = string(hashed)
@@ -170,7 +206,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	user.DeviceCount = req.DeviceCount
 
 	if result := h.db.Save(&user); result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
+		apiError(c, http.StatusInternalServerError, CodeInternalError, result.Error.Error())
 		return
 	}
 
@@ -180,8 +216,20 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 // DeleteUser handles DELETE /admin/user-list/:id
 func (h *UserHandler) DeleteUser(c *gin.Context) {
 	id := c.Param("id")
+	// Delete all rows referencing this user before deleting the user
+	for _, model := range []interface{}{&models.UserFavorite{}, &models.UserDevice{}, &models.ConnectionHistory{}} {
+		if err := h.db.Where("user_id = ?", id).Delete(model).Error; err != nil {
+			apiError(c, http.StatusInternalServerError, CodeInternalError, err.Error())
+			return
+		}
+	}
+	// Unbind devices (nullable FK — set to NULL rather than delete)
+	if err := h.db.Model(&models.Device{}).Where("user_id = ?", id).Update("user_id", nil).Error; err != nil {
+		apiError(c, http.StatusInternalServerError, CodeInternalError, err.Error())
+		return
+	}
 	if result := h.db.Delete(&models.User{}, id); result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
+		apiError(c, http.StatusInternalServerError, CodeInternalError, result.Error.Error())
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "用户删除成功"})
@@ -195,12 +243,12 @@ func (h *UserHandler) UpdateUserDeviceCount(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apiErrorBadRequest(c, CodeInvalidRequest, err.Error())
 		return
 	}
 
 	if result := h.db.Model(&models.User{}).Where("id = ?", id).Update("device_count", req.DeviceCount); result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
+		apiError(c, http.StatusInternalServerError, CodeInternalError, result.Error.Error())
 		return
 	}
 
@@ -256,46 +304,49 @@ func (a *UserAuth) Register(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		apiErrorBadRequest(c, CodeInvalidRequest, "invalid request")
 		return
 	}
 
-	// When SMS is enabled, phone + sms_code are mandatory
+	if err := validatePassword(req.Password); err != nil {
+		apiErrorBadRequest(c, CodePasswordWeak, err.Error())
+		return
+	}
+
+	// When SMS is enabled and phone is provided, verify SMS code
 	smsEnabled := a.sms != nil && a.sms.IsEnabled()
-	if smsEnabled {
-		if req.Phone == "" || req.SmsCode == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "手机号和验证码为必填项"})
+	if smsEnabled && req.Phone != "" {
+		if req.SmsCode == "" {
+			apiErrorBadRequest(c, CodeInvalidRequest, "提供手机号时验证码为必填项")
 			return
 		}
 		if !service.ValidatePhone(req.Phone) {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "手机号格式不正确"})
+			apiErrorBadRequest(c, CodePhoneInvalid, "手机号格式不正确")
 			return
 		}
-		// Verify SMS code
 		if err := a.sms.VerifyCode(c.Request.Context(), req.Phone, req.SmsCode); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			apiErrorBadRequest(c, CodeSmsInvalid, err.Error())
 			return
 		}
 	}
 
 	var existing models.User
-	if result := a.db.Where("username = ?", req.Username).First(&existing); result.Error == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "用户名已存在"})
+	if a.db.Where("username = ?", req.Username).First(&existing).Error == nil {
+		apiErrorBadRequest(c, CodeUsernameExists, "用户名已存在")
 		return
 	}
 
-	// Check phone uniqueness (when phone is provided)
 	if req.Phone != "" {
 		var phoneUser models.User
-		if result := a.db.Where("phone = ?", req.Phone).First(&phoneUser); result.Error == nil {
-			c.JSON(http.StatusConflict, gin.H{"error": "该手机号已注册"})
+		if a.db.Where("phone = ?", req.Phone).First(&phoneUser).Error == nil {
+			apiError(c, http.StatusConflict, CodePhoneExists, "该手机号已注册")
 			return
 		}
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "密码加密失败"})
+		apiError(c, http.StatusInternalServerError, CodeInternalError, "密码加密失败")
 		return
 	}
 
@@ -310,24 +361,13 @@ func (a *UserAuth) Register(c *gin.Context) {
 	}
 
 	if result := a.db.Create(&user); result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建用户失败"})
+		apiError(c, http.StatusInternalServerError, CodeInternalError, "创建用户失败")
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "注册成功",
-		"user": gin.H{
-			"id":          user.ID,
-			"username":    user.Username,
-			"phone":       user.Phone,
-			"email":       user.Email,
-			"level":       user.Level,
-			"deviceCount": user.DeviceCount,
-			"channelType": user.ChannelType,
-			"status":      user.Status,
-			"createdAt":   user.CreatedAt,
-			"updatedAt":   user.UpdatedAt,
-		},
+		"user":    userJSON(&user),
 	})
 }
 
@@ -339,54 +379,39 @@ func (a *UserAuth) Login(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		apiErrorBadRequest(c, CodeInvalidRequest, "invalid request")
 		return
 	}
 
 	var user models.User
-	if result := a.db.Where("username = ?", req.Username).First(&user); result.Error != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "用户名或密码错误"})
+	if a.db.Where("username = ?", req.Username).First(&user).Error != nil {
+		apiError(c, http.StatusUnauthorized, CodeInvalidCredentials, "用户名或密码错误")
 		return
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "用户名或密码错误"})
+		apiError(c, http.StatusUnauthorized, CodeInvalidCredentials, "用户名或密码错误")
 		return
 	}
 
 	if !user.Status {
-		c.JSON(http.StatusForbidden, gin.H{"error": "账号已被禁用"})
+		apiError(c, http.StatusForbidden, CodeAccountDisabled, "账号已被禁用")
 		return
 	}
 
 	token := a.generateToken()
-	ctx := context.Background()
-	if err := a.rdb.Set(ctx, a.redisKey(token), user.ID, userTokenTTL).Err(); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "session 存储失败"})
+	if err := a.rdb.Set(context.Background(), a.redisKey(token), user.ID, userTokenTTL).Err(); err != nil {
+		apiError(c, http.StatusInternalServerError, CodeSessionFailed, "session 存储失败")
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"token": token,
-		"user": gin.H{
-			"id":          user.ID,
-			"username":    user.Username,
-			"phone":       user.Phone,
-			"email":       user.Email,
-			"level":       user.Level,
-			"deviceCount": user.DeviceCount,
-			"channelType": user.ChannelType,
-			"status":      user.Status,
-			"createdAt":   user.CreatedAt,
-			"updatedAt":   user.UpdatedAt,
-		},
-	})
+	c.JSON(http.StatusOK, gin.H{"token": token, "user": userJSON(&user)})
 }
 
 // LoginWithSms handles POST /api/v1/user/login-sms
 func (a *UserAuth) LoginWithSms(c *gin.Context) {
 	if a.sms == nil || !a.sms.IsEnabled() {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "短信服务未启用"})
+		apiError(c, http.StatusServiceUnavailable, CodeSmsDisabled, "短信服务未启用")
 		return
 	}
 
@@ -395,78 +420,52 @@ func (a *UserAuth) LoginWithSms(c *gin.Context) {
 		SmsCode string `json:"sms_code" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "请提供手机号和验证码"})
+		apiErrorBadRequest(c, CodeInvalidRequest, "请提供手机号和验证码")
 		return
 	}
 
 	if !service.ValidatePhone(req.Phone) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "手机号格式不正确"})
+		apiErrorBadRequest(c, CodePhoneInvalid, "手机号格式不正确")
 		return
 	}
 
-	// Verify SMS code
 	if err := a.sms.VerifyCode(c.Request.Context(), req.Phone, req.SmsCode); err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		apiError(c, http.StatusUnauthorized, CodeSmsInvalid, err.Error())
 		return
 	}
 
-	// Find user by phone
 	var user models.User
-	if result := a.db.Where("phone = ?", req.Phone).First(&user); result.Error != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "该手机号未注册"})
+	if a.db.Where("phone = ?", req.Phone).First(&user).Error != nil {
+		apiError(c, http.StatusUnauthorized, CodePhoneNotFound, "该手机号未注册")
 		return
 	}
 
 	if !user.Status {
-		c.JSON(http.StatusForbidden, gin.H{"error": "账号已被禁用"})
+		apiError(c, http.StatusForbidden, CodeAccountDisabled, "账号已被禁用")
 		return
 	}
 
 	token := a.generateToken()
-	ctx := context.Background()
-	if err := a.rdb.Set(ctx, a.redisKey(token), user.ID, userTokenTTL).Err(); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "session 存储失败"})
+	if err := a.rdb.Set(context.Background(), a.redisKey(token), user.ID, userTokenTTL).Err(); err != nil {
+		apiError(c, http.StatusInternalServerError, CodeSessionFailed, "session 存储失败")
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"token": token,
-		"user": gin.H{
-			"id":          user.ID,
-			"username":    user.Username,
-			"phone":       user.Phone,
-			"email":       user.Email,
-			"level":       user.Level,
-			"deviceCount": user.DeviceCount,
-			"channelType": user.ChannelType,
-			"status":      user.Status,
-			"createdAt":   user.CreatedAt,
-			"updatedAt":   user.UpdatedAt,
-		},
-	})
+	c.JSON(http.StatusOK, gin.H{"token": token, "user": userJSON(&user)})
 }
 
 // AuthRequired returns a Gin middleware that requires a valid user token.
 func (a *UserAuth) AuthRequired() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		token := ""
-		auth := c.GetHeader("Authorization")
-		if len(auth) > 7 && auth[:7] == "Bearer " {
-			token = auth[7:]
-		}
+		token := extractToken(c)
 		if token == "" {
-			token = c.Query("token")
-		}
-
-		if token == "" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "未授权"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"code": CodeUnauthorized, "error": "未授权"})
 			return
 		}
 
-		ctx := context.Background()
-		val, err := a.rdb.Get(ctx, a.redisKey(token)).Result()
+		val, err := a.rdb.Get(context.Background(), a.redisKey(token)).Result()
 		if err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "token已过期"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"code": CodeTokenExpired, "error": "token已过期"})
 			return
 		}
 
@@ -477,21 +476,11 @@ func (a *UserAuth) AuthRequired() gin.HandlerFunc {
 }
 
 // GetUserIDFromToken extracts the user ID from the request token.
-// Returns 0 if the token is missing or invalid.
 func (a *UserAuth) GetUserIDFromToken(c *gin.Context) uint {
-	token := ""
-	auth := c.GetHeader("Authorization")
-	if len(auth) > 7 && auth[:7] == "Bearer " {
-		token = auth[7:]
-	}
-	if token == "" {
-		token = c.Query("token")
-	}
-
+	token := extractToken(c)
 	if token == "" {
 		return 0
 	}
-
 	val, err := a.rdb.Get(context.Background(), a.redisKey(token)).Result()
 	if err != nil {
 		return 0
@@ -500,50 +489,215 @@ func (a *UserAuth) GetUserIDFromToken(c *gin.Context) uint {
 	return uint(userID)
 }
 
-// Logout handles POST /api/v1/user/logout
-func (a *UserAuth) Logout(c *gin.Context) {
-	token := ""
+func extractToken(c *gin.Context) string {
 	auth := c.GetHeader("Authorization")
 	if len(auth) > 7 && auth[:7] == "Bearer " {
-		token = auth[7:]
+		return auth[7:]
 	}
-	if token == "" {
-		token = c.Query("token")
-	}
+	return c.Query("token")
+}
 
+// Logout handles POST /api/v1/user/logout
+func (a *UserAuth) Logout(c *gin.Context) {
+	token := extractToken(c)
 	if token == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "token不能为空"})
+		apiErrorBadRequest(c, CodeInvalidRequest, "token不能为空")
 		return
 	}
-
-	ctx := context.Background()
-	a.rdb.Del(ctx, a.redisKey(token))
-
+	a.rdb.Del(context.Background(), a.redisKey(token))
 	c.JSON(http.StatusOK, gin.H{"message": "退出登录成功"})
 }
 
 // GetMe handles GET /api/v1/user/me
 func (a *UserAuth) GetMe(c *gin.Context) {
 	userID, _ := c.Get("authed_user_id")
-
 	var user models.User
-	if result := a.db.First(&user, userID); result.Error != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "用户不存在"})
+	if a.db.First(&user, userID).Error != nil {
+		apiError(c, http.StatusNotFound, CodeUserNotFound, "用户不存在")
 		return
 	}
+	c.JSON(http.StatusOK, gin.H{"user": userJSON(&user)})
+}
 
-	c.JSON(http.StatusOK, gin.H{
-		"user": gin.H{
-			"id":          user.ID,
-			"username":    user.Username,
-			"phone":       user.Phone,
-			"email":       user.Email,
-			"level":       user.Level,
-			"deviceCount": user.DeviceCount,
-			"channelType": user.ChannelType,
-			"status":      user.Status,
-			"createdAt":   user.CreatedAt,
-			"updatedAt":   user.UpdatedAt,
-		},
-	})
+// userJSON returns a consistent user map for API responses.
+func userJSON(u *models.User) gin.H {
+	return gin.H{
+		"id":          u.ID,
+		"username":    u.Username,
+		"phone":       u.Phone,
+		"email":       u.Email,
+		"level":       u.Level,
+		"deviceCount": u.DeviceCount,
+		"channelType": u.ChannelType,
+		"status":      u.Status,
+		"createdAt":   u.CreatedAt,
+		"updatedAt":   u.UpdatedAt,
+	}
+}
+
+// ChangePassword handles PUT /api/v1/user/password
+func (a *UserAuth) ChangePassword(c *gin.Context) {
+	userID, _ := c.Get("authed_user_id")
+	var req struct {
+		OldPassword string `json:"old_password" binding:"required"`
+		NewPassword string `json:"new_password" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		apiErrorBadRequest(c, CodeInvalidRequest, "invalid request")
+		return
+	}
+	if err := validatePassword(req.NewPassword); err != nil {
+		apiErrorBadRequest(c, CodePasswordWeak, err.Error())
+		return
+	}
+	var user models.User
+	if a.db.First(&user, userID).Error != nil {
+		apiError(c, http.StatusNotFound, CodeUserNotFound, "用户不存在")
+		return
+	}
+	if bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.OldPassword)) != nil {
+		apiError(c, http.StatusUnauthorized, CodePasswordWrong, "原密码错误")
+		return
+	}
+	hashed, _ := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	a.db.Model(&user).Update("password", string(hashed))
+	c.JSON(http.StatusOK, gin.H{"message": "密码修改成功"})
+}
+
+// SendResetPasswordCode handles POST /api/v1/user/reset-password (public, no auth)
+func (a *UserAuth) SendResetPasswordCode(c *gin.Context) {
+	if a.sms == nil || !a.sms.IsEnabled() {
+		apiError(c, http.StatusServiceUnavailable, CodeSmsDisabled, "短信服务未启用")
+		return
+	}
+	var req struct {
+		Phone string `json:"phone" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		apiErrorBadRequest(c, CodeInvalidRequest, "invalid request")
+		return
+	}
+	if !service.ValidatePhone(req.Phone) {
+		apiErrorBadRequest(c, CodePhoneInvalid, "手机号格式不正确")
+		return
+	}
+	var user models.User
+	if a.db.Where("phone = ?", req.Phone).First(&user).Error != nil {
+		apiError(c, http.StatusNotFound, CodePhoneNotFound, "该手机号未注册")
+		return
+	}
+	if err := a.sms.SendCode(c.Request.Context(), req.Phone); err != nil {
+		errMsg := err.Error()
+		code, status := CodeInternalError, http.StatusInternalServerError
+		if errMsg == "发送太频繁，请稍后再试" {
+			code, status = CodeSmsRateLimit, http.StatusTooManyRequests
+		} else if errMsg == "今日验证码发送次数已达上限" {
+			code, status = CodeSmsDailyLimit, http.StatusTooManyRequests
+		}
+		apiError(c, status, code, errMsg)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "验证码已发送", "expires_in": 300})
+}
+
+// ResetPassword handles PUT /api/v1/user/reset-password (public, no auth)
+func (a *UserAuth) ResetPassword(c *gin.Context) {
+	if a.sms == nil || !a.sms.IsEnabled() {
+		apiError(c, http.StatusServiceUnavailable, CodeSmsDisabled, "短信服务未启用")
+		return
+	}
+	var req struct {
+		Phone       string `json:"phone" binding:"required"`
+		SmsCode     string `json:"sms_code" binding:"required"`
+		NewPassword string `json:"new_password" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		apiErrorBadRequest(c, CodeInvalidRequest, "invalid request")
+		return
+	}
+	if !service.ValidatePhone(req.Phone) {
+		apiErrorBadRequest(c, CodePhoneInvalid, "手机号格式不正确")
+		return
+	}
+	if err := validatePassword(req.NewPassword); err != nil {
+		apiErrorBadRequest(c, CodePasswordWeak, err.Error())
+		return
+	}
+	if err := a.sms.VerifyCode(c.Request.Context(), req.Phone, req.SmsCode); err != nil {
+		apiErrorBadRequest(c, CodeSmsInvalid, err.Error())
+		return
+	}
+	var user models.User
+	if a.db.Where("phone = ?", req.Phone).First(&user).Error != nil {
+		apiError(c, http.StatusNotFound, CodePhoneNotFound, "该手机号未注册")
+		return
+	}
+	hashed, _ := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	a.db.Model(&user).Update("password", string(hashed))
+	c.JSON(http.StatusOK, gin.H{"message": "密码重置成功"})
+}
+
+// ChangeUsername handles PUT /api/v1/user/username
+func (a *UserAuth) ChangeUsername(c *gin.Context) {
+	userID, _ := c.Get("authed_user_id")
+	var req struct {
+		Username string `json:"username" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		apiErrorBadRequest(c, CodeInvalidRequest, "invalid request")
+		return
+	}
+	var existing models.User
+	if a.db.Where("username = ? AND id != ?", req.Username, userID).First(&existing).Error == nil {
+		apiErrorBadRequest(c, CodeUsernameExists, "用户名已存在")
+		return
+	}
+	a.db.Model(&models.User{}).Where("id = ?", userID).Update("username", req.Username)
+	c.JSON(http.StatusOK, gin.H{"message": "用户名修改成功"})
+}
+
+// ChangePhone handles PUT /api/v1/user/phone
+func (a *UserAuth) ChangePhone(c *gin.Context) {
+	if a.sms == nil || !a.sms.IsEnabled() {
+		apiError(c, http.StatusServiceUnavailable, CodeSmsDisabled, "短信服务未启用")
+		return
+	}
+	userID, _ := c.Get("authed_user_id")
+	var req struct {
+		Phone   string `json:"phone" binding:"required"`
+		SmsCode string `json:"sms_code" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		apiErrorBadRequest(c, CodeInvalidRequest, "invalid request")
+		return
+	}
+	if !service.ValidatePhone(req.Phone) {
+		apiErrorBadRequest(c, CodePhoneInvalid, "手机号格式不正确")
+		return
+	}
+	var existing models.User
+	if a.db.Where("phone = ? AND id != ?", req.Phone, userID).First(&existing).Error == nil {
+		apiError(c, http.StatusConflict, CodePhoneExists, "该手机号已被使用")
+		return
+	}
+	if err := a.sms.VerifyCode(c.Request.Context(), req.Phone, req.SmsCode); err != nil {
+		apiErrorBadRequest(c, CodeSmsInvalid, err.Error())
+		return
+	}
+	a.db.Model(&models.User{}).Where("id = ?", userID).Update("phone", req.Phone)
+	c.JSON(http.StatusOK, gin.H{"message": "手机号修改成功"})
+}
+
+// ChangeEmail handles PUT /api/v1/user/email
+func (a *UserAuth) ChangeEmail(c *gin.Context) {
+	userID, _ := c.Get("authed_user_id")
+	var req struct {
+		Email string `json:"email" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		apiErrorBadRequest(c, CodeInvalidRequest, "invalid request")
+		return
+	}
+	a.db.Model(&models.User{}).Where("id = ?", userID).Update("email", req.Email)
+	c.JSON(http.StatusOK, gin.H{"message": "邮箱修改成功"})
 }

@@ -13,6 +13,17 @@ namespace quickdesk {
 
 namespace {
 constexpr int kRequestTimeoutMs = 10000;
+
+// Extract {code, error} from JSON error response
+std::pair<QString, QString> parseError(const std::string& data, const std::string& fallback) {
+    QJsonDocument doc = QJsonDocument::fromJson(QByteArray::fromStdString(data));
+    if (doc.isObject()) {
+        QString code = doc.object()["code"].toString();
+        QString msg = doc.object()["error"].toString();
+        if (!msg.isEmpty()) return {code, msg};
+    }
+    return {{}, QString::fromStdString(fallback)};
+}
 }
 
 AuthManager::AuthManager(ServerManager* serverManager, QObject* parent)
@@ -93,17 +104,9 @@ void AuthManager::login(const QString& username, const QString& password)
         [this](int statusCode, const std::string& errorMsg, const std::string& data) {
             QMetaObject::invokeMethod(this, [this, statusCode, errorMsg, data]() {
                 if (statusCode != 200 || !errorMsg.empty()) {
-                    // Try to parse error message from response
-                    QString errStr;
-                    QJsonDocument doc = QJsonDocument::fromJson(QByteArray::fromStdString(data));
-                    if (doc.isObject()) {
-                        errStr = doc.object()["error"].toString();
-                    }
-                    if (errStr.isEmpty()) {
-                        errStr = QString::fromStdString(errorMsg);
-                    }
-                    LOG_WARN("[AuthManager] Login failed: {}", errStr.toStdString());
-                    emit loginFailed(errStr);
+                    auto [code, msg] = parseError(data, errorMsg);
+                    LOG_WARN("[AuthManager] Login failed: {}", msg.toStdString());
+                    emit loginFailed(code, msg);
                     return;
                 }
 
@@ -151,16 +154,9 @@ void AuthManager::registerUser(const QString& username, const QString& password,
         [this](int statusCode, const std::string& errorMsg, const std::string& data) {
             QMetaObject::invokeMethod(this, [this, statusCode, errorMsg, data]() {
                 if (statusCode != 200 || !errorMsg.empty()) {
-                    QString errStr;
-                    QJsonDocument doc = QJsonDocument::fromJson(QByteArray::fromStdString(data));
-                    if (doc.isObject()) {
-                        errStr = doc.object()["error"].toString();
-                    }
-                    if (errStr.isEmpty()) {
-                        errStr = QString::fromStdString(errorMsg);
-                    }
-                    LOG_WARN("[AuthManager] Registration failed: {}", errStr.toStdString());
-                    emit registerFailed(errStr);
+                    auto [code, msg] = parseError(data, errorMsg);
+                    LOG_WARN("[AuthManager] Registration failed: {}", msg.toStdString());
+                    emit registerFailed(code, msg);
                     return;
                 }
 
@@ -188,16 +184,9 @@ void AuthManager::sendSmsCode(const QString& phone, const QString& scene)
         [this](int statusCode, const std::string& errorMsg, const std::string& data) {
             QMetaObject::invokeMethod(this, [this, statusCode, errorMsg, data]() {
                 if (statusCode != 200 || !errorMsg.empty()) {
-                    QString errStr;
-                    QJsonDocument doc = QJsonDocument::fromJson(QByteArray::fromStdString(data));
-                    if (doc.isObject()) {
-                        errStr = doc.object()["error"].toString();
-                    }
-                    if (errStr.isEmpty()) {
-                        errStr = QString::fromStdString(errorMsg);
-                    }
-                    LOG_WARN("[AuthManager] SMS send failed: {}", errStr.toStdString());
-                    emit smsCodeFailed(errStr);
+                    auto [code, msg] = parseError(data, errorMsg);
+                    LOG_WARN("[AuthManager] SMS send failed: {}", msg.toStdString());
+                    emit smsCodeFailed(code, msg);
                     return;
                 }
 
@@ -225,16 +214,9 @@ void AuthManager::loginWithSms(const QString& phone, const QString& smsCode)
         [this](int statusCode, const std::string& errorMsg, const std::string& data) {
             QMetaObject::invokeMethod(this, [this, statusCode, errorMsg, data]() {
                 if (statusCode != 200 || !errorMsg.empty()) {
-                    QString errStr;
-                    QJsonDocument doc = QJsonDocument::fromJson(QByteArray::fromStdString(data));
-                    if (doc.isObject()) {
-                        errStr = doc.object()["error"].toString();
-                    }
-                    if (errStr.isEmpty()) {
-                        errStr = QString::fromStdString(errorMsg);
-                    }
-                    LOG_WARN("[AuthManager] SMS login failed: {}", errStr.toStdString());
-                    emit loginFailed(errStr);
+                    auto [code, msg] = parseError(data, errorMsg);
+                    LOG_WARN("[AuthManager] SMS login failed: {}", msg.toStdString());
+                    emit loginFailed(code, msg);
                     return;
                 }
 

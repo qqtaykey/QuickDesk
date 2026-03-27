@@ -7,6 +7,7 @@ on:
       - 'quickdesk-mcp/**'
       - 'cmake/**'
       - 'scripts/**'
+      - 'WebClient/**'
       - 'CMakeLists.txt'
       - '.github/workflows/quickdesk-macos.yml'
   pull_request:
@@ -15,6 +16,7 @@ on:
       - 'quickdesk-mcp/**'
       - 'cmake/**'
       - 'scripts/**'
+      - 'WebClient/**'
       - 'CMakeLists.txt'
       - '.github/workflows/quickdesk-macos.yml'
   workflow_dispatch:
@@ -64,6 +66,9 @@ jobs:
 
       - name: Build Agent
         run: bash scripts/build_agent_mac.sh Release
+
+      - name: Build WebClient
+        run: bash scripts/build_webclient_mac.sh
 
       - name: Publish
         run: bash scripts/publish_qd_mac.sh Release
