@@ -18,17 +18,10 @@ export class IceConfigFetcher {
 
     /**
      * Fetch ICE server configuration from the signaling server.
-     * If user TURN servers are configured, skip remote fetch and use local config.
      *
-     * @param {Array} userIceServers
      * @returns {Promise<Array>} iceServers array for RTCPeerConnection
      */
-    async getIceServers(userIceServers = []) {
-        if (userIceServers.length > 0) {
-            console.log('[IceConfigFetcher] User ICE servers configured, skip remote fetch');
-            return [...userIceServers];
-        }
-
+    async getIceServers() {
         try {
             const fetched = await this._fetchFromServer();
             if (fetched && fetched.length > 0) {

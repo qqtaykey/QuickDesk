@@ -16,7 +16,6 @@ import { MouseButton } from './protocol/protobuf-messages.js';
 import { VideoStats } from './ui/video-stats.js';
 import { FloatingToolbar } from './ui/floating-toolbar.js';
 import { IceConfigFetcher } from './ice-config-fetcher.js';
-import { IceServerStorage } from './storage/ice-server-storage.js';
 import { t, applyI18n, getLocale, setLocale } from './i18n.js';
 import { userApi } from './api/user-api.js';
 
@@ -114,8 +113,7 @@ class RemoteDesktopApp {
 
         this._log(t('log.fetchingIce'));
         const fetcher = new IceConfigFetcher(serverUrl);
-        const userIceServers = IceServerStorage.getAll();
-        const iceServers = await fetcher.getIceServers(userIceServers);
+        const iceServers = await fetcher.getIceServers();
         this._log(t('log.iceServers', { count: iceServers.length }));
 
         await this._connect(serverUrl, deviceId, accessCode, iceServers, preferredVideoCodec);
