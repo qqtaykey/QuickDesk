@@ -218,7 +218,7 @@ void CloudDeviceManager::recordConnection(const QString& deviceId, int duration,
         url, headers, bodyData, kRequestTimeoutMs,
         [this, deviceId, status](int statusCode, const std::string& errorMsg, const std::string& data) {
             Q_UNUSED(data);
-            QMetaObject::invokeMethod(this, [this, statusCode, errorMsg, deviceId, status]() {
+            QMetaObject::invokeMethod(this, [statusCode, errorMsg, deviceId, status]() {
                 if (statusCode != 200 || !errorMsg.empty()) {
                     LOG_WARN("[CloudDeviceManager] recordConnection failed: {}", errorMsg);
                     return;
