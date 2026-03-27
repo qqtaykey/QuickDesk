@@ -10,7 +10,7 @@
         <h2 v-else-if="!isMobile">&nbsp;</h2>
         <h2 v-else-if="!settingsStore.loading">{{ settingsStore.siteName.charAt(0) }}</h2>
         <h2 v-else>&nbsp;</h2>
-        <span v-if="!isMobile" class="subtitle">管理后台</span>
+        <span v-if="!isMobile" class="subtitle">{{ t('nav.adminPanel') }}</span>
       </div>
       <el-menu
         :default-active="activeMenu"
@@ -20,33 +20,58 @@
       >
         <el-menu-item index="/home" :route="{ path: '/home' }">
           <el-icon><House /></el-icon>
-          <span v-if="!isMobile">监控面板</span>
+          <span v-if="!isMobile">{{ t('nav.dashboard') }}</span>
         </el-menu-item>
         <el-menu-item index="/devices" :route="{ path: '/devices' }">
           <el-icon><Monitor /></el-icon>
-          <span v-if="!isMobile">设备列表</span>
+          <span v-if="!isMobile">{{ t('nav.devices') }}</span>
         </el-menu-item>
         <el-menu-item index="/preset" :route="{ path: '/preset' }">
           <el-icon><Setting /></el-icon>
-          <span v-if="!isMobile">预设管理</span>
+          <span v-if="!isMobile">{{ t('nav.preset') }}</span>
         </el-menu-item>
         <el-menu-item index="/users" :route="{ path: '/users' }">
           <el-icon><UserFilled /></el-icon>
-          <span v-if="!isMobile">用户管理</span>
+          <span v-if="!isMobile">{{ t('nav.users') }}</span>
         </el-menu-item>
         <el-menu-item index="/admin-users" :route="{ path: '/admin-users' }">
           <el-icon><User /></el-icon>
-          <span v-if="!isMobile">管理员账户</span>
+          <span v-if="!isMobile">{{ t('nav.adminUsers') }}</span>
         </el-menu-item>
         <el-menu-item index="/settings" :route="{ path: '/settings' }">
           <el-icon><Tools /></el-icon>
-          <span v-if="!isMobile">系统设置</span>
+          <span v-if="!isMobile">{{ t('nav.settings') }}</span>
         </el-menu-item>
       </el-menu>
       <div class="aside-footer">
+        <div class="locale-switcher">
+          <el-dropdown v-if="!isMobile" trigger="click" @command="onLocaleCommand">
+            <span class="locale-trigger">
+              <el-icon><Connection /></el-icon>
+              <span>{{ currentLocale === 'zh-CN' ? '中文' : 'EN' }}</span>
+            </span>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="zh-CN">中文</el-dropdown-item>
+                <el-dropdown-item command="en-US">EN</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+          <el-dropdown v-else trigger="click" @command="onLocaleCommand">
+            <el-button text class="locale-btn-collapsed" :aria-label="currentLocale === 'zh-CN' ? '中文' : 'EN'">
+              <el-icon><Connection /></el-icon>
+            </el-button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="zh-CN">中文</el-dropdown-item>
+                <el-dropdown-item command="en-US">EN</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+        </div>
         <el-button text class="logout-btn" @click="handleLogout">
           <el-icon><SwitchButton /></el-icon>
-          <span v-if="!isMobile">退出登录</span>
+          <span v-if="!isMobile">{{ t('nav.logout') }}</span>
         </el-button>
       </div>
     </el-aside>
@@ -64,19 +89,30 @@
 <script setup>
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useSettingsStore } from './stores/settings.js'
 import { logout } from './api/auth.js'
-import { House, Monitor, Setting, User, UserFilled, SwitchButton, Tools } from '@element-plus/icons-vue'
+import { setLocale, getLocale } from './i18n'
+import { House, Monitor, Setting, User, UserFilled, SwitchButton, Tools, Connection } from '@element-plus/icons-vue'
 
+const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const settingsStore = useSettingsStore()
+const locale = ref(getLocale())
+const currentLocale = computed(() => locale.value)
 const activeMenu = computed(() => {
   if (route.path === '/') return '/home'
   return route.path
 })
-const currentTitle = computed(() => route.meta?.title || '')
+const currentTitle = computed(() => (route.meta?.title ? t(route.meta.title) : ''))
 const isLoginPage = computed(() => route.name === 'Login')
+
+function onLocaleCommand(cmd) {
+  if (cmd === locale.value) return
+  setLocale(cmd)
+  locale.value = getLocale()
+}
 
 const isMobile = ref(window.innerWidth < 768)
 
@@ -167,6 +203,34 @@ html, body, #app {
 .aside-footer {
   padding: 12px 16px;
   border-top: 1px solid #303133;
+}
+
+.locale-switcher {
+  margin-bottom: 8px;
+}
+
+.locale-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  color: #909399;
+  font-size: 12px;
+  outline: none;
+}
+
+.locale-trigger:hover {
+  color: #c0c4cc;
+}
+
+.locale-btn-collapsed {
+  width: 100%;
+  color: #909399 !important;
+  justify-content: center;
+}
+
+.locale-btn-collapsed:hover {
+  color: #c0c4cc !important;
 }
 
 .logout-btn {

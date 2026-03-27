@@ -1,12 +1,20 @@
 package config
 
 import (
+	"flag"
 	"fmt"
 	"log"
+	"path/filepath"
 	"strings"
 
 	"github.com/spf13/viper"
 )
+
+var envFile string
+
+func init() {
+	flag.StringVar(&envFile, "env", "", "Path to env config file (default: .env in current directory)")
+}
 
 type IceConfig struct {
 	TurnURLs      []string
@@ -64,9 +72,19 @@ type RedisConfig struct {
 }
 
 func Load() *Config {
-	viper.SetConfigName(".env")
-	viper.SetConfigType("env")
-	viper.AddConfigPath(".")
+	if !flag.Parsed() {
+		flag.Parse()
+	}
+
+	if envFile != "" {
+		viper.SetConfigFile(envFile)
+		viper.SetConfigType("env")
+		log.Printf("Using config file: %s", envFile)
+	} else {
+		viper.SetConfigName(".env")
+		viper.SetConfigType("env")
+		viper.AddConfigPath(".")
+	}
 	viper.AutomaticEnv()
 
 	// Set defaults
@@ -99,13 +117,15 @@ func Load() *Config {
 	viper.SetDefault("ALIYUN_SMS_SIGN_NAME", "")
 	viper.SetDefault("ALIYUN_SMS_TEMPLATE_CODE", "")
 
-	// Read config file (optional, will use defaults if not exists)
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
 			log.Println("Config file not found, using defaults and environment variables")
 		} else {
 			log.Fatalf("Error reading config file: %v", err)
 		}
+	} else {
+		absPath, _ := filepath.Abs(viper.ConfigFileUsed())
+		log.Printf("Loaded config from: %s", absPath)
 	}
 
 	cfg := &Config{

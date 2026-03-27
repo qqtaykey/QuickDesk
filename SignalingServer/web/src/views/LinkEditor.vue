@@ -2,7 +2,7 @@
   <div class="link-editor">
     <div class="table-container">
       <el-table :data="modelValue" border size="small" class="link-table">
-        <el-table-column label="图标代码" min-width="100">
+        <el-table-column :label="t('linkEditor.iconCode')" min-width="100">
           <template #default="{ row }">
             <div class="icon-cell">
               <span v-if="row.icon" class="icon-preview" style="font-family: 'Segoe Fluent Icons'">
@@ -12,17 +12,17 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="显示文字" min-width="150">
+        <el-table-column :label="t('linkEditor.displayText')" min-width="150">
           <template #default="{ row }">
-            <el-input v-model="row.text" placeholder="QQ交流群" size="small" style="width: 100%" />
+            <el-input v-model="row.text" :placeholder="t('linkEditor.textPlaceholder')" size="small" style="width: 100%" />
           </template>
         </el-table-column>
-        <el-table-column label="链接地址" min-width="200">
+        <el-table-column :label="t('linkEditor.linkUrl')" min-width="200">
           <template #default="{ row }">
             <el-input v-model="row.url" placeholder="https://..." size="small" style="width: 100%" />
           </template>
         </el-table-column>
-        <el-table-column label="操作" min-width="80" align="center">
+        <el-table-column :label="t('common.operation')" min-width="80" align="center">
           <template #default="{ $index }">
             <el-button type="danger" text size="small" @click="removeLink($index)">
               <el-icon><Delete /></el-icon>
@@ -33,12 +33,15 @@
     </div>
     <el-button class="add-btn" text type="primary" @click="addLink">
       <el-icon><Plus /></el-icon>
-      添加链接
+      {{ t('linkEditor.addLink') }}
     </el-button>
   </div>
 </template>
 
 <script setup>
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
+
 const props = defineProps({
   modelValue: { type: Array, default: () => [] }
 })

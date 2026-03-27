@@ -7,7 +7,7 @@ echo check ENV
 echo ---------------------------------------------------------------
 
 :: example: C:\QtPro\6.8.4
-if "%ENV_QT_PATH%"=="" set ENV_QT_PATH=D:\Qt\Qt5.15.2\6.8.3
+if "%ENV_QT_PATH%"=="" set ENV_QT_PATH=C:\QtPro\6.8.4
 :: example: C:\Program Files\Microsoft Visual Studio\2022\Community
 if "%ENV_VS_INSTALL%"=="" set "ENV_VS_INSTALL=C:\Program Files\Microsoft Visual Studio\2022\Community"
 if "%ENV_VCVARSALL%"=="" set "ENV_VCVARSALL=%ENV_VS_INSTALL%\VC\Auxiliary\Build\vcvarsall.bat"

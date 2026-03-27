@@ -1,87 +1,87 @@
 <template>
   <div class="admin-user-page">
     <div class="page-header">
-      <h2>管理员账户</h2>
+      <h2>{{ t('adminUser.title') }}</h2>
       <el-button type="primary" size="small" @click="showCreateDialog" :icon="Plus">
-        新增管理员
+        {{ t('adminUser.addAdmin') }}
       </el-button>
     </div>
 
     <el-card shadow="never" class="table-card">
       <el-table :data="adminUsers" stripe style="width: 100%" v-loading="loading" size="small">
         <el-table-column prop="id" label="ID" width="60" />
-        <el-table-column prop="username" label="用户名" min-width="120" />
-        <el-table-column prop="email" label="邮箱" min-width="150" show-overflow-tooltip />
-        <el-table-column prop="role" label="角色" width="100">
+        <el-table-column prop="username" :label="t('adminUser.username')" min-width="120" />
+        <el-table-column prop="email" :label="t('adminUser.email')" min-width="150" show-overflow-tooltip />
+        <el-table-column prop="role" :label="t('adminUser.role')" width="100">
           <template #default="{ row }">
             <el-tag :type="row.role === 'super_admin' ? 'danger' : 'primary'" size="small">
-              {{ row.role === 'super_admin' ? '超级管理员' : '管理员' }}
+              {{ row.role === 'super_admin' ? t('adminUser.roleSuperAdmin') : t('adminUser.roleAdmin') }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="status" label="状态" width="80">
+        <el-table-column prop="status" :label="t('common.status')" width="80">
           <template #default="{ row }">
             <el-tag :type="row.status ? 'success' : 'info'" size="small">
-              {{ row.status ? '启用' : '禁用' }}
+              {{ row.status ? t('common.enabled') : t('common.disabled') }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="last_login" label="最后登录" min-width="150">
+        <el-table-column prop="last_login" :label="t('adminUser.lastLogin')" min-width="150">
           <template #default="{ row }">
             {{ formatDate(row.last_login) }}
           </template>
         </el-table-column>
-        <el-table-column prop="created_at" label="创建时间" min-width="150">
+        <el-table-column prop="created_at" :label="t('adminUser.createdAt')" min-width="150">
           <template #default="{ row }">
             {{ formatDate(row.created_at) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="150" fixed="right">
+        <el-table-column :label="t('common.operation')" width="150" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" size="small" text @click="showEditDialog(row)">
-              编辑
+              {{ t('common.edit') }}
             </el-button>
             <el-button type="danger" size="small" text @click="handleDelete(row)" :disabled="row.role === 'super_admin'">
-              删除
+              {{ t('common.delete') }}
             </el-button>
           </template>
         </el-table-column>
       </el-table>
 
       <div v-if="adminUsers.length === 0 && !loading" class="empty-state">
-        <el-empty description="暂无管理员账户" />
+        <el-empty :description="t('adminUser.noAdmins')" />
       </div>
     </el-card>
 
     <!-- 创建/编辑对话框 -->
-    <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑管理员' : '新增管理员'" width="500px" destroy-on-close>
+    <el-dialog v-model="dialogVisible" :title="isEdit ? t('adminUser.editAdmin') : t('adminUser.addAdmin')" width="500px" destroy-on-close>
       <el-form ref="formRef" :model="form" :rules="rules" label-width="80px">
-        <el-form-item label="用户名" prop="username">
-          <el-input v-model="form.username" placeholder="请输入用户名" />
+        <el-form-item :label="t('adminUser.username')" prop="username">
+          <el-input v-model="form.username" :placeholder="t('adminUser.usernamePlaceholder')" />
         </el-form-item>
-        <el-form-item label="密码" prop="password" v-if="!isEdit">
-          <el-input v-model="form.password" type="password" placeholder="请输入密码" show-password />
+        <el-form-item :label="t('adminUser.password')" prop="password" v-if="!isEdit">
+          <el-input v-model="form.password" type="password" :placeholder="t('adminUser.passPlaceholder')" show-password />
         </el-form-item>
-        <el-form-item label="密码" prop="password" v-else>
-          <el-input v-model="form.password" type="password" placeholder="不修改请留空" show-password />
+        <el-form-item :label="t('adminUser.password')" prop="password" v-else>
+          <el-input v-model="form.password" type="password" :placeholder="t('adminUser.passwordHint')" show-password />
         </el-form-item>
-        <el-form-item label="邮箱" prop="email">
-          <el-input v-model="form.email" placeholder="请输入邮箱" />
+        <el-form-item :label="t('adminUser.email')" prop="email">
+          <el-input v-model="form.email" :placeholder="t('adminUser.emailPlaceholder')" />
         </el-form-item>
-        <el-form-item label="角色" prop="role">
-          <el-select v-model="form.role" placeholder="请选择角色" style="width: 100%">
-            <el-option label="管理员" value="admin" />
-            <el-option label="超级管理员" value="super_admin" />
+        <el-form-item :label="t('adminUser.role')" prop="role">
+          <el-select v-model="form.role" :placeholder="t('adminUser.rolePlaceholder')" style="width: 100%">
+            <el-option :label="t('adminUser.roleAdmin')" value="admin" />
+            <el-option :label="t('adminUser.roleSuperAdmin')" value="super_admin" />
           </el-select>
         </el-form-item>
-        <el-form-item label="状态" prop="status" v-if="isEdit">
-          <el-switch v-model="form.status" active-text="启用" inactive-text="禁用" />
+        <el-form-item :label="t('common.status')" prop="status" v-if="isEdit">
+          <el-switch v-model="form.status" :active-text="t('common.enabled')" :inactive-text="t('common.disabled')" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button @click="dialogVisible = false">{{ t('common.cancel') }}</el-button>
         <el-button type="primary" @click="handleSubmit" :loading="submitting">
-          {{ isEdit ? '保存' : '创建' }}
+          {{ isEdit ? t('common.save') : t('common.create') }}
         </el-button>
       </template>
     </el-dialog>
@@ -89,10 +89,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { getAdminUsers, createAdminUser, updateAdminUser, deleteAdminUser } from '../api/admin.js'
+
+const { t } = useI18n()
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -110,19 +113,19 @@ const form = ref({
   status: true
 })
 
-const rules = {
+const rules = computed(() => ({
   username: [
-    { required: true, message: '请输入用户名', trigger: 'blur' },
-    { min: 3, max: 50, message: '长度在 3 到 50 个字符', trigger: 'blur' }
+    { required: true, message: t('adminUser.usernameRequired'), trigger: 'blur' },
+    { min: 3, max: 50, message: t('adminUser.usernameLength'), trigger: 'blur' }
   ],
   password: [
-    { required: !isEdit.value, message: '请输入密码', trigger: 'blur' },
-    { min: 6, message: '密码至少 6 个字符', trigger: 'blur' }
+    { required: !isEdit.value, message: t('adminUser.passRequired'), trigger: 'blur' },
+    { min: 6, message: t('adminUser.passLength'), trigger: 'blur' }
   ],
   role: [
-    { required: true, message: '请选择角色', trigger: 'change' }
+    { required: true, message: t('adminUser.roleRequired'), trigger: 'change' }
   ]
-}
+}))
 
 function formatDate(dateStr) {
   if (!dateStr) return '-'
@@ -139,7 +142,7 @@ async function loadAdminUsers() {
     const data = await getAdminUsers()
     adminUsers.value = data.users || []
   } catch (e) {
-    ElMessage.error('加载管理员列表失败: ' + e.message)
+    ElMessage.error(t('adminUser.loadFailed') + ': ' + e.message)
   } finally {
     loading.value = false
   }
@@ -188,7 +191,7 @@ async function handleSubmit() {
         updateData.password = form.value.password
       }
       await updateAdminUser(form.value.id, updateData)
-      ElMessage.success('管理员信息已更新')
+      ElMessage.success(t('adminUser.updated'))
     } else {
       await createAdminUser({
         username: form.value.username,
@@ -196,7 +199,7 @@ async function handleSubmit() {
         email: form.value.email,
         role: form.value.role
       })
-      ElMessage.success('管理员创建成功')
+      ElMessage.success(t('adminUser.created'))
     }
     dialogVisible.value = false
     loadAdminUsers()
@@ -210,16 +213,16 @@ async function handleSubmit() {
 async function handleDelete(row) {
   try {
     await ElMessageBox.confirm(
-      `确定要删除管理员 "${row.username}" 吗？`,
-      '确认删除',
+      t('adminUser.confirmDelete', { name: row.username }),
+      t('adminUser.confirmDeleteTitle'),
       {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
+        confirmButtonText: t('common.confirm'),
+        cancelButtonText: t('common.cancel'),
         type: 'warning'
       }
     )
     await deleteAdminUser(row.id)
-    ElMessage.success('管理员已删除')
+    ElMessage.success(t('adminUser.deleted'))
     loadAdminUsers()
   } catch (e) {
     if (e !== 'cancel') {

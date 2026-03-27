@@ -7,17 +7,17 @@
         <template #header>
           <div class="card-header">
             <el-icon><Warning /></el-icon>
-            <span>版本控制</span>
+            <span>{{ t('preset.versionControl') }}</span>
           </div>
         </template>
-        <el-form-item label="最低允许版本号">
+        <el-form-item :label="t('preset.minVersion')">
           <el-input
             v-model="form.minVersion"
-            placeholder="留空表示不限制，例如 1.0.0"
+            :placeholder="t('preset.minVersionPlaceholder')"
             style="width: 100%; max-width: 300px"
             clearable
           />
-          <div class="form-tip">低于此版本的客户端将被强制要求升级</div>
+          <div class="form-tip">{{ t('preset.minVersionTip') }}</div>
         </el-form-item>
       </el-card>
 
@@ -26,34 +26,34 @@
         <template #header>
           <div class="card-header">
             <el-icon><Bell /></el-icon>
-            <span>公告管理</span>
+            <span>{{ t('preset.announcement') }}</span>
           </div>
         </template>
         <el-tabs>
-          <el-tab-pane label="中文 (zh_CN)">
-            <el-form-item label="公告内容">
+          <el-tab-pane :label="t('preset.tabZh')">
+            <el-form-item :label="t('preset.announcementContent')">
               <el-input
                 v-model="form.notice.zh_CN"
                 type="textarea"
                 :rows="3"
-                placeholder="支持 HTML，如：维护通知 <a href='https://...'>查看详情</a>"
+                :placeholder="t('preset.noticePlaceholderZh')"
                 style="width: 100%"
               />
             </el-form-item>
           </el-tab-pane>
-          <el-tab-pane label="English (en_US)">
-            <el-form-item label="Announcement">
+          <el-tab-pane :label="t('preset.tabEn')">
+            <el-form-item :label="t('preset.announcementEn')">
               <el-input
                 v-model="form.notice.en_US"
                 type="textarea"
                 :rows="3"
-                placeholder="Supports HTML, e.g.: Maintenance <a href='https://...'>Details</a>"
+                :placeholder="t('preset.noticePlaceholderEn')"
                 style="width: 100%"
               />
             </el-form-item>
           </el-tab-pane>
         </el-tabs>
-        <div class="form-tip">留空则不显示公告栏。支持 HTML 超链接标签。</div>
+        <div class="form-tip">{{ t('preset.announcementTip') }}</div>
       </el-card>
 
       <!-- 导航链接 -->
@@ -61,32 +61,32 @@
         <template #header>
           <div class="card-header">
             <el-icon><Link /></el-icon>
-            <span>导航链接</span>
+            <span>{{ t('preset.navLinks') }}</span>
           </div>
         </template>
         <el-tabs>
-          <el-tab-pane label="中文 (zh_CN)">
+          <el-tab-pane :label="t('preset.tabZh')">
             <LinkEditor v-model="form.links.zh_CN" />
           </el-tab-pane>
-          <el-tab-pane label="English (en_US)">
+          <el-tab-pane :label="t('preset.tabEn')">
             <LinkEditor v-model="form.links.en_US" />
           </el-tab-pane>
         </el-tabs>
-        <div class="form-tip">显示在客户端导航栏底部，点击后在浏览器打开链接。</div>
+        <div class="form-tip">{{ t('preset.navLinksTip') }}</div>
       </el-card>
 
       <!-- 操作按钮 -->
       <div class="action-bar">
         <el-button type="primary" :loading="saving" @click="handleSave" size="large">
           <el-icon><Check /></el-icon>
-          保存配置
+          {{ t('preset.saveConfig') }}
         </el-button>
         <el-button @click="handleReset" size="large">
           <el-icon><RefreshLeft /></el-icon>
-          重置
+          {{ t('common.reset') }}
         </el-button>
         <span v-if="lastUpdated" class="last-updated">
-          上次更新：{{ lastUpdated }}
+          {{ t('common.lastUpdate') }}：{{ lastUpdated }}
         </span>
       </div>
     </el-form>
@@ -95,9 +95,12 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { getPreset, updatePreset } from '../api/preset.js'
 import LinkEditor from './LinkEditor.vue'
+
+const { t } = useI18n()
 
 const loading = ref(false)
 const saving = ref(false)
@@ -139,7 +142,7 @@ async function loadPreset() {
     }
     serverSnapshot = JSON.parse(JSON.stringify(form))
   } catch (e) {
-    ElMessage.error('加载配置失败: ' + e.message)
+    ElMessage.error(t('preset.loadFailed') + ': ' + e.message)
   } finally {
     loading.value = false
   }
@@ -156,9 +159,9 @@ async function handleSave() {
     await updatePreset(payload)
     serverSnapshot = JSON.parse(JSON.stringify(form))
     lastUpdated.value = new Date().toLocaleString('zh-CN')
-    ElMessage.success('配置已保存')
+    ElMessage.success(t('preset.saved'))
   } catch (e) {
-    ElMessage.error('保存失败: ' + e.message)
+    ElMessage.error(t('preset.saveFailed') + ': ' + e.message)
   } finally {
     saving.value = false
   }
@@ -167,7 +170,7 @@ async function handleSave() {
 function handleReset() {
   if (serverSnapshot) {
     Object.assign(form, JSON.parse(JSON.stringify(serverSnapshot)))
-    ElMessage.info('已重置为上次保存的配置')
+    ElMessage.info(t('preset.resetDone'))
   }
 }
 

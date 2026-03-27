@@ -4,41 +4,41 @@
       <template #header>
         <div class="card-header">
           <el-icon><Monitor /></el-icon>
-          <span>设备列表</span>
+          <span>{{ t('deviceList.title') }}</span>
           <el-button
             type="primary"
             size="small"
             @click="loadDevices"
             :icon="Refresh"
           >
-            刷新
+            {{ t('common.refresh') }}
           </el-button>
         </div>
       </template>
 
       <div class="table-container">
         <el-table :data="devices" stripe style="width: 100%" size="small">
-          <el-table-column prop="device_id" label="设备ID" min-width="100" />
-          <el-table-column prop="device_uuid" label="设备UUID" min-width="180" show-overflow-tooltip />
-          <el-table-column label="系统信息" min-width="150">
+          <el-table-column prop="device_id" :label="t('deviceList.deviceId')" min-width="100" />
+          <el-table-column prop="device_uuid" :label="t('deviceList.deviceUuid')" min-width="180" show-overflow-tooltip />
+          <el-table-column :label="t('deviceList.systemInfo')" min-width="150">
             <template #default="{ row }">
               <div>{{ row.os }} {{ row.os_version }}</div>
             </template>
           </el-table-column>
-          <el-table-column prop="app_version" label="应用版本" min-width="100" />
-          <el-table-column label="在线状态" min-width="80">
+          <el-table-column prop="app_version" :label="t('deviceList.appVersion')" min-width="100" />
+          <el-table-column :label="t('deviceList.onlineStatus')" min-width="80">
             <template #default="{ row }">
               <el-tag :type="row.online ? 'success' : 'info'" size="small">
-                {{ row.online ? '在线' : '离线' }}
+                {{ row.online ? t('deviceList.online') : t('deviceList.offline') }}
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="最后活跃" min-width="160">
+          <el-table-column :label="t('deviceList.lastSeen')" min-width="160">
             <template #default="{ row }">
               {{ formatDate(row.last_seen) }}
             </template>
           </el-table-column>
-          <el-table-column label="注册时间" min-width="160">
+          <el-table-column :label="t('deviceList.createdAt')" min-width="160">
             <template #default="{ row }">
               {{ formatDate(row.created_at) }}
             </template>
@@ -47,7 +47,7 @@
       </div>
 
       <div v-if="devices.length === 0 && !loading" class="empty-state">
-        <el-empty description="暂无设备" />
+        <el-empty :description="t('deviceList.noDevices')" />
       </div>
     </el-card>
   </div>
@@ -55,9 +55,12 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { getDevices } from '../api/admin_device.js'
 import { Monitor, Refresh } from '@element-plus/icons-vue'
+
+const { t } = useI18n()
 
 const loading = ref(false)
 const devices = ref([])
@@ -77,7 +80,7 @@ async function loadDevices() {
     const data = await getDevices()
     devices.value = data.devices || []
   } catch (e) {
-    ElMessage.error('加载设备列表失败: ' + e.message)
+    ElMessage.error(t('deviceList.loadFailed') + ': ' + e.message)
   } finally {
     loading.value = false
   }

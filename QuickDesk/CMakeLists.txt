@@ -179,6 +179,7 @@ qt_add_qml_module(QuickDesk
         qml/pages/RemoteControlPage.qml
         qml/pages/SettingsPage.qml
         qml/pages/AboutPage.qml
+        qml/pages/DeviceListPage.qml
         qml/pages/McpConfigPopup.qml
         qml/component/Theme.qml
         qml/component/FluentIconGlyph.qml
@@ -236,8 +237,7 @@ qt_add_qml_module(QuickDesk
         qml/quickdeskcomponent/ConnectionListPanel.qml
         qml/quickdeskcomponent/RemoteDeviceSelector.qml
         qml/quickdeskcomponent/VideoStatsOverlay.qml
-        qml/quickdeskcomponent/LoginDialog.qml
-        qml/pages/DeviceListPage.qml
+        qml/quickdeskcomponent/LoginDialog.qml        
     RESOURCES
         res/font/SegoeFluentIcons.ttf
         qml/component/qmldir

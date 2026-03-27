@@ -1,14 +1,14 @@
 <template>
   <div class="home-page" v-loading="loading">
     <div class="page-header">
-      <h2>监控面板</h2>
+      <h2>{{ t('dashboard.title') }}</h2>
       <el-button
         type="primary"
         size="small"
         @click="loadStats"
         :icon="Refresh"
       >
-        刷新数据
+        {{ t('dashboard.refreshData') }}
       </el-button>
     </div>
 
@@ -20,8 +20,8 @@
         </div>
         <div class="overview-content">
           <div class="overview-value">{{ overview.totalDevices }}</div>
-          <div class="overview-label">总设备数</div>
-          <div class="overview-desc">系统中注册的设备总数</div>
+          <div class="overview-label">{{ t('dashboard.totalDevices') }}</div>
+          <div class="overview-desc">{{ t('dashboard.totalDevicesDesc') }}</div>
         </div>
       </div>
       <div class="overview-card blue">
@@ -30,8 +30,8 @@
         </div>
         <div class="overview-content">
           <div class="overview-value">{{ overview.totalConnections }}</div>
-          <div class="overview-label">总连接数</div>
-          <div class="overview-desc">当前活跃的连接总数</div>
+          <div class="overview-label">{{ t('dashboard.totalConnections') }}</div>
+          <div class="overview-desc">{{ t('dashboard.totalConnectionsDesc') }}</div>
         </div>
       </div>
       <div class="overview-card green">
@@ -40,8 +40,8 @@
         </div>
         <div class="overview-content">
           <div class="overview-value">{{ overview.webSocketConnections }}</div>
-          <div class="overview-label">WebSocket连接</div>
-          <div class="overview-desc">当前WebSocket连接数</div>
+          <div class="overview-label">{{ t('dashboard.wsConnections') }}</div>
+          <div class="overview-desc">{{ t('dashboard.wsConnectionsDesc') }}</div>
         </div>
       </div>
       <div class="overview-card orange">
@@ -50,8 +50,8 @@
         </div>
         <div class="overview-content">
           <div class="overview-value">{{ overview.apiRequests }}</div>
-          <div class="overview-label">API请求数</div>
-          <div class="overview-desc">今日API请求总数</div>
+          <div class="overview-label">{{ t('dashboard.apiRequests') }}</div>
+          <div class="overview-desc">{{ t('dashboard.apiRequestsDesc') }}</div>
         </div>
       </div>
     </div>
@@ -61,32 +61,32 @@
       <template #header>
         <div class="card-header">
           <el-icon class="card-icon"><Timer /></el-icon>
-          <span>最近活动</span>
+          <span>{{ t('dashboard.recentActivity') }}</span>
           <el-button
             type="primary"
             size="small"
             @click="loadActivity"
             :icon="Refresh"
           >
-            刷新
+            {{ t('common.refresh') }}
           </el-button>
         </div>
       </template>
       <el-table :data="activityList" stripe style="width: 100%" :row-class-name="rowClassName">
-        <el-table-column prop="time" label="时间" width="180" />
-        <el-table-column prop="deviceId" label="设备ID" width="120" />
-        <el-table-column prop="action" label="活动" width="150" />
-        <el-table-column prop="details" label="详情" show-overflow-tooltip />
-        <el-table-column prop="status" label="状态" width="100">
+        <el-table-column prop="time" :label="t('dashboard.time')" width="180" />
+        <el-table-column prop="deviceId" :label="t('dashboard.deviceId')" width="120" />
+        <el-table-column prop="action" :label="t('dashboard.activity')" width="150" />
+        <el-table-column prop="details" :label="t('dashboard.details')" show-overflow-tooltip />
+        <el-table-column prop="status" :label="t('common.status')" width="100">
           <template #default="{ row }">
             <el-tag :type="row.status === 'success' ? 'success' : 'warning'" size="small">
-              {{ row.status === 'success' ? '成功' : '失败' }}
+              {{ row.status === 'success' ? t('common.success') : t('common.failed') }}
             </el-tag>
           </template>
         </el-table-column>
       </el-table>
       <div v-if="activityList.length === 0 && !loading" class="empty-state">
-        <el-empty description="暂无活动记录" />
+        <el-empty :description="t('dashboard.noActivity')" />
       </div>
     </el-card>
   </div>
@@ -94,10 +94,12 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { Monitor, Connection, Timer, Refresh, DataLine } from '@element-plus/icons-vue'
 import { getStats, getSystemStatus, getConnectionStatus, getActivity } from '../api/stats.js'
 
+const { t } = useI18n()
 const loading = ref(false)
 
 const overview = ref({
@@ -116,17 +118,17 @@ const stats = ref({
 
 const systemStatus = ref({
   status: 'online',
-  statusText: '运行中',
+  statusText: 'Running',
   uptime: '00:00:00',
   apiVersion: 'v1',
   dbStatus: 'connected',
-  dbStatusText: '已连接',
+  dbStatusText: 'Connected',
   cpu: '0%',
   memory: '0%',
   disk: '0%',
-  network: '未知',
-  systemVersion: '未知',
-  ip: '未知',
+  network: 'Unknown',
+  systemVersion: 'Unknown',
+  ip: 'Unknown',
   uploadSpeed: 0,
   downloadSpeed: 0,
   uploadTotal: 0,
@@ -173,9 +175,9 @@ async function loadActivity() {
   try {
     const data = await getActivity()
     activityList.value = data.activity || []
-    ElMessage.success('活动数据已更新')
+    ElMessage.success(t('dashboard.activityUpdated'))
   } catch (e) {
-    ElMessage.error('加载活动数据失败: ' + e.message)
+    ElMessage.error(t('dashboard.activityFailed') + ': ' + e.message)
   } finally {
     loading.value = false
   }
@@ -193,9 +195,9 @@ async function loadStats() {
     systemStatus.value = systemData
     connectionStatus.value = connectionData
     updateOverview(systemData)
-    ElMessage.success('统计数据已更新')
+    ElMessage.success(t('dashboard.statsUpdated'))
   } catch (e) {
-    ElMessage.error('加载统计数据失败: ' + e.message)
+    ElMessage.error(t('dashboard.statsFailed') + ': ' + e.message)
   } finally {
     loading.value = false
   }
@@ -216,7 +218,7 @@ async function refreshSystemStatus() {
     systemStatus.value = systemData
     updateOverview(systemData)
   } catch (e) {
-    console.error('刷新系统状态失败:', e.message)
+    console.error('Failed to refresh system status:', e.message)
   }
 }
 

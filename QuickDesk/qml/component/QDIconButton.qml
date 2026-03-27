@@ -8,6 +8,7 @@ Controls.Button {
     // ============ Custom Properties ============
     
     property string iconSource: ""
+    property string toolTipText: ""
     property color iconColor: Theme.text
     property color iconHoverColor: Theme.primary
     property color iconPressedColor: Theme.primaryPressed
@@ -146,4 +147,8 @@ Controls.Button {
     HoverHandler {
         cursorShape: control.enabled ? Qt.PointingHandCursor : Qt.ForbiddenCursor
     }
+
+    Controls.ToolTip.visible: toolTipText && hovered
+    Controls.ToolTip.text: toolTipText
+    Controls.ToolTip.delay: 600
 }

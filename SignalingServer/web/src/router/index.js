@@ -10,12 +10,12 @@ import SettingsPage from '../views/SettingsPage.vue'
 const routes = [
   { path: '/login', name: 'Login', component: LoginPage, meta: { public: true } },
   { path: '/', redirect: '/home' },
-  { path: '/home', name: 'Home', component: HomePage, meta: { title: '监控面板' } },
-  { path: '/preset', name: 'Preset', component: PresetPage, meta: { title: '预设管理' } },
-  { path: '/devices', name: 'Devices', component: DeviceListPage, meta: { title: '设备列表' } },
-  { path: '/users', name: 'Users', component: UsersPage, meta: { title: '用户管理' } },
-  { path: '/admin-users', name: 'AdminUsers', component: AdminUserPage, meta: { title: '管理员账户' } },
-  { path: '/settings', name: 'Settings', component: SettingsPage, meta: { title: '系统设置' } }
+  { path: '/home', name: 'Home', component: HomePage, meta: { title: 'nav.dashboard' } },
+  { path: '/preset', name: 'Preset', component: PresetPage, meta: { title: 'nav.preset' } },
+  { path: '/devices', name: 'Devices', component: DeviceListPage, meta: { title: 'nav.devices' } },
+  { path: '/users', name: 'Users', component: UsersPage, meta: { title: 'nav.users' } },
+  { path: '/admin-users', name: 'AdminUsers', component: AdminUserPage, meta: { title: 'nav.adminUsers' } },
+  { path: '/settings', name: 'Settings', component: SettingsPage, meta: { title: 'nav.settings' } }
 ]
 
 const router = createRouter({

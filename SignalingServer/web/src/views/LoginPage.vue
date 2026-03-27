@@ -4,7 +4,7 @@
       <div class="login-header">
         <h1 v-if="!loading">{{ siteName }}</h1>
         <h1 v-else>&nbsp;</h1>
-        <p>管理后台</p>
+        <p>{{ t('login.title') }}</p>
       </div>
       <el-form
         ref="formRef"
@@ -16,7 +16,7 @@
         <el-form-item prop="user">
           <el-input
             v-model="form.user"
-            placeholder="用户名"
+            :placeholder="t('login.username')"
             size="large"
             :prefix-icon="User"
           />
@@ -25,7 +25,7 @@
           <el-input
             v-model="form.password"
             type="password"
-            placeholder="密码"
+            :placeholder="t('login.password')"
             size="large"
             :prefix-icon="Lock"
             show-password
@@ -40,7 +40,7 @@
             @click="handleLogin"
             class="login-btn"
           >
-            登 录
+            {{ t('login.loginBtn') }}
           </el-button>
         </el-form-item>
       </el-form>
@@ -52,7 +52,7 @@
           class="clear-cache-btn"
         >
           <el-icon><Delete /></el-icon>
-          清除缓存
+          {{ t('login.clearCache') }}
         </el-button>
       </div>
     </div>
@@ -60,14 +60,16 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { User, Lock, Delete } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { login } from '../api/auth.js'
 import { getSettings } from '../api/settings.js'
 
 const router = useRouter()
+const { t } = useI18n()
 const formRef = ref(null)
 const loading = ref(true)
 const siteName = ref('')
@@ -77,10 +79,10 @@ const form = reactive({
   password: ''
 })
 
-const rules = {
-  user: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
-  password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
-}
+const rules = computed(() => ({
+  user: [{ required: true, message: t('login.userRequired'), trigger: 'blur' }],
+  password: [{ required: true, message: t('login.passRequired'), trigger: 'blur' }]
+}))
 
 async function loadSiteName() {
   loading.value = true
@@ -91,7 +93,7 @@ async function loadSiteName() {
       document.title = data.siteName + ' Admin'
     }
   } catch (e) {
-    console.error('加载网站名称失败:', e)
+    console.error('Failed to load site name:', e)
     siteName.value = 'QuickDesk'
   } finally {
     loading.value = false
@@ -109,10 +111,10 @@ async function handleLogin() {
   loading.value = true
   try {
     await login(form.user, form.password)
-    ElMessage.success('登录成功')
+    ElMessage.success(t('login.loginSuccess'))
     router.push('/home')
   } catch (e) {
-    ElMessage.error('用户名或密码错误')
+    ElMessage.error(t('login.loginFailed'))
   } finally {
     loading.value = false
   }
@@ -131,13 +133,13 @@ function clearCache() {
         names.forEach(name => caches.delete(name))
       })
     }
-    ElMessage.success('缓存已清除，请刷新页面')
+    ElMessage.success(t('login.cacheCleared'))
     setTimeout(() => {
       window.location.reload(true)
     }, 1000)
   } catch (e) {
     console.error('清除缓存失败:', e)
-    ElMessage.error('清除缓存失败')
+    ElMessage.error(t('login.cacheFailed'))
   }
 }
 </script>

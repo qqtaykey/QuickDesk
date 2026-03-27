@@ -132,7 +132,7 @@ Item {
                         // Connect button (only for online devices)
                         QDIconButton {
                             visible: modelData.online === true
-                            icon: FluentIconGlyph.remoteGlyph
+                            iconSource: FluentIconGlyph.remoteGlyph
                             toolTipText: qsTr("Connect")
 
                             onClicked: {
@@ -240,7 +240,7 @@ Item {
 
                         // Connect button
                         QDIconButton {
-                            icon: FluentIconGlyph.remoteGlyph
+                            iconSource: FluentIconGlyph.remoteGlyph
                             toolTipText: qsTr("Connect")
 
                             onClicked: {

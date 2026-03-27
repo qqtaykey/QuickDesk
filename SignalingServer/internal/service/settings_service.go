@@ -88,31 +88,65 @@ type EnvSeed struct {
 	SmsSignName, SmsTemplateCode   string
 }
 
-// SeedFromEnv initializes DB with .env values if settings row doesn't exist yet.
+// SeedFromEnv initializes DB with .env values on first run, or backfills
+// empty fields into an existing row (handles upgrades that add new config fields).
 func (s *SettingsService) SeedFromEnv(seed EnvSeed) {
-	var count int64
-	s.db.Model(&models.Settings{}).Count(&count)
-	if count > 0 {
+	var existing models.Settings
+	err := s.db.First(&existing).Error
+
+	if err == gorm.ErrRecordNotFound {
+		log.Println("Seeding settings from .env configuration...")
+		settings := &models.Settings{
+			SiteEnabled:        true,
+			SiteName:           "QuickDesk",
+			TurnURLs:           seed.TurnURLs,
+			TurnAuthSecret:     seed.TurnAuthSecret,
+			TurnCredentialTTL:  seed.TurnTTL,
+			StunURLs:           seed.StunURLs,
+			APIKey:             seed.APIKey,
+			AllowedOrigins:     seed.AllowedOrigins,
+			SmsAccessKeyID:     seed.SmsKeyID,
+			SmsAccessKeySecret: seed.SmsKeySecret,
+			SmsSignName:        seed.SmsSignName,
+			SmsTemplateCode:    seed.SmsTemplateCode,
+		}
+		if e := s.Save(settings); e != nil {
+			log.Printf("Failed to seed settings: %v", e)
+		}
+		return
+	}
+	if err != nil {
+		log.Printf("Failed to read settings for seeding: %v", err)
 		return
 	}
 
-	log.Println("Seeding settings from .env configuration...")
-	settings := &models.Settings{
-		SiteEnabled:        true,
-		SiteName:           "QuickDesk",
-		TurnURLs:           seed.TurnURLs,
-		TurnAuthSecret:     seed.TurnAuthSecret,
-		TurnCredentialTTL:  seed.TurnTTL,
-		StunURLs:           seed.StunURLs,
-		APIKey:             seed.APIKey,
-		AllowedOrigins:     seed.AllowedOrigins,
-		SmsAccessKeyID:     seed.SmsKeyID,
-		SmsAccessKeySecret: seed.SmsKeySecret,
-		SmsSignName:        seed.SmsSignName,
-		SmsTemplateCode:    seed.SmsTemplateCode,
+	// Backfill: update DB fields that are still empty with non-empty .env values
+	updated := false
+	backfill := func(dbField *string, envVal string) {
+		if *dbField == "" && envVal != "" {
+			*dbField = envVal
+			updated = true
+		}
 	}
-	if err := s.Save(settings); err != nil {
-		log.Printf("Failed to seed settings: %v", err)
+	backfill(&existing.TurnURLs, seed.TurnURLs)
+	backfill(&existing.TurnAuthSecret, seed.TurnAuthSecret)
+	backfill(&existing.StunURLs, seed.StunURLs)
+	backfill(&existing.APIKey, seed.APIKey)
+	backfill(&existing.AllowedOrigins, seed.AllowedOrigins)
+	backfill(&existing.SmsAccessKeyID, seed.SmsKeyID)
+	backfill(&existing.SmsAccessKeySecret, seed.SmsKeySecret)
+	backfill(&existing.SmsSignName, seed.SmsSignName)
+	backfill(&existing.SmsTemplateCode, seed.SmsTemplateCode)
+	if existing.TurnCredentialTTL == 0 && seed.TurnTTL > 0 {
+		existing.TurnCredentialTTL = seed.TurnTTL
+		updated = true
+	}
+
+	if updated {
+		log.Println("Backfilling empty settings fields from .env...")
+		if e := s.Save(&existing); e != nil {
+			log.Printf("Failed to backfill settings: %v", e)
+		}
 	}
 }
 

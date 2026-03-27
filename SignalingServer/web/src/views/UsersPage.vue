@@ -1,10 +1,10 @@
 <template>
   <div class="users-page">
     <div class="page-header">
-      <h2>用户管理</h2>
+      <h2>{{ t('userMgmt.title') }}</h2>
       <el-button type="primary" @click="handleAdd">
         <el-icon><Plus /></el-icon>
-        新增用户
+        {{ t('userMgmt.addUser') }}
       </el-button>
     </div>
 
@@ -16,23 +16,23 @@
         :header-cell-style="{ background: '#f5f7fa' }"
       >
         <el-table-column prop="id" label="ID" width="60" />
-        <el-table-column prop="username" label="用户名" min-width="120" />
-        <el-table-column prop="phone" label="手机号" min-width="120" />
-        <el-table-column prop="email" label="邮箱号" min-width="180" />
-        <el-table-column prop="level" label="权限等级" width="100">
+        <el-table-column prop="username" :label="t('userMgmt.username')" min-width="120" />
+        <el-table-column prop="phone" :label="t('userMgmt.phone')" min-width="120" />
+        <el-table-column prop="email" :label="t('userMgmt.email')" min-width="180" />
+        <el-table-column prop="level" :label="t('userMgmt.level')" width="100">
           <template #default="{ row }">
             <el-tag :type="getLevelType(row.level)">{{ row.level }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="deviceCount" label="设备数量" width="100" />
-        <el-table-column prop="channelType" label="通道类型" width="100">
+        <el-table-column prop="deviceCount" :label="t('userMgmt.deviceCount')" width="100" />
+        <el-table-column prop="channelType" :label="t('userMgmt.channelType')" width="100">
           <template #default="{ row }">
             <el-tag :type="row.channelType === '全球' ? 'success' : 'warning'">
-              {{ row.channelType }}
+              {{ row.channelType === '全球' ? t('userMgmt.channelGlobal') : t('userMgmt.channelChina') }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="status" label="状态" width="80">
+        <el-table-column prop="status" :label="t('common.status')" width="80">
           <template #default="{ row }">
             <el-switch
               v-model="row.status"
@@ -40,27 +40,27 @@
             />
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="180" fixed="right">
+        <el-table-column :label="t('common.operation')" width="180" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="handleEdit(row)">
               <el-icon><Edit /></el-icon>
-              编辑
+              {{ t('common.edit') }}
             </el-button>
             <el-button link type="danger" @click="handleDelete(row)">
               <el-icon><Delete /></el-icon>
-              删除
+              {{ t('common.delete') }}
             </el-button>
           </template>
         </el-table-column>
       </el-table>
 
-      <el-empty v-if="!loading && users.length === 0" description="暂无用户数据" />
+      <el-empty v-if="!loading && users.length === 0" :description="t('userMgmt.noUsers')" />
     </el-card>
 
     <!-- 新增/编辑对话框 -->
     <el-dialog
       v-model="dialogVisible"
-      :title="isEdit ? '编辑用户' : '新增用户'"
+      :title="isEdit ? t('userMgmt.editUser') : t('userMgmt.addUser')"
       width="500px"
       destroy-on-close
     >
@@ -70,23 +70,23 @@
         :rules="rules"
         label-width="100px"
       >
-        <el-form-item label="用户名" prop="username">
-          <el-input v-model="form.username" placeholder="请输入用户名" :disabled="isEdit" />
+        <el-form-item :label="t('userMgmt.username')" prop="username">
+          <el-input v-model="form.username" :placeholder="t('userMgmt.usernamePlaceholder')" :disabled="isEdit" />
         </el-form-item>
-        <el-form-item label="手机号" prop="phone">
-          <el-input v-model="form.phone" placeholder="请输入手机号" />
+        <el-form-item :label="t('userMgmt.phone')" prop="phone">
+          <el-input v-model="form.phone" :placeholder="t('userMgmt.phonePlaceholder')" />
         </el-form-item>
-        <el-form-item label="邮箱号" prop="email">
-          <el-input v-model="form.email" placeholder="请输入邮箱号" />
+        <el-form-item :label="t('userMgmt.email')" prop="email">
+          <el-input v-model="form.email" :placeholder="t('userMgmt.emailPlaceholder')" />
         </el-form-item>
-        <el-form-item label="密码" prop="password" v-if="!isEdit">
-          <el-input v-model="form.password" type="password" placeholder="请输入密码" show-password />
+        <el-form-item :label="t('userMgmt.password')" prop="password" v-if="!isEdit">
+          <el-input v-model="form.password" type="password" :placeholder="t('userMgmt.passwordPlaceholder')" show-password />
         </el-form-item>
-        <el-form-item label="密码" prop="password" v-else>
-          <el-input v-model="form.password" type="password" placeholder="不修改请留空" show-password />
+        <el-form-item :label="t('userMgmt.password')" prop="password" v-else>
+          <el-input v-model="form.password" type="password" :placeholder="t('userMgmt.passwordHint')" show-password />
         </el-form-item>
-        <el-form-item label="权限等级" prop="level">
-          <el-select v-model="form.level" placeholder="请选择权限等级" style="width: 100%">
+        <el-form-item :label="t('userMgmt.level')" prop="level">
+          <el-select v-model="form.level" :placeholder="t('userMgmt.levelPlaceholder')" style="width: 100%">
             <el-option label="V1" value="V1" />
             <el-option label="V2" value="V2" />
             <el-option label="V3" value="V3" />
@@ -94,23 +94,23 @@
             <el-option label="V5" value="V5" />
           </el-select>
         </el-form-item>
-        <el-form-item label="设备数量" prop="deviceCount">
+        <el-form-item :label="t('userMgmt.deviceCount')" prop="deviceCount">
           <el-input-number v-model="form.deviceCount" :min="0" style="width: 100%" />
         </el-form-item>
-        <el-form-item label="通道类型" prop="channelType">
-          <el-select v-model="form.channelType" placeholder="请选择通道类型" style="width: 100%">
-            <el-option label="全球" value="全球" />
-            <el-option label="中国大陆" value="中国大陆" />
+        <el-form-item :label="t('userMgmt.channelType')" prop="channelType">
+          <el-select v-model="form.channelType" :placeholder="t('userMgmt.channelPlaceholder')" style="width: 100%">
+            <el-option :label="t('userMgmt.channelGlobal')" value="全球" />
+            <el-option :label="t('userMgmt.channelChina')" value="中国大陆" />
           </el-select>
         </el-form-item>
-        <el-form-item label="状态" prop="status">
+        <el-form-item :label="t('common.status')" prop="status">
           <el-switch v-model="form.status" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button @click="dialogVisible = false">{{ t('common.cancel') }}</el-button>
         <el-button type="primary" @click="handleSubmit" :loading="submitting">
-          确定
+          {{ t('common.confirm') }}
         </el-button>
       </template>
     </el-dialog>
@@ -118,10 +118,13 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Edit, Delete } from '@element-plus/icons-vue'
 import { getUsers, createUser, updateUser, deleteUser } from '../api/users.js'
+
+const { t } = useI18n()
 
 const loading = ref(false)
 const users = ref([])
@@ -142,10 +145,10 @@ const form = reactive({
   status: true
 })
 
-const rules = {
-  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
-  password: [{ required: !isEdit.value, message: '请输入密码', trigger: 'blur' }]
-}
+const rules = computed(() => ({
+  username: [{ required: true, message: t('userMgmt.usernameRequired'), trigger: 'blur' }],
+  password: [{ required: !isEdit.value, message: t('userMgmt.passRequired'), trigger: 'blur' }]
+}))
 
 async function loadUsers() {
   loading.value = true
@@ -153,7 +156,7 @@ async function loadUsers() {
     const data = await getUsers()
     users.value = data.users || []
   } catch (e) {
-    ElMessage.error('加载用户列表失败: ' + e.message)
+    ElMessage.error(t('userMgmt.loadFailed') + ': ' + e.message)
   } finally {
     loading.value = false
   }
@@ -204,10 +207,10 @@ async function handleSubmit() {
   try {
     if (isEdit.value) {
       await updateUser(form.id, form)
-      ElMessage.success('用户更新成功')
+      ElMessage.success(t('userMgmt.updated'))
     } else {
       await createUser(form)
-      ElMessage.success('用户创建成功')
+      ElMessage.success(t('userMgmt.created'))
     }
     dialogVisible.value = false
     loadUsers()
@@ -220,13 +223,13 @@ async function handleSubmit() {
 
 async function handleDelete(row) {
   try {
-    await ElMessageBox.confirm('确定要删除该用户吗？', '提示', { type: 'warning' })
+    await ElMessageBox.confirm(t('userMgmt.confirmDelete'), t('common.tip'), { type: 'warning' })
     await deleteUser(row.id)
-    ElMessage.success('用户删除成功')
+    ElMessage.success(t('userMgmt.deleted'))
     loadUsers()
   } catch (e) {
     if (e !== 'cancel') {
-      ElMessage.error('删除失败: ' + e.message)
+      ElMessage.error(t('userMgmt.deleteFailed') + ': ' + e.message)
     }
   }
 }
@@ -234,9 +237,9 @@ async function handleDelete(row) {
 async function handleStatusChange(row, status) {
   try {
     await updateUser(row.id, { status })
-    ElMessage.success('状态更新成功')
+    ElMessage.success(t('userMgmt.statusUpdated'))
   } catch (e) {
-    ElMessage.error('状态更新失败: ' + e.message)
+    ElMessage.error(t('userMgmt.statusFailed') + ': ' + e.message)
     row.status = !status
   }
 }

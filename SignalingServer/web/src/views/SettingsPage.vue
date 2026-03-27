@@ -1,9 +1,9 @@
 <template>
   <div class="settings-page" v-loading="loading">
     <div class="page-header">
-      <h2>系统设置</h2>
+      <h2>{{ t('settings.title') }}</h2>
       <el-button type="primary" size="small" @click="handleSave" :loading="saving" :icon="Check">
-        保存设置
+        {{ t('settings.saveSettings') }}
       </el-button>
     </div>
 
@@ -13,15 +13,15 @@
         <template #header>
           <div class="card-header">
             <el-icon><Setting /></el-icon>
-            <span>Basic</span>
+            <span>{{ t('settings.basic') }}</span>
           </div>
         </template>
         <el-form label-width="120px" label-position="top">
-          <el-form-item label="Site Enabled">
-            <el-switch v-model="form.siteEnabled" active-text="On" inactive-text="Off" />
+          <el-form-item :label="t('settings.siteEnabled')">
+            <el-switch v-model="form.siteEnabled" :active-text="t('common.on')" :inactive-text="t('common.off')" />
           </el-form-item>
-          <el-form-item label="Site Name">
-            <el-input v-model="form.siteName" placeholder="QuickDesk" style="max-width:400px" />
+          <el-form-item :label="t('settings.siteName')">
+            <el-input v-model="form.siteName" :placeholder="t('settings.siteNamePlaceholder')" style="max-width:400px" />
           </el-form-item>
         </el-form>
       </el-card>
@@ -31,41 +31,41 @@
         <template #header>
           <div class="card-header">
             <el-icon><Connection /></el-icon>
-            <span>ICE / TURN / STUN</span>
+            <span>{{ t('settings.ice') }}</span>
           </div>
         </template>
         <el-form label-width="180px" label-position="top">
-          <el-form-item label="TURN Server URLs">
-            <div class="form-tip">WebRTC relay servers. Clients will use these when direct connection fails.</div>
+          <el-form-item :label="t('settings.turnUrls')">
+            <div class="form-tip">{{ t('settings.turnUrlsTip') }}</div>
             <ListEditor
               v-model="turnUrlList"
-              placeholder="turn:your-server.com:3478"
-              add-text="Add TURN Server"
+              :placeholder="t('settings.turnUrlsPlaceholder')"
+              :add-text="t('settings.addTurnServer')"
             />
           </el-form-item>
 
-          <el-form-item label="TURN Auth Secret">
+          <el-form-item :label="t('settings.turnAuthSecret')">
             <el-input
               v-model="form.turnAuthSecret"
-              placeholder="Shared secret matching coturn static-auth-secret"
+              :placeholder="t('settings.turnAuthSecretPlaceholder')"
               style="max-width:500px"
               show-password
               type="password"
             />
-            <div class="form-tip">Must match the static-auth-secret in your coturn configuration.</div>
+            <div class="form-tip">{{ t('settings.turnAuthSecretTip') }}</div>
           </el-form-item>
 
-          <el-form-item label="TURN Credential TTL (seconds)">
+          <el-form-item :label="t('settings.turnTtl')">
             <el-input-number v-model="form.turnCredentialTtl" :min="300" :max="604800" :step="3600" />
-            <div class="form-tip">How long TURN credentials remain valid. Default: 86400 (24 hours).</div>
+            <div class="form-tip">{{ t('settings.turnTtlTip') }}</div>
           </el-form-item>
 
-          <el-form-item label="STUN Server URLs">
-            <div class="form-tip">NAT traversal servers for discovering public IP addresses.</div>
+          <el-form-item :label="t('settings.stunUrls')">
+            <div class="form-tip">{{ t('settings.stunUrlsTip') }}</div>
             <ListEditor
               v-model="stunUrlList"
-              placeholder="stun:stun.example.com:3478"
-              add-text="Add STUN Server"
+              :placeholder="t('settings.stunUrlsPlaceholder')"
+              :add-text="t('settings.addStunServer')"
             />
           </el-form-item>
         </el-form>
@@ -76,32 +76,31 @@
         <template #header>
           <div class="card-header">
             <el-icon><Lock /></el-icon>
-            <span>Security</span>
+            <span>{{ t('settings.security') }}</span>
           </div>
         </template>
         <el-form label-width="180px" label-position="top">
-          <el-form-item label="API Key">
+          <el-form-item :label="t('settings.apiKey')">
             <el-input
               v-model="form.apiKey"
-              placeholder="Leave empty to allow all clients"
+              :placeholder="t('settings.apiKeyPlaceholder')"
               style="max-width:500px"
               show-password
               type="password"
             />
             <div class="form-tip">
-              When set, clients must send this key via X-API-Key header to access signaling APIs.
-              Leave empty to disable API key authentication.
+              {{ t('settings.apiKeyTip') }}
             </div>
           </el-form-item>
 
-          <el-form-item label="Allowed Origins">
+          <el-form-item :label="t('settings.allowedOrigins')">
             <div class="form-tip">
-              Restrict WebClient access to specific domains. Leave empty to disable origin checking.
+              {{ t('settings.allowedOriginsTip') }}
             </div>
             <ListEditor
               v-model="allowedOriginList"
-              placeholder="https://web.quickdesk.example.com"
-              add-text="Add Origin"
+              :placeholder="t('settings.allowedOriginsPlaceholder')"
+              :add-text="t('settings.addOrigin')"
             />
           </el-form-item>
         </el-form>
@@ -112,51 +111,50 @@
         <template #header>
           <div class="card-header">
             <el-icon><ChatLineRound /></el-icon>
-            <span>Aliyun SMS</span>
-            <el-tag v-if="isSmsEnabled" type="success" size="small" style="margin-left:auto">Enabled</el-tag>
-            <el-tag v-else type="info" size="small" style="margin-left:auto">Disabled</el-tag>
+            <span>{{ t('settings.sms') }}</span>
+            <el-tag v-if="isSmsEnabled" type="success" size="small" style="margin-left:auto">{{ t('common.enabled') }}</el-tag>
+            <el-tag v-else type="info" size="small" style="margin-left:auto">{{ t('common.disabled') }}</el-tag>
           </div>
         </template>
         <el-form label-width="180px" label-position="top">
           <div class="form-tip" style="margin-bottom:12px">
-            Configure Aliyun SMS for phone number verification (login/register).
-            All four fields must be filled to enable SMS features. Leave empty to disable.
+            {{ t('settings.smsTip') }}
           </div>
 
-          <el-form-item label="Access Key ID">
+          <el-form-item :label="t('settings.smsKeyId')">
             <el-input
               v-model="form.smsAccessKeyId"
-              placeholder="e.g. LTAI5txxxxxxxxxx"
+              :placeholder="t('settings.smsKeyIdPlaceholder')"
               style="max-width:500px"
             />
           </el-form-item>
 
-          <el-form-item label="Access Key Secret">
+          <el-form-item :label="t('settings.smsKeySecret')">
             <el-input
               v-model="form.smsAccessKeySecret"
-              placeholder="e.g. eHjxxxxxxxxxxxxxxxxxx"
+              :placeholder="t('settings.smsKeySecretPlaceholder')"
               style="max-width:500px"
               show-password
               type="password"
             />
           </el-form-item>
 
-          <el-form-item label="Sign Name">
+          <el-form-item :label="t('settings.smsSignName')">
             <el-input
               v-model="form.smsSignName"
-              placeholder="e.g. QuickDesk"
+              :placeholder="t('settings.smsSignNamePlaceholder')"
               style="max-width:400px"
             />
-            <div class="form-tip">The SMS signature approved in your Aliyun SMS console.</div>
+            <div class="form-tip">{{ t('settings.smsSignNameTip') }}</div>
           </el-form-item>
 
-          <el-form-item label="Template Code">
+          <el-form-item :label="t('settings.smsTemplateCode')">
             <el-input
               v-model="form.smsTemplateCode"
-              placeholder="e.g. SMS_123456789"
+              :placeholder="t('settings.smsTemplateCodePlaceholder')"
               style="max-width:400px"
             />
-            <div class="form-tip">The template code for verification code SMS, must contain ${code} variable.</div>
+            <div class="form-tip">{{ t('settings.smsTemplateCodeTip') }}</div>
           </el-form-item>
         </el-form>
       </el-card>
@@ -166,11 +164,14 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { Setting, Check, Connection, Lock, ChatLineRound } from '@element-plus/icons-vue'
 import { useSettingsStore } from '../stores/settings.js'
 import { authFetch } from '../api/auth.js'
 import ListEditor from './ListEditor.vue'
+
+const { t } = useI18n()
 
 const settingsStore = useSettingsStore()
 const loading = ref(false)
@@ -198,20 +199,9 @@ const isSmsEnabled = computed(() =>
   form.smsAccessKeyId && form.smsAccessKeySecret && form.smsSignName && form.smsTemplateCode
 )
 
-const turnUrlList = computed({
-  get: () => textToList(form.turnUrls),
-  set: (v) => { form.turnUrls = listToText(v) }
-})
-
-const stunUrlList = computed({
-  get: () => textToList(form.stunUrls),
-  set: (v) => { form.stunUrls = listToText(v) }
-})
-
-const allowedOriginList = computed({
-  get: () => textToList(form.allowedOrigins),
-  set: (v) => { form.allowedOrigins = listToText(v) }
-})
+const turnUrlList = ref([])
+const stunUrlList = ref([])
+const allowedOriginList = ref([])
 
 function textToList(text) {
   if (!text) return []
@@ -219,7 +209,19 @@ function textToList(text) {
 }
 
 function listToText(list) {
-  return list.filter(Boolean).join('\n')
+  return list.filter(s => s.trim() !== '').join('\n')
+}
+
+function syncListsFromForm() {
+  turnUrlList.value = textToList(form.turnUrls)
+  stunUrlList.value = textToList(form.stunUrls)
+  allowedOriginList.value = textToList(form.allowedOrigins)
+}
+
+function syncFormFromLists() {
+  form.turnUrls = listToText(turnUrlList.value)
+  form.stunUrls = listToText(stunUrlList.value)
+  form.allowedOrigins = listToText(allowedOriginList.value)
 }
 
 async function loadSettings() {
@@ -230,14 +232,16 @@ async function loadSettings() {
     const data = await res.json()
     Object.assign(form, data)
     if (!form.turnCredentialTtl) form.turnCredentialTtl = 86400
+    syncListsFromForm()
   } catch (e) {
-    ElMessage.error('Failed to load settings: ' + e.message)
+    ElMessage.error(t('settings.loadFailed') + ': ' + e.message)
   } finally {
     loading.value = false
   }
 }
 
 async function handleSave() {
+  syncFormFromLists()
   saving.value = true
   try {
     const res = await authFetch('/api/v1/admin/settings', {
@@ -247,9 +251,9 @@ async function handleSave() {
     })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     settingsStore.updateSettings(form)
-    ElMessage.success('Settings saved')
+    ElMessage.success(t('settings.saved'))
   } catch (e) {
-    ElMessage.error('Failed to save settings: ' + e.message)
+    ElMessage.error(t('settings.saveFailed') + ': ' + e.message)
   } finally {
     saving.value = false
   }

@@ -246,7 +246,14 @@ sudo systemctl enable quickdesk-signaling
 sudo systemctl status quickdesk-signaling
 ```
 
-The Go server automatically reads the `.env` file from its working directory.
+The Go server reads `.env` from its working directory by default. You can also specify a custom config file:
+
+```bash
+# Specify config file path
+/opt/quickdesk-signaling/quickdesk_signaling --env /etc/quickdesk/production.env
+```
+
+You can also modify `ExecStart` in the systemd service to add the `--env` flag.
 
 To update configuration later, edit the file and restart:
 
