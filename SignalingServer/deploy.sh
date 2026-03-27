@@ -134,15 +134,97 @@ if [ -n "$DOMAIN" ]; then
 
     if ! command -v nginx &>/dev/null; then
         echo "Installing Nginx..."
-        if command -v yum &>/dev/null; then
+        if command -v dnf &>/dev/null; then
+            sudo dnf install -y nginx
+        elif command -v yum &>/dev/null; then
             sudo yum install -y nginx
         elif command -v apt-get &>/dev/null; then
             sudo apt-get update && sudo apt-get install -y nginx
         fi
     fi
 
-    sudo mkdir -p /etc/nginx/conf.d
-    sudo tee /etc/nginx/conf.d/quickdesk.conf > /dev/null << NGINX_EOF
+    if ! command -v nginx &>/dev/null; then
+        echo "ERROR: Failed to install Nginx. Please install it manually and re-run."
+        exit 1
+    fi
+
+    # Find nginx.conf location (supports system, BT Panel, custom installs)
+    NGINX_CONF=""
+    for candidate in \
+        /etc/nginx/nginx.conf \
+        /www/server/nginx/conf/nginx.conf \
+        /usr/local/nginx/conf/nginx.conf \
+        /opt/nginx/conf/nginx.conf; do
+        if [ -f "$candidate" ]; then
+            NGINX_CONF="$candidate"
+            break
+        fi
+    done
+
+    # Fallback: ask nginx itself for its config path
+    if [ -z "$NGINX_CONF" ]; then
+        NGINX_CONF=$(nginx -t 2>&1 | grep -oP 'file \K\S+(?= syntax)' || true)
+    fi
+
+    if [ -z "$NGINX_CONF" ] || [ ! -f "$NGINX_CONF" ]; then
+        NGINX_CONF="/etc/nginx/nginx.conf"
+        echo "Creating minimal $NGINX_CONF ..."
+        sudo mkdir -p /etc/nginx/conf.d /var/log/nginx
+        sudo tee "$NGINX_CONF" > /dev/null << 'MINCONF'
+user nginx;
+worker_processes auto;
+error_log /var/log/nginx/error.log;
+pid /run/nginx.pid;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    include       /etc/nginx/mime.types;
+    default_type  application/octet-stream;
+    sendfile      on;
+    keepalive_timeout 65;
+    include /etc/nginx/conf.d/*.conf;
+}
+MINCONF
+    fi
+
+    echo "Using nginx config: $NGINX_CONF"
+
+    # Detect the vhost include directory from nginx.conf (http block)
+    # BT Panel uses /www/server/panel/vhost/nginx/*.conf
+    # Standard uses /etc/nginx/conf.d/*.conf
+    NGINX_CONF_DIR=""
+    # Extract include paths ending in *.conf from the http block, skip mime/lua/proxy includes
+    while IFS= read -r inc_path; do
+        inc_dir="$(dirname "$inc_path")"
+        if [ -d "$inc_dir" ]; then
+            NGINX_CONF_DIR="$inc_dir"
+            break
+        fi
+    done < <(grep -E '^\s*include\s+' "$NGINX_CONF" \
+        | grep -v 'mime' | grep -v 'lua' | grep -v 'proxy' | grep -v 'php' | grep -v 'enable-' | grep -v 'fastcgi' \
+        | grep -oP 'include\s+\K[^;]+' \
+        | grep '\*\.conf' \
+        | tail -n 5)
+
+    if [ -z "$NGINX_CONF_DIR" ]; then
+        NGINX_CONF_DIR="$(dirname "$NGINX_CONF")/conf.d"
+    fi
+
+    echo "Using vhost directory: $NGINX_CONF_DIR"
+    sudo mkdir -p "$NGINX_CONF_DIR"
+
+    # Remove stale config from wrong directory
+    for stale in /etc/nginx/conf.d/quickdesk.conf /www/server/nginx/conf/conf.d/quickdesk.conf; do
+        if [ -f "$stale" ] && [ "$(dirname "$stale")" != "$NGINX_CONF_DIR" ]; then
+            echo "Removing stale config: $stale"
+            sudo rm -f "$stale"
+        fi
+    done
+
+    sudo tee "$NGINX_CONF_DIR/quickdesk.conf" > /dev/null << NGINX_EOF
 # QuickDesk Signaling Server reverse proxy
 # WebSocket-aware with proper long-connection handling
 
@@ -192,13 +274,37 @@ server {
 }
 NGINX_EOF
 
-    # Ensure nginx.conf includes conf.d directory
-    if ! grep -q 'include /etc/nginx/conf.d/\*.conf' /etc/nginx/nginx.conf 2>/dev/null; then
-        echo "Adding conf.d include to nginx.conf..."
-        sudo sed -i '/^http\s*{/a \    include /etc/nginx/conf.d/*.conf;' /etc/nginx/nginx.conf
+    # Ensure nginx.conf includes the vhost directory (skip if already included, e.g. BT Panel)
+    NGINX_CONF_DIR_ESCAPED=$(echo "$NGINX_CONF_DIR" | sed 's/[\/&]/\\&/g')
+    if ! grep -q "include.*${NGINX_CONF_DIR_ESCAPED}" "$NGINX_CONF" 2>/dev/null; then
+        echo "Adding include for $NGINX_CONF_DIR to $NGINX_CONF ..."
+        # Insert inside http block - handle both "http {" and "http\n{" formats
+        if grep -qP 'http\s*\{' "$NGINX_CONF"; then
+            sudo sed -i '/http\s*{/a \    include '"$NGINX_CONF_DIR"'/*.conf;' "$NGINX_CONF"
+        elif grep -q '^http$' "$NGINX_CONF"; then
+            sudo sed -i '/^http$/,/\{/{/\{/a \    include '"$NGINX_CONF_DIR"'/*.conf;
+            }' "$NGINX_CONF"
+        else
+            echo "WARNING: Could not auto-add include. Please add manually:"
+            echo "  include $NGINX_CONF_DIR/*.conf;"
+        fi
     fi
 
-    sudo nginx -t && sudo systemctl restart nginx && sudo systemctl enable nginx
+    echo "Testing nginx config..."
+    if ! sudo nginx -t; then
+        echo "ERROR: Nginx config test failed!"
+        exit 1
+    fi
+
+    # Reload nginx (compatible with systemd, init.d, and BT Panel)
+    if sudo systemctl is-active nginx &>/dev/null; then
+        sudo systemctl reload nginx
+    elif pgrep -x nginx &>/dev/null; then
+        sudo nginx -s reload
+    else
+        sudo nginx
+        sudo systemctl enable nginx 2>/dev/null || true
+    fi
     echo "Nginx configured for $DOMAIN"
 
     # SSL with certbot

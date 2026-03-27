@@ -2,13 +2,7 @@
   <div class="settings-page" v-loading="loading">
     <div class="page-header">
       <h2>系统设置</h2>
-      <el-button
-        type="primary"
-        size="small"
-        @click="handleSave"
-        :loading="saving"
-        :icon="Check"
-      >
+      <el-button type="primary" size="small" @click="handleSave" :loading="saving" :icon="Check">
         保存设置
       </el-button>
     </div>
@@ -19,27 +13,96 @@
         <template #header>
           <div class="card-header">
             <el-icon><Setting /></el-icon>
-            <span>基础配置</span>
+            <span>Basic</span>
           </div>
         </template>
-
         <el-form label-width="120px" label-position="top">
-          <el-form-item label="站点开启">
-            <el-switch
-              v-model="form.siteEnabled"
-              active-text="开启"
-              inactive-text="关闭"
+          <el-form-item label="Site Enabled">
+            <el-switch v-model="form.siteEnabled" active-text="On" inactive-text="Off" />
+          </el-form-item>
+          <el-form-item label="Site Name">
+            <el-input v-model="form.siteName" placeholder="QuickDesk" style="max-width:400px" />
+          </el-form-item>
+        </el-form>
+      </el-card>
+
+      <!-- ICE / TURN 配置 -->
+      <el-card class="settings-card" shadow="never">
+        <template #header>
+          <div class="card-header">
+            <el-icon><Connection /></el-icon>
+            <span>ICE / TURN / STUN</span>
+          </div>
+        </template>
+        <el-form label-width="180px" label-position="top">
+          <el-form-item label="TURN Server URLs">
+            <div class="form-tip">WebRTC relay servers. Clients will use these when direct connection fails.</div>
+            <ListEditor
+              v-model="turnUrlList"
+              placeholder="turn:your-server.com:3478"
+              add-text="Add TURN Server"
             />
-            <div class="form-tip">关闭后站点将无法访问</div>
           </el-form-item>
 
-          <el-form-item label="网站名称">
+          <el-form-item label="TURN Auth Secret">
             <el-input
-              v-model="form.siteName"
-              placeholder="请输入网站名称"
-              style="width: 100%; max-width: 400px"
+              v-model="form.turnAuthSecret"
+              placeholder="Shared secret matching coturn static-auth-secret"
+              style="max-width:500px"
+              show-password
+              type="password"
             />
-            <div class="form-tip">显示在浏览器标题栏和页面顶部</div>
+            <div class="form-tip">Must match the static-auth-secret in your coturn configuration.</div>
+          </el-form-item>
+
+          <el-form-item label="TURN Credential TTL (seconds)">
+            <el-input-number v-model="form.turnCredentialTtl" :min="300" :max="604800" :step="3600" />
+            <div class="form-tip">How long TURN credentials remain valid. Default: 86400 (24 hours).</div>
+          </el-form-item>
+
+          <el-form-item label="STUN Server URLs">
+            <div class="form-tip">NAT traversal servers for discovering public IP addresses.</div>
+            <ListEditor
+              v-model="stunUrlList"
+              placeholder="stun:stun.example.com:3478"
+              add-text="Add STUN Server"
+            />
+          </el-form-item>
+        </el-form>
+      </el-card>
+
+      <!-- 安全配置 -->
+      <el-card class="settings-card" shadow="never">
+        <template #header>
+          <div class="card-header">
+            <el-icon><Lock /></el-icon>
+            <span>Security</span>
+          </div>
+        </template>
+        <el-form label-width="180px" label-position="top">
+          <el-form-item label="API Key">
+            <el-input
+              v-model="form.apiKey"
+              placeholder="Leave empty to allow all clients"
+              style="max-width:500px"
+              show-password
+              type="password"
+            />
+            <div class="form-tip">
+              When set, clients must send this key via X-API-Key header to access signaling APIs.
+              Leave empty to disable API key authentication.
+            </div>
+          </el-form-item>
+
+          <el-form-item label="Allowed Origins">
+            <div class="form-tip">
+              Restrict WebClient access to specific domains. Leave empty to disable origin checking.
+            </div>
+            <ListEditor
+              v-model="allowedOriginList"
+              placeholder="https://web.quickdesk.example.com"
+              add-text="Add Origin"
+            />
           </el-form-item>
         </el-form>
       </el-card>
@@ -48,11 +111,12 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Setting, Check } from '@element-plus/icons-vue'
+import { Setting, Check, Connection, Lock } from '@element-plus/icons-vue'
 import { useSettingsStore } from '../stores/settings.js'
-import { getSettings, updateSettings } from '../api/settings.js'
+import { authFetch } from '../api/auth.js'
+import ListEditor from './ListEditor.vue'
 
 const settingsStore = useSettingsStore()
 const loading = ref(false)
@@ -60,16 +124,52 @@ const saving = ref(false)
 
 const form = reactive({
   siteEnabled: true,
-  siteName: 'QuickDesk'
+  siteName: 'QuickDesk',
+  loginLogo: '',
+  smallLogo: '',
+  favicon: '',
+  turnUrls: '',
+  turnAuthSecret: '',
+  turnCredentialTtl: 86400,
+  stunUrls: '',
+  apiKey: '',
+  allowedOrigins: ''
 })
+
+const turnUrlList = computed({
+  get: () => textToList(form.turnUrls),
+  set: (v) => { form.turnUrls = listToText(v) }
+})
+
+const stunUrlList = computed({
+  get: () => textToList(form.stunUrls),
+  set: (v) => { form.stunUrls = listToText(v) }
+})
+
+const allowedOriginList = computed({
+  get: () => textToList(form.allowedOrigins),
+  set: (v) => { form.allowedOrigins = listToText(v) }
+})
+
+function textToList(text) {
+  if (!text) return []
+  return text.split('\n').map(s => s.trim()).filter(Boolean)
+}
+
+function listToText(list) {
+  return list.filter(Boolean).join('\n')
+}
 
 async function loadSettings() {
   loading.value = true
   try {
-    const data = await getSettings()
+    const res = await authFetch('/api/v1/admin/settings')
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const data = await res.json()
     Object.assign(form, data)
+    if (!form.turnCredentialTtl) form.turnCredentialTtl = 86400
   } catch (e) {
-    ElMessage.error('加载设置失败: ' + e.message)
+    ElMessage.error('Failed to load settings: ' + e.message)
   } finally {
     loading.value = false
   }
@@ -78,22 +178,22 @@ async function loadSettings() {
 async function handleSave() {
   saving.value = true
   try {
-    await updateSettings(form)
+    const res = await authFetch('/api/v1/admin/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(form)
+    })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
     settingsStore.updateSettings(form)
-    ElMessage.success('设置已保存')
-    if (form.siteName) {
-      document.title = form.siteName + ' Admin'
-    }
+    ElMessage.success('Settings saved')
   } catch (e) {
-    ElMessage.error('保存设置失败: ' + e.message)
+    ElMessage.error('Failed to save settings: ' + e.message)
   } finally {
     saving.value = false
   }
 }
 
-onMounted(() => {
-  loadSettings()
-})
+onMounted(loadSettings)
 </script>
 
 <style scoped>
@@ -135,20 +235,15 @@ onMounted(() => {
 }
 
 .form-tip {
-  margin-top: 8px;
+  margin-top: 4px;
+  margin-bottom: 8px;
   color: #909399;
   font-size: 13px;
+  line-height: 1.5;
 }
 
 @media (max-width: 768px) {
-  .settings-page {
-    padding: 10px;
-  }
-
-  .page-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
-  }
+  .settings-page { padding: 10px; }
+  .page-header { flex-direction: column; align-items: flex-start; gap: 10px; }
 }
 </style>

@@ -3,45 +3,38 @@ package handler
 import (
 	"net/http"
 	"quickdesk/signaling/internal/models"
+	"quickdesk/signaling/internal/service"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
-// SettingsHandler handles system settings read/write operations.
 type SettingsHandler struct {
-	db *gorm.DB
+	service *service.SettingsService
 }
 
-// NewSettingsHandler creates a new SettingsHandler.
-func NewSettingsHandler(db *gorm.DB) *SettingsHandler {
-	return &SettingsHandler{db: db}
+func NewSettingsHandler(service *service.SettingsService) *SettingsHandler {
+	return &SettingsHandler{service: service}
 }
 
-// GetSettings handles GET /api/v1/settings and GET /admin/settings
-// Returns the single system settings row, or defaults if not yet configured.
+// GetPublicSettings returns non-sensitive settings for public access.
+func (h *SettingsHandler) GetPublicSettings(c *gin.Context) {
+	s := h.service.Get()
+	c.JSON(http.StatusOK, gin.H{
+		"siteEnabled": s.SiteEnabled,
+		"siteName":    s.SiteName,
+		"loginLogo":   s.LoginLogo,
+		"smallLogo":   s.SmallLogo,
+		"favicon":     s.Favicon,
+	})
+}
+
+// GetSettings returns all settings including sensitive ones (admin only).
 func (h *SettingsHandler) GetSettings(c *gin.Context) {
-	var settings models.Settings
-	result := h.db.First(&settings)
-	if result.Error != nil {
-		if result.Error == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusOK, gin.H{
-				"siteEnabled": true,
-				"siteName":    "QuickDesk",
-				"loginLogo":   "",
-				"smallLogo":   "",
-				"favicon":     "",
-			})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
-		return
-	}
-	c.JSON(http.StatusOK, settings)
+	s := h.service.Get()
+	c.JSON(http.StatusOK, s)
 }
 
-// UpdateSettings handles POST /admin/settings
-// Creates the settings row on first call; updates it on subsequent calls.
+// UpdateSettings saves settings and refreshes the in-memory cache.
 func (h *SettingsHandler) UpdateSettings(c *gin.Context) {
 	var settings models.Settings
 	if err := c.ShouldBindJSON(&settings); err != nil {
@@ -49,24 +42,9 @@ func (h *SettingsHandler) UpdateSettings(c *gin.Context) {
 		return
 	}
 
-	var existing models.Settings
-	result := h.db.First(&existing)
-	if result.Error != nil && result.Error != gorm.ErrRecordNotFound {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
+	if err := h.service.Save(&settings); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
-	}
-
-	if result.Error == gorm.ErrRecordNotFound {
-		if err := h.db.Create(&settings).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-	} else {
-		settings.ID = existing.ID
-		if err := h.db.Save(&settings).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
 	}
 
 	c.JSON(http.StatusOK, settings)

@@ -57,7 +57,7 @@
     <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑管理员' : '新增管理员'" width="500px" destroy-on-close>
       <el-form ref="formRef" :model="form" :rules="rules" label-width="80px">
         <el-form-item label="用户名" prop="username">
-          <el-input v-model="form.username" placeholder="请输入用户名" :disabled="isEdit" />
+          <el-input v-model="form.username" placeholder="请输入用户名" />
         </el-form-item>
         <el-form-item label="密码" prop="password" v-if="!isEdit">
           <el-input v-model="form.password" type="password" placeholder="请输入密码" show-password />
@@ -179,6 +179,7 @@ async function handleSubmit() {
   try {
     if (isEdit.value) {
       const updateData = {
+        username: form.value.username,
         email: form.value.email,
         role: form.value.role,
         status: form.value.status

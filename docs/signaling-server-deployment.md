@@ -14,6 +14,8 @@ vim .env.production
 
 Configuration reference:
 
+**Required (infrastructure):**
+
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `SERVER_HOST` | 0.0.0.0 | Listen address |
@@ -26,14 +28,23 @@ Configuration reference:
 | `REDIS_HOST` | localhost | Redis host |
 | `REDIS_PORT` | 6379 | Redis port |
 | `REDIS_PASSWORD` | (empty) | Redis password |
-| `ADMIN_USER` | admin | Admin panel username |
-| `ADMIN_PASSWORD` | admin | Admin panel password |
-| `API_KEY` | (empty) | Client auth API key (empty=disabled) |
-| `ALLOWED_ORIGINS` | (empty) | WebClient origin whitelist (comma-separated) |
+| `ADMIN_USER` | admin | Initial admin username (first deploy only) |
+| `ADMIN_PASSWORD` | admin | Initial admin password (first deploy only) |
+
+**Optional (can be configured in admin panel after deployment):**
+
+These parameters can be preset in `.env` or configured later in the admin panel (Settings page). Changes take effect immediately without restart.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
 | `TURN_URLS` | (empty) | TURN server URLs (comma-separated) |
-| `TURN_AUTH_SECRET` | (empty) | TURN shared secret |
+| `TURN_AUTH_SECRET` | (empty) | TURN shared secret (matches coturn static-auth-secret) |
 | `TURN_CREDENTIAL_TTL` | 86400 | TURN credential TTL in seconds |
 | `STUN_URLS` | (empty) | STUN server URLs (comma-separated) |
+| `API_KEY` | (empty) | Client auth API key (empty=disabled) |
+| `ALLOWED_ORIGINS` | (empty) | WebClient origin whitelist (comma-separated) |
+
+> **Note:** Optional `.env` values are only used to seed the database on first deployment. After that, all changes should be made through the admin panel.
 
 ---
 
@@ -61,7 +72,17 @@ docker run -d \
     quickdesk-signaling
 ```
 
-To update configuration later, edit your `.env` file and re-deploy:
+### Post-Deployment Setup
+
+After deployment, log in to the admin panel to complete the following:
+
+1. **Change admin password**: Admin Panel → Admin Users → Edit, change username/password
+2. **Configure ICE servers**: Admin Panel → Settings → ICE / TURN / STUN, add your TURN/STUN servers
+3. **Configure security**: Set API Key and Allowed Origins as needed
+
+These settings take effect **immediately** without restarting the server.
+
+To update infrastructure config (port, database, etc.), edit `.env` and re-deploy:
 
 ```bash
 vim .env.production

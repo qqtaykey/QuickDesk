@@ -23,25 +23,26 @@ import (
 )
 
 type APIHandler struct {
-	deviceService *service.DeviceService
-	authService   *service.AuthService
-	presetService *service.PresetService
-	config        *config.Config
-	wsHandler     *WSHandler
-	// network IO stats for computing real-time speed
-	lastNetIO     psnet.IOCountersStat
-	lastNetIOTime time.Time
-	uploadSpeed   float64 // KB/s
-	downloadSpeed float64 // KB/s
+	deviceService   *service.DeviceService
+	authService     *service.AuthService
+	presetService   *service.PresetService
+	settingsService *service.SettingsService
+	config          *config.Config
+	wsHandler       *WSHandler
+	lastNetIO       psnet.IOCountersStat
+	lastNetIOTime   time.Time
+	uploadSpeed     float64
+	downloadSpeed   float64
 }
 
-func NewAPIHandler(deviceService *service.DeviceService, authService *service.AuthService, presetService *service.PresetService, cfg *config.Config) *APIHandler {
+func NewAPIHandler(deviceService *service.DeviceService, authService *service.AuthService, presetService *service.PresetService, settingsService *service.SettingsService, cfg *config.Config) *APIHandler {
 	return &APIHandler{
-		deviceService: deviceService,
-		authService:   authService,
-		presetService: presetService,
-		config:        cfg,
-		lastNetIOTime: time.Now(),
+		deviceService:   deviceService,
+		authService:     authService,
+		presetService:   presetService,
+		settingsService: settingsService,
+		config:          cfg,
+		lastNetIOTime:   time.Now(),
 	}
 }
 
@@ -165,36 +166,31 @@ func (h *APIHandler) GetDeviceStatus(c *gin.Context) {
 // GetIceConfig handles GET /api/v1/ice-config
 // Returns ICE server configuration with time-limited TURN credentials (coturn REST API style).
 func (h *APIHandler) GetIceConfig(c *gin.Context) {
-	ice := h.config.Ice
-	ttl := ice.CredentialTTL
-	if ttl <= 0 {
-		ttl = 86400
-	}
+	turnURLs := h.settingsService.GetTurnURLs()
+	authSecret := h.settingsService.GetTurnAuthSecret()
+	ttl := h.settingsService.GetTurnCredentialTTL()
+	stunURLs := h.settingsService.GetStunURLs()
 
 	iceServers := []gin.H{}
 
-	if len(ice.TurnURLs) > 0 && ice.AuthSecret != "" {
+	if len(turnURLs) > 0 && authSecret != "" {
 		expiry := time.Now().Unix() + int64(ttl)
 		username := fmt.Sprintf("%d:%s", expiry, generateRandomHex(4))
 
-		mac := hmac.New(sha1.New, []byte(ice.AuthSecret))
+		mac := hmac.New(sha1.New, []byte(authSecret))
 		mac.Write([]byte(username))
 		credential := base64.StdEncoding.EncodeToString(mac.Sum(nil))
 
-		turnEntry := gin.H{
-			"urls":       ice.TurnURLs,
+		iceServers = append(iceServers, gin.H{
+			"urls":       turnURLs,
 			"username":   username,
 			"credential": credential,
-		}
-		if ice.MaxRateKbps > 0 {
-			turnEntry["maxRateKbps"] = ice.MaxRateKbps
-		}
-		iceServers = append(iceServers, turnEntry)
+		})
 	}
 
-	if len(ice.StunURLs) > 0 {
+	if len(stunURLs) > 0 {
 		iceServers = append(iceServers, gin.H{
-			"urls": ice.StunURLs,
+			"urls": stunURLs,
 		})
 	}
 
