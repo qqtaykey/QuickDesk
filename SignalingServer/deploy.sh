@@ -204,7 +204,7 @@ MINCONF
             break
         fi
     done < <(grep -E '^\s*include\s+' "$NGINX_CONF" \
-        | grep -v 'mime' | grep -v 'lua' | grep -v 'proxy' | grep -v 'php' | grep -v 'enable-' | grep -v 'fastcgi' \
+        | grep -v 'mime' | grep -v 'lua' | grep -v 'proxy' | grep -v 'php' | grep -v 'enable-' | grep -v 'fastcgi' | grep -v '/tcp/' | grep -v '/stream/' \
         | grep -oP 'include\s+\K[^;]+' \
         | grep '\*\.conf' \
         | tail -n 5)
@@ -216,13 +216,6 @@ MINCONF
     echo "Using vhost directory: $NGINX_CONF_DIR"
     sudo mkdir -p "$NGINX_CONF_DIR"
 
-    # Remove stale config from wrong directory
-    for stale in /etc/nginx/conf.d/quickdesk.conf /www/server/nginx/conf/conf.d/quickdesk.conf; do
-        if [ -f "$stale" ] && [ "$(dirname "$stale")" != "$NGINX_CONF_DIR" ]; then
-            echo "Removing stale config: $stale"
-            sudo rm -f "$stale"
-        fi
-    done
 
     sudo tee "$NGINX_CONF_DIR/quickdesk.conf" > /dev/null << NGINX_EOF
 # QuickDesk Signaling Server reverse proxy
