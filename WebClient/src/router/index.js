@@ -4,6 +4,7 @@ import DevicesPage from '../views/DevicesPage.vue'
 import AccountPage from '../views/AccountPage.vue'
 import SettingsPage from '../views/SettingsPage.vue'
 import AboutPage from '../views/AboutPage.vue'
+import ResetPasswordPage from '../views/ResetPasswordPage.vue'
 
 const routes = [
   { path: '/', redirect: '/remote' },
@@ -12,6 +13,7 @@ const routes = [
   { path: '/account', component: AccountPage },
   { path: '/settings', component: SettingsPage },
   { path: '/about', component: AboutPage },
+  { path: '/reset-password', component: ResetPasswordPage },
 ]
 
 export default createRouter({

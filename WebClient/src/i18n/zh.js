@@ -117,6 +117,7 @@ export const zh = {
     newEmail: '新邮箱',
     resetPassword: '重置密码',
     resetPasswordDesc: '通过手机号验证码重置密码',
+    resetPasswordSuccess: '密码重置成功，请使用新密码登录',
     save: '保存',
     success: '修改成功',
     loginRequired: '请先登录',

@@ -377,7 +377,7 @@ Popup {
                             loginDialog.errorMessage = qsTr("WebClient URL not configured on the server")
                             return
                         }
-                        Qt.openUrlExternally(webclientUrl + "/#/account")
+                        Qt.openUrlExternally(webclientUrl + "/#/reset-password")
                     }
                 }
             }

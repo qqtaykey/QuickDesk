@@ -117,6 +117,7 @@ export const en = {
     newEmail: 'New Email',
     resetPassword: 'Reset Password',
     resetPasswordDesc: 'Reset password via SMS verification',
+    resetPasswordSuccess: 'Password reset successfully, please login with your new password',
     save: 'Save',
     success: 'Updated successfully',
     loginRequired: 'Please login first',
