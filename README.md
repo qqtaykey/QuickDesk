@@ -317,6 +317,26 @@ QuickDesk supports full self-hosted deployment. You can deploy all services on y
 2. **TURN Relay Server** (recommended): Provides relay when P2P direct connection fails
    → [TURN Server Deployment Guide](docs/turn-server-deployment.md)
 
+### Docker Deploy (Signaling Server)
+
+Three deployment methods for the signaling server:
+
+```bash
+cd SignalingServer
+cp .env.example .env && vim .env
+
+# Option 1: Pull pre-built image (recommended)
+./deploy-pull.sh
+
+# Option 2: Build from source
+./deploy-build.sh
+
+# Option 3: Offline deploy (no internet needed)
+./deploy-offline.sh quickdesk-signaling-image.tar.gz
+```
+
+Pre-built Docker images are automatically published to `ghcr.io/barry-ran/quickdesk-signaling` on each tagged release. See the [deployment guide](docs/signaling-server-deployment.md) for details.
+
 ### Client Configuration
 
 In QuickDesk **Settings → Network**:

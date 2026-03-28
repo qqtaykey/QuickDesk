@@ -1,0 +1,4 @@
+services:
+  signaling-server:
+    build: .
+    image: quickdesk-signaling:local

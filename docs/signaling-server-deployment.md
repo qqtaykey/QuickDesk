@@ -2,15 +2,18 @@
 
 ## Quick Deploy (Recommended)
 
-Use the all-in-one Docker image (PostgreSQL + Redis + signaling server):
+All-in-one Docker image including PostgreSQL + Redis + signaling server. Three deployment methods are available:
+
+### Prepare Configuration
 
 ```bash
 git clone git@github.com:barry-ran/QuickDesk.git
 cd QuickDesk/SignalingServer
 
 # Copy and edit your configuration
-cp .env .env.production
-vim .env.production
+cp .env.example .env
+vim .env
+```
 
 Configuration reference:
 
@@ -24,7 +27,7 @@ Configuration reference:
 | `DB_PORT` | 5432 | Database port |
 | `DB_USER` | quickdesk | Database user |
 | `DB_PASSWORD` | quickdesk123 | Database password |
-| `DB_NAME` | quickdesk | Database name |
+| `DB_NAME` | quickdesk_signaling | Database name |
 | `REDIS_HOST` | localhost | Redis host |
 | `REDIS_PORT` | 6379 | Redis port |
 | `REDIS_PASSWORD` | (empty) | Redis password |
@@ -52,30 +55,59 @@ These parameters can be preset in `.env` or configured later in the admin panel 
 > 
 > **SMS:** Aliyun SMS enables phone number verification for login/register. SMS is auto-enabled when all four fields are set; leave any empty to disable.
 
----
+### Option 1: Pull Pre-built Image (Recommended)
 
-# One-click deploy with your config file
-chmod +x deploy.sh
-./deploy.sh --env .env.production
-
-# With domain and Nginx
-./deploy.sh --env .env.production --port 8000 --domain your-domain.com
-```
-
-Or manually:
+No local compilation needed — pull the pre-built image from GitHub Container Registry:
 
 ```bash
-# Build image
-docker build -t quickdesk-signaling .
+chmod +x deploy-pull.sh
 
-# Run with --env-file
-docker run -d \
-    --name quickdesk-signaling \
-    --restart=always \
-    -p 8000:8000 \
-    -v /data/quickdesk:/data \
-    --env-file .env.production \
-    quickdesk-signaling
+# Deploy latest version
+./deploy-pull.sh
+
+# Deploy a specific version
+./deploy-pull.sh v1.0.0
+
+# Custom port
+./deploy-pull.sh --port 9000
+```
+
+### Option 2: Build from Source
+
+Build the Docker image locally. Use this when you need to customize the source code or can't pull images from the registry:
+
+```bash
+chmod +x deploy-build.sh
+./deploy-build.sh
+
+# Custom port
+./deploy-build.sh --port 9000
+```
+
+### Option 3: Offline Deploy
+
+For servers without internet access. Download the offline image from GitHub Actions Artifacts or Releases, then load and deploy:
+
+```bash
+# 1. Download the offline image (.tar.gz) on a machine with internet
+#    - GitHub Actions → SignalingServer Docker → Artifacts
+#    - GitHub Releases (for tagged versions)
+
+# 2. Transfer to the target server and deploy
+chmod +x deploy-offline.sh
+./deploy-offline.sh quickdesk-signaling-image.tar.gz
+```
+
+### Legacy Deploy Script
+
+The original one-click deploy script is still available, with Nginx reverse proxy and SSL support:
+
+```bash
+chmod +x deploy.sh
+./deploy.sh
+
+# With domain and Nginx
+./deploy.sh --port 8000 --domain your-domain.com
 ```
 
 ### Post-Deployment Setup
@@ -84,16 +116,30 @@ After deployment, log in to the admin panel to complete the following:
 
 1. **Change admin password**: Admin Panel → Admin Users → Edit, change username/password
 2. **Configure ICE servers**: Admin Panel → Settings → ICE / TURN / STUN, add your TURN/STUN servers
-3. **Configure security**: Set API Key and Allowed Origins as needed
-4. **Configure SMS** (optional): Admin Panel → Settings → Aliyun SMS, fill in AccessKey, signature and template to enable phone number verification
+3. **Configure security**:
+   - **API Key**: Admin Panel → Settings → API Key. When set, only native clients (QuickDesk desktop) carrying this key can connect to the signaling server, preventing unauthorized client access
+   - **Allowed Origins**: Admin Panel → Settings → Allowed Origins. When the WebClient is deployed on a separate domain (e.g. `https://web.quickdesk.cc`), browsers block cross-origin requests by default. Add the WebClient's domain here so the signaling server allows CORS requests from those origins. Separate multiple domains with commas
+4. **Configure WebClient URL** (optional): Admin Panel → Preset → WebClient URL. Enter the WebClient deployment address (e.g. `https://web.quickdesk.cc`). The native client will display this link in its UI so users can quickly access the WebClient
+5. **Configure SMS** (optional): Admin Panel → Settings → Aliyun SMS, fill in AccessKey, signature and template to enable phone number verification
 
 These settings take effect **immediately** without restarting the server.
 
-To update infrastructure config (port, database, etc.), edit `.env` and re-deploy:
+### Docker Compose Management
+
+After deploying with `deploy-pull.sh` or `deploy-offline.sh`, use standard docker compose commands:
 
 ```bash
-vim .env.production
-./deploy.sh --env .env.production
+# Check status
+docker compose ps
+
+# View logs
+docker compose logs -f
+
+# Stop services
+docker compose down
+
+# Restart services
+docker compose restart
 ```
 
 ---
@@ -548,10 +594,10 @@ docker run -d --name quickdesk-postgres \
   postgres:15
 
 # 2. Update DB_PASSWORD in your .env file
-vim .env.production
+vim .env
 
 # 3. Re-deploy
-./deploy.sh --env .env.production
+./deploy.sh
 ```
 
 ## Access URLs
