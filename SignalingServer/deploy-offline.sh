@@ -90,15 +90,15 @@ echo "[1/3] Loading Docker image from $IMAGE_TAR ..."
 LOADED_OUTPUT=$(docker load -i "$IMAGE_TAR" 2>&1)
 echo "$LOADED_OUTPUT"
 
-LOADED_IMAGE=$(echo "$LOADED_OUTPUT" | grep -oP 'Loaded image: \K.+' | tail -1)
+LOADED_IMAGE=$(echo "$LOADED_OUTPUT" | grep -oP 'Loaded image: \K.+' | tail -1 | tr -d '\r')
 if [ -z "$LOADED_IMAGE" ]; then
-    LOADED_IMAGE=$(echo "$LOADED_OUTPUT" | grep -oP 'Loaded image ID: \K.+' | tail -1)
+    LOADED_IMAGE=$(echo "$LOADED_OUTPUT" | grep -oP 'Loaded image ID: \K.+' | tail -1 | tr -d '\r')
 fi
 
 echo "Loaded: $LOADED_IMAGE"
 
 # Tag to match what docker-compose.yml expects
-EXPECTED_IMAGE=$(grep -E '^\s*image:' docker-compose.yml | head -1 | awk '{print $2}')
+EXPECTED_IMAGE=$(grep -E '^\s*image:' docker-compose.yml | head -1 | awk '{print $2}' | tr -d '\r')
 if [ -n "$EXPECTED_IMAGE" ] && [ "$LOADED_IMAGE" != "$EXPECTED_IMAGE" ]; then
     echo "Tagging $LOADED_IMAGE → $EXPECTED_IMAGE"
     docker tag "$LOADED_IMAGE" "$EXPECTED_IMAGE"
