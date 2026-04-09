@@ -115,9 +115,9 @@ AI配置
 - 双传输模式：stdio（AI 客户端启动进程）或 HTTP/SSE（QuickDesk 管理 MCP 服务器，多个 AI 客户端同时连接）
 - MCP 传输模式持久化 —— 记住 stdio/HTTP 选择，重启后自动恢复
 - 40+ MCP 工具：截图、鼠标点击/拖拽/滚动、键盘输入/快捷键、剪贴板、OCR 文字识别、UI 元素检测、屏幕验证等
-- 主机端 AI Agent，内置技能（系统信息、文件操作、Shell 执行）—— 在远程机器上运行结构化工具
+- 主机端技能宿主，内置技能（系统信息、文件操作、Shell 执行）—— 在远程机器上运行结构化工具
 - 可插拔技能架构 —— 支持添加自定义 skills 目录，技能自动加载并同步给已连接客户端
-- 设置中的 AI Agent 开关 —— 启用/禁用 Agent 进程，持久化配置
+- 设置中的技能宿主开关 —— 启用/禁用技能宿主进程，持久化配置
 - MCP Resources：实时设备状态、连接信息、主机详情
 - 9 个 MCP Prompts：操作指南、服务器健康检查、批量自动化、故障诊断、屏幕分析、多设备编排、SOP 文档生成
 - 实时事件推送：连接状态变化、剪贴板更新、屏幕变化、性能统计
@@ -373,8 +373,8 @@ QuickDesk/
 │       ├── main.rs               # 入口、命令行参数、MCP Server 启动
 │       ├── server.rs             # MCP 工具、提示词模板、资源
 │       └── ws_client.rs          # 连接 Qt API 的 WebSocket 客户端
-├── quickdesk-agent/              # Rust 主机端 AI Agent（Cargo workspace）
-│   ├── agent/                    # Agent 主程序
+├── quickdesk-skill-host/         # Rust 主机端技能宿主（Cargo workspace）
+│   ├── agent/                    # 技能宿主主程序
 │   ├── mcp-server-common/        # MCP Server 通用框架
 │   └── skills/                   # 内置技能 MCP 服务器
 │       ├── sys-info/             # 系统信息技能
@@ -405,9 +405,9 @@ QuickDesk/
 - [x] **MCP Server —— AI Agent 操控远程桌面**
 - [x] **20+ MCP 工具（截图、点击、输入、拖拽、快捷键、剪贴板等）**
 - [x] **MCP Resources & Prompts**
-- [x] **主机端 AI Agent，内置技能（sys-info、file-ops、shell-runner）**
+- [x] **主机端技能宿主，内置技能（sys-info、file-ops、shell-runner）**
 - [x] **基于 OCR 的 UI 分析工具（get_ui_state、find_element、screen_diff_summary 等）**
-- [x] **MCP 传输模式和 AI Agent 设置持久化**
+- [x] **MCP 传输模式和技能宿主设置持久化**
 - [x] **多目录 Skills 加载，支持用户自定义路径**
 - [x] **设备记忆与历史检索（自动画像、操作日志、失败模式分析）**
 - [x] **工作流录制与回放（录制、回放、参数化）**

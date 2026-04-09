@@ -109,7 +109,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
     <button class="secondary" onclick="doListTools()">Refresh Tools</button>
     <span style="color:var(--text2);font-size:11px;">│</span>
     <select id="connSelect" title="Active connection"><option value="">No connections</option></select>
-    <button class="secondary" onclick="loadAgentSkills()">Load Agent Skills</button>
+    <button class="secondary" onclick="loadSkills()">Load Skills</button>
     <button class="danger" onclick="clearLog()">Clear</button>
   </div>
 
@@ -179,8 +179,8 @@ let reqCounter = 0;
 let tools = [];
 let currentTool = null;
 let sseSource = null;
-let agentTools = [];
-let agentDeviceId = '';
+let skillTools = [];
+let skillDeviceId = '';
 let connectionsRefreshInterval = null;
 
 function getMcpUrl() { return document.getElementById('mcpUrl').value.replace(/\/+$/, ''); }
@@ -432,25 +432,25 @@ async function doListTools() {
   startConnectionsRefreshInterval();
 }
 
-async function loadAgentSkills() {
+async function loadSkills() {
   const deviceId = document.getElementById('connSelect').value.trim();
   if (!deviceId) {
     logMsg('error', 'Select a device first (refresh runs list_connections automatically)');
     return;
   }
-  agentDeviceId = deviceId;
+  skillDeviceId = deviceId;
 
-  logMsg('info', `Loading agent skills for device: ${deviceId}`);
-  const result = await mcpRequest('tools/call', { name: 'agent_list_tools', arguments: { device_id: deviceId } });
+  logMsg('info', `Loading skills for device: ${deviceId}`);
+  const result = await mcpRequest('tools/call', { name: 'skill_list_tools', arguments: { device_id: deviceId } });
   if (!result || result.error) {
-    logMsg('error', 'Failed to load agent skills');
+    logMsg('error', 'Failed to load skills');
     if (result) showResult(result, true);
     return;
   }
 
   const content = result.result?.content;
   if (!content || !content.length) {
-    logMsg('error', 'Empty response from agent_list_tools');
+    logMsg('error', 'Empty response from skill_list_tools');
     return;
   }
 
@@ -463,12 +463,12 @@ async function loadAgentSkills() {
       showResult(result, false);
       return;
     }
-    agentTools = toolsArr;
-    logMsg('info', `Discovered ${agentTools.length} agent skill tool(s)`);
+    skillTools = toolsArr;
+    logMsg('info', `Discovered ${skillTools.length} skill tool(s)`);
     buildSidebar();
     showResult(result, false);
   } catch (e) {
-    logMsg('error', `Failed to parse agent tools: ${e.message}`);
+    logMsg('error', `Failed to parse skill tools: ${e.message}`);
     showResult(result, false);
   }
 }
@@ -477,15 +477,15 @@ async function sendToolCall() {
   if (!currentTool) { logMsg('error', 'Select a tool first'); return; }
   const args = collectArgs();
 
-  if (currentTool._agentSkill) {
-    const deviceId = document.getElementById('connSelect').value.trim() || agentDeviceId;
+  if (currentTool._skill) {
+    const deviceId = document.getElementById('connSelect').value.trim() || skillDeviceId;
     if (!deviceId) {
       logMsg('error', 'Select a device first');
       return;
     }
     const result = await mcpRequest('tools/call', {
-      name: 'agent_exec',
-      arguments: { device_id: deviceId, tool: currentTool._agentToolName, args }
+      name: 'skill_exec',
+      arguments: { device_id: deviceId, tool: currentTool._skillToolName, args }
     });
     if (result) showResult(result, !!result.error);
   } else {
@@ -560,7 +560,7 @@ function buildSidebar() {
     else if (t.name.startsWith('keyboard') || t.name.startsWith('key_')) group = 'Keyboard';
     else if (t.name.includes('clipboard')) group = 'Clipboard';
     else if (t.name.startsWith('wait_for') || t.name.startsWith('assert') || t.name.startsWith('verify') || t.name.startsWith('screen_diff')) group = 'Verification';
-    else if (t.name.startsWith('agent')) group = 'Agent';
+    else if (t.name.startsWith('skill')) group = 'Skills';
     else if (t.name.startsWith('list_event') || t.name.startsWith('get_recent')) group = 'Events';
     else if (t.name === 'retry_with_alternative') group = 'Verification';
     else if (t.name.includes('device_profile') || t.name.includes('operation_history') || t.name.includes('failure_memory') || t.name.includes('device_summary')) group = 'Device Memory';
@@ -579,9 +579,9 @@ function buildSidebar() {
     }
   }
 
-  if (agentTools.length > 0) {
+  if (skillTools.length > 0) {
     const skillGroups = {};
-    for (const at of agentTools) {
+    for (const at of skillTools) {
       let group = 'Other';
       const n = at.name || '';
       if (['get_system_info', 'list_processes'].includes(n)) group = 'sys-info';
@@ -593,7 +593,7 @@ function buildSidebar() {
 
     for (const [sg, items] of Object.entries(skillGroups)) {
       const h = document.createElement('h3');
-      h.textContent = `Agent: ${sg} (${items.length})`;
+      h.textContent = `Skills: ${sg} (${items.length})`;
       h.style.color = 'var(--orange)';
       sb.appendChild(h);
       for (const at of items) {
@@ -602,7 +602,7 @@ function buildSidebar() {
         btn.textContent = '⚡ ' + at.name;
         btn.title = at.description || '';
         btn.style.color = 'var(--orange)';
-        btn.onclick = () => selectAgentSkillTool(at);
+        btn.onclick = () => selectSkillTool(at);
         sb.appendChild(btn);
       }
     }
@@ -752,19 +752,19 @@ function selectTool(tool) {
   switchTab('form');
 }
 
-function selectAgentSkillTool(agentTool) {
+function selectSkillTool(agentTool) {
   currentTool = {
     name: agentTool.name,
     description: agentTool.description,
     inputSchema: agentTool.inputSchema || agentTool.input_schema,
-    _agentSkill: true,
-    _agentToolName: agentTool.name,
+    _skill: true,
+    _skillToolName: agentTool.name,
   };
   activateBtn('⚡ ' + agentTool.name);
 
   const header = document.getElementById('toolHeader');
   header.querySelector('h2').textContent = agentTool.name;
-  header.querySelector('p').textContent = `[Agent Skill] ${agentTool.description || ''}`;
+  header.querySelector('p').textContent = `[Skill] ${agentTool.description || ''}`;
 
   const area = document.getElementById('paramsArea');
   area.innerHTML = '';
@@ -837,7 +837,7 @@ function selectAgentSkillTool(agentTool) {
     }
   }
 
-  const deviceId = document.getElementById('connSelect').value.trim() || agentDeviceId;
+  const deviceId = document.getElementById('connSelect').value.trim() || skillDeviceId;
   const sampleArgs = {};
   if (schema && schema.properties) {
     for (const [key, prop] of Object.entries(schema.properties)) {
@@ -849,7 +849,7 @@ function selectAgentSkillTool(agentTool) {
   }
   document.getElementById('rawJson').value = JSON.stringify({
     jsonrpc: '2.0', id: reqCounter + 1, method: 'tools/call',
-    params: { name: 'agent_exec', arguments: { device_id: deviceId, tool: agentTool.name, args: sampleArgs } }
+    params: { name: 'skill_exec', arguments: { device_id: deviceId, tool: agentTool.name, args: sampleArgs } }
   }, null, 2);
 
   switchTab('form');

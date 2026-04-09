@@ -251,7 +251,7 @@ void ClientManager::syncClipboard(const QString& deviceId, const QString& text)
     m_messaging->sendMessage(message);
 }
 
-void ClientManager::sendAgentCommand(const QString& deviceId,
+void ClientManager::sendSkillCommand(const QString& deviceId,
                                      const QString& jsonData)
 {
     if (!m_messaging || !m_messaging->isReady()) {
@@ -261,7 +261,7 @@ void ClientManager::sendAgentCommand(const QString& deviceId,
     if (connId.isEmpty()) return;
 
     QJsonObject message;
-    message["type"] = "agentBridgeSend";
+    message["type"] = "skillBridgeSend";
     message["connectionId"] = connId;
     message["data"] = jsonData;
     m_messaging->sendMessage(message);
@@ -675,8 +675,8 @@ void ClientManager::onMessageReceived(const QJsonObject& message)
         handleFileDownloadComplete(message);
     } else if (type == "fileDownloadError") {
         handleFileDownloadError(message);
-    } else if (type == "agentBridgeResponse") {
-        handleAgentBridgeResponse(message);
+    } else if (type == "skillBridgeResponse") {
+        handleSkillBridgeResponse(message);
     } else if (type == "setFramerateResponse" || type == "setResolutionResponse" || type == "setFramerateBoostResponse" || type == "setBitrateResponse") {
         bool success = message["success"].toBool();
         if (!success) {
@@ -1353,7 +1353,7 @@ void ClientManager::handleFileDownloadError(const QJsonObject& message)
     emit fileDownloadError(deviceId, transferId, errorMessage);
 }
 
-void ClientManager::handleAgentBridgeResponse(const QJsonObject& message)
+void ClientManager::handleSkillBridgeResponse(const QJsonObject& message)
 {
     QString connId = message["connectionId"].toString();
     QString deviceId = findDeviceId(connId);
@@ -1363,7 +1363,7 @@ void ClientManager::handleAgentBridgeResponse(const QJsonObject& message)
     QJsonDocument doc = QJsonDocument::fromJson(data.toUtf8());
     QJsonObject response = doc.isObject() ? doc.object() : QJsonObject{{"raw", data}};
 
-    emit agentBridgeResponseReceived(deviceId, response);
+    emit skillBridgeResponseReceived(deviceId, response);
 }
 
 } // namespace quickdesk

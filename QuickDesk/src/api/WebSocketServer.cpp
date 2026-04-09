@@ -269,7 +269,7 @@ void WebSocketApiServer::onTextMessageReceived(const QString& message) {
         "getUiState", "getScreenText", "findElement", "clickText",
         "assertTextPresent", "assertScreenState", "screenDiffSummary",
         "waitForText", "verifyActionResult",
-        "agentExec", "agentListTools",
+        "skillExec", "skillListTools",
         "requestConfirmation"
     };
 

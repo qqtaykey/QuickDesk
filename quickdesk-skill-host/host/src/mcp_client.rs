@@ -133,7 +133,7 @@ impl McpClient {
                 "protocolVersion": "2024-11-05",
                 "capabilities": {},
                 "clientInfo": {
-                    "name": "quickdesk-agent",
+                    "name": "quickdesk-skill-host",
                     "version": "0.1.0"
                 }
             }),

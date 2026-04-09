@@ -1,7 +1,7 @@
 // Copyright 2026 QuickDesk Authors
-// Agent bridge handler implementation
+// Skill bridge handler implementation
 
-#include "AgentHandler.h"
+#include "SkillHandler.h"
 
 #include <QJsonDocument>
 #include <QMutexLocker>
@@ -12,32 +12,32 @@
 
 namespace quickdesk {
 
-AgentHandler::AgentHandler(MainController* controller, QObject* parent)
+SkillHandler::SkillHandler(MainController* controller, QObject* parent)
     : QObject(parent)
     , m_controller(controller)
 {
     connect(m_controller->clientManager(),
-            &ClientManager::agentBridgeResponseReceived,
+            &ClientManager::skillBridgeResponseReceived,
             this,
             [this](const QString& deviceId, const QJsonObject& response) {
-                onAgentResponse(deviceId, response);
+                onSkillResponse(deviceId, response);
             });
 }
 
 // ---- Public API (called from worker threads) ----
 
-QJsonObject AgentHandler::handleAgentExec(const QJsonObject& params)
+QJsonObject SkillHandler::handleSkillExec(const QJsonObject& params)
 {
     QString deviceId = params["deviceId"].toString();
     QString tool     = params["tool"].toString();
     QJsonValue args  = params.value("args");
 
     if (deviceId.isEmpty() || tool.isEmpty()) {
-        return {{"error", "agentExec: device_id and tool are required"}};
+        return {{"error", "skillExec: device_id and tool are required"}};
     }
 
     if (!isConnectionValid(deviceId)) {
-        return {{"error", QString("agentExec: device '%1' not found").arg(deviceId)}};
+        return {{"error", QString("skillExec: device '%1' not found").arg(deviceId)}};
     }
 
     QJsonObject payload;
@@ -49,16 +49,16 @@ QJsonObject AgentHandler::handleAgentExec(const QJsonObject& params)
     return sendAndWait(deviceId, payload);
 }
 
-QJsonObject AgentHandler::handleAgentListTools(const QJsonObject& params)
+QJsonObject SkillHandler::handleSkillListTools(const QJsonObject& params)
 {
     QString deviceId = params["deviceId"].toString();
 
     if (deviceId.isEmpty()) {
-        return {{"error", "agentListTools: device_id is required"}};
+        return {{"error", "skillListTools: device_id is required"}};
     }
 
     if (!isConnectionValid(deviceId)) {
-        return {{"error", QString("agentListTools: device '%1' not found").arg(deviceId)}};
+        return {{"error", QString("skillListTools: device '%1' not found").arg(deviceId)}};
     }
 
     QJsonObject payload;
@@ -70,7 +70,7 @@ QJsonObject AgentHandler::handleAgentListTools(const QJsonObject& params)
 
 // ---- Callback from ClientManager (main thread) ----
 
-void AgentHandler::onAgentResponse(const QString& /*deviceId*/,
+void SkillHandler::onSkillResponse(const QString& /*deviceId*/,
                                    const QJsonObject& response)
 {
     QString id = response["id"].toString();
@@ -89,13 +89,13 @@ void AgentHandler::onAgentResponse(const QString& /*deviceId*/,
 
 // ---- Private helpers ----
 
-bool AgentHandler::isConnectionValid(const QString& deviceId) const
+bool SkillHandler::isConnectionValid(const QString& deviceId) const
 {
     auto* cm = m_controller->clientManager();
     return cm && cm->connectedDeviceIds().contains(deviceId);
 }
 
-QJsonObject AgentHandler::sendAndWait(const QString& deviceId,
+QJsonObject SkillHandler::sendAndWait(const QString& deviceId,
                                       const QJsonObject& payload,
                                       int timeoutMs)
 {
@@ -116,7 +116,7 @@ QJsonObject AgentHandler::sendAndWait(const QString& deviceId,
     // NativeMessaging is not thread-safe — send from the main thread.
     auto* cm = m_controller->clientManager();
     QMetaObject::invokeMethod(cm, [cm, deviceId, jsonData]() {
-        cm->sendAgentCommand(deviceId, jsonData);
+        cm->sendSkillCommand(deviceId, jsonData);
     }, Qt::QueuedConnection);
 
     // Block the *worker thread* (not the main thread) until response or timeout.
@@ -133,14 +133,14 @@ QJsonObject AgentHandler::sendAndWait(const QString& deviceId,
     }
 
     if (!done) {
-        return {{"error", QString("agentExec timed out after %1 ms").arg(timeoutMs)}};
+        return {{"error", QString("skillExec timed out after %1 ms").arg(timeoutMs)}};
     }
     return result;
 }
 
-QString AgentHandler::nextRequestId()
+QString SkillHandler::nextRequestId()
 {
-    return QString("agent-%1").arg(m_nextId.fetchAndAddRelaxed(1));
+    return QString("skill-%1").arg(m_nextId.fetchAndAddRelaxed(1));
 }
 
 } // namespace quickdesk

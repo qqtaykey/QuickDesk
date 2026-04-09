@@ -68,8 +68,8 @@ public:
     // Access code management
     Q_INVOKABLE void refreshAccessCode();
 
-    // Agent bridge — send JSON data from AgentManager to the connected client
-    Q_INVOKABLE void sendAgentBridgeSend(const QString& jsonData);
+    // Skill bridge — send JSON data from SkillHostManager to the connected client
+    Q_INVOKABLE void sendSkillBridgeSend(const QString& jsonData);
 
     // State getters
     QString deviceId() const;
@@ -108,8 +108,8 @@ signals:
     void errorOccurred(const QString& code, const QString& message);
     void refreshAccessCodeResult(bool success, const QString& errorCode, const QString& errorMessage);
 
-    // Agent bridge — forwarded from Chromium host to AgentManager
-    void agentMessage(const QString& jsonData);
+    // Skill bridge — forwarded from Chromium host to SkillHostManager
+    void skillMessage(const QString& jsonData);
 
 private slots:
     void onMessageReceived(const QJsonObject& message);
@@ -144,7 +144,7 @@ private:
     void handleSignalingStateChanged(const QJsonObject& message);
     void handleRefreshAccessCodeResponse(const QJsonObject& message);
     void handleDisconnectResponse(const QJsonObject& message);
-    void handleAgentMessage(const QJsonObject& message);
+    void handleSkillMessage(const QJsonObject& message);
 };
 
 } // namespace quickdesk

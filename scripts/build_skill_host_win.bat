@@ -3,7 +3,7 @@
 echo=
 echo=
 echo ---------------------------------------------------------------
-echo build quickdesk-agent + built-in skills (Rust workspace)
+echo build quickdesk-skill-host + built-in skills (Rust workspace)
 echo ---------------------------------------------------------------
 
 :: get script absolute path
@@ -32,10 +32,10 @@ goto parse_args
 echo [*] build mode: %build_mode%
 echo=
 
-set agent_dir=%script_path%..\quickdesk-agent
+set skill_host_dir=%script_path%..\quickdesk-skill-host
 set output_path=%script_path%..\output\x64
 
-echo [*] agent workspace dir: %agent_dir%
+echo [*] skill-host workspace dir: %skill_host_dir%
 echo [*] output path: %output_path%
 
 :: check if Rust is installed
@@ -46,8 +46,8 @@ if %errorlevel% neq 0 (
 )
 
 :: build
-cd /d "%agent_dir%"
-echo [*] building quickdesk-agent workspace...
+cd /d "%skill_host_dir%"
+echo [*] building quickdesk-skill-host workspace...
 
 if /i "%build_mode%"=="debug" (
     cargo build
@@ -55,7 +55,7 @@ if /i "%build_mode%"=="debug" (
         echo [!] cargo build failed
         goto return
     )
-    set cargo_out=%agent_dir%\target\debug
+    set cargo_out=%skill_host_dir%\target\debug
     set dest_dir=%output_path%\Debug
 ) else (
     cargo build --release
@@ -63,17 +63,17 @@ if /i "%build_mode%"=="debug" (
         echo [!] cargo build failed
         goto return
     )
-    set cargo_out=%agent_dir%\target\release
+    set cargo_out=%skill_host_dir%\target\release
     set dest_dir=%output_path%\Release
 )
 
-:: copy agent binary to output directory
+:: copy skill-host binary to output directory
 if not exist "!dest_dir!" mkdir "!dest_dir!"
-copy /Y "!cargo_out!\quickdesk-agent.exe" "!dest_dir!\" >nul
-echo [*] copied quickdesk-agent.exe to !dest_dir!
+copy /Y "!cargo_out!\quickdesk-skill-host.exe" "!dest_dir!\" >nul
+echo [*] copied quickdesk-skill-host.exe to !dest_dir!
 
 :: copy skill binaries and SKILL.md into per-skill subdirectories
-set skills_src=%agent_dir%\skills
+set skills_src=%skill_host_dir%\skills
 for %%s in (sys-info file-ops shell-runner) do (
     if not exist "!dest_dir!\skills\%%s" mkdir "!dest_dir!\skills\%%s"
     copy /Y "!cargo_out!\%%s.exe" "!dest_dir!\skills\%%s\" >nul
@@ -84,7 +84,7 @@ for %%s in (sys-info file-ops shell-runner) do (
 echo=
 echo=
 echo ---------------------------------------------------------------
-echo [*] quickdesk-agent build finished!
+echo [*] quickdesk-skill-host build finished!
 echo ---------------------------------------------------------------
 
 set errno=0

@@ -117,14 +117,14 @@ else
 fi
 echo
 
-# Copy agent and built-in skills
-echo "[*] copying quickdesk-agent..."
-agent_output="$script_path/../output/arm64/$build_mode/quickdesk-agent"
-if [ -f "$agent_output" ]; then
-    cp "$agent_output" "$frameworks_dir/"
-    echo "[*] copied quickdesk-agent from output"
+# Copy skill-host and built-in skills
+echo "[*] copying quickdesk-skill-host..."
+skill_host_output="$script_path/../output/arm64/$build_mode/quickdesk-skill-host"
+if [ -f "$skill_host_output" ]; then
+    cp "$skill_host_output" "$frameworks_dir/"
+    echo "[*] copied quickdesk-skill-host from output"
 else
-    echo "[!] warning: quickdesk-agent not found (run build_agent_mac.sh first)"
+    echo "[!] warning: quickdesk-skill-host not found (run build_skill_host_mac.sh first)"
 fi
 
 echo "[*] copying built-in skills..."
@@ -134,7 +134,7 @@ if [ -d "$skills_output" ]; then
     cp -R "$skills_output/"* "$frameworks_dir/skills/"
     echo "[*] copied skills directory"
 else
-    echo "[!] warning: skills directory not found (run build_agent_mac.sh first)"
+    echo "[!] warning: skills directory not found (run build_skill_host_mac.sh first)"
 fi
 echo
 
@@ -248,8 +248,8 @@ fi
 if [ -f "$frameworks_dir/quickdesk-mcp" ]; then
     codesign --force --sign - "$frameworks_dir/quickdesk-mcp"
 fi
-if [ -f "$frameworks_dir/quickdesk-agent" ]; then
-    codesign --force --sign - "$frameworks_dir/quickdesk-agent"
+if [ -f "$frameworks_dir/quickdesk-skill-host" ]; then
+    codesign --force --sign - "$frameworks_dir/quickdesk-skill-host"
 fi
 # Sign built-in skill binaries
 if [ -d "$frameworks_dir/skills" ]; then

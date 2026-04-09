@@ -684,24 +684,24 @@ Item {
                         width: parent.width
                         spacing: Theme.spacingMedium
                         
-                        // AI Agent Toggle
+                        // Skills Toggle
                         Row {
                             width: parent.width
                             spacing: Theme.spacingMedium
                             
                             Column {
-                                width: parent.width - agentSwitch.width - parent.spacing
+                                width: parent.width - skillHostSwitch.width - parent.spacing
                                 spacing: Theme.spacingXSmall
                                 anchors.verticalCenter: parent.verticalCenter
                                 
                                 Text {
-                                    text: qsTr("AI Agent")
+                                    text: qsTr("Skills")
                                     font.pixelSize: Theme.fontSizeMedium
                                     color: Theme.text
                                 }
                                 
                                 Text {
-                                    text: qsTr("Enable host-side AI agent for remote tool execution")
+                                    text: qsTr("Enable host-side skill execution for remote tool operations")
                                     font.pixelSize: Theme.fontSizeSmall
                                     color: Theme.textSecondary
                                     wrapMode: Text.WordWrap
@@ -710,14 +710,14 @@ Item {
                             }
                             
                             QDSwitch {
-                                id: agentSwitch
+                                id: skillHostSwitch
                                 anchors.verticalCenter: parent.verticalCenter
-                                checked: mainController ? mainController.agentEnabled : true
+                                checked: mainController ? mainController.skillHostEnabled : true
                                 
                                 onToggled: {
                                     if (mainController) {
-                                        mainController.agentEnabled = checked
-                                        root.showToast(checked ? qsTr("AI Agent enabled") : qsTr("AI Agent disabled"), QDToast.Type.Info)
+                                        mainController.skillHostEnabled = checked
+                                        root.showToast(checked ? qsTr("Skills enabled") : qsTr("Skills disabled"), QDToast.Type.Info)
                                     }
                                 }
                             }
@@ -866,7 +866,7 @@ Item {
                                         if (!mainController) return
                                         mainController.addSkillsDir(skillsDirField.text.trim())
                                         skillsDirField.text = ""
-                                        root.showToast(qsTr("Skills directory added. Agent will reload."), QDToast.Type.Success)
+                                        root.showToast(qsTr("Skills directory added. Skill host will reload."), QDToast.Type.Success)
                                     }
                                 }
                             }

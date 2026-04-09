@@ -1,11 +1,11 @@
 [package]
-name = "quickdesk-agent"
+name = "quickdesk-skill-host"
 version.workspace = true
 edition.workspace = true
-description = "QuickDesk host-side agent — manages skill MCP servers and bridges tool calls"
+description = "QuickDesk host-side skill host — manages skill MCP servers and bridges tool calls"
 
 [[bin]]
-name = "quickdesk-agent"
+name = "quickdesk-skill-host"
 path = "src/main.rs"
 
 [dependencies]

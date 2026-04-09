@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "agent",
+    "host",
     "mcp-server-common",
     "skills/sys-info",
     "skills/file-ops",

@@ -1,9 +1,9 @@
 // Copyright 2026 QuickDesk Authors
-// Agent bridge handler — routes agentExec / agentListTools from MCP to the
-// remote host agent via the qd-agent-bridge WebRTC data channel.
+// Skill bridge handler — routes skillExec / skillListTools from MCP to the
+// remote skill host via the qd-skill-bridge WebRTC data channel.
 
-#ifndef QUICKDESK_API_AGENTHANDLER_H
-#define QUICKDESK_API_AGENTHANDLER_H
+#ifndef QUICKDESK_API_SKILLHANDLER_H
+#define QUICKDESK_API_SKILLHANDLER_H
 
 #include <QAtomicInt>
 #include <QJsonObject>
@@ -18,28 +18,28 @@ namespace quickdesk {
 class MainController;
 
 /**
- * @brief Handles agentExec and agentListTools MCP tool calls.
+ * @brief Handles skillExec and skillListTools MCP tool calls.
  *
- * Thread safety: handleAgentExec / handleAgentListTools are designed to be
+ * Thread safety: handleSkillExec / handleSkillListTools are designed to be
  * called from *worker threads* (e.g. QThreadPool).  They block the calling
- * worker thread via QWaitCondition (NOT QEventLoop) until the remote agent
+ * worker thread via QWaitCondition (NOT QEventLoop) until the remote skill host
  * replies or the timeout elapses.
  *
- * onAgentResponse runs on the *main thread* (direct signal connection from
+ * onSkillResponse runs on the *main thread* (direct signal connection from
  * ClientManager) and wakes the waiting worker thread.
  */
-class AgentHandler : public QObject {
+class SkillHandler : public QObject {
     Q_OBJECT
 
 public:
-    explicit AgentHandler(MainController* controller, QObject* parent = nullptr);
+    explicit SkillHandler(MainController* controller, QObject* parent = nullptr);
 
     // Thread-safe: can be called from any thread (dispatched via QThreadPool).
-    QJsonObject handleAgentExec(const QJsonObject& params);
-    QJsonObject handleAgentListTools(const QJsonObject& params);
+    QJsonObject handleSkillExec(const QJsonObject& params);
+    QJsonObject handleSkillListTools(const QJsonObject& params);
 
-    // Called on the main thread when an agentBridgeResponse arrives.
-    void onAgentResponse(const QString& deviceId,
+    // Called on the main thread when a skillBridgeResponse arrives.
+    void onSkillResponse(const QString& deviceId,
                          const QJsonObject& response);
 
 private:
@@ -66,4 +66,4 @@ private:
 
 } // namespace quickdesk
 
-#endif // QUICKDESK_API_AGENTHANDLER_H
+#endif // QUICKDESK_API_SKILLHANDLER_H

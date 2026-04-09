@@ -3,7 +3,7 @@
 echo
 echo
 echo "---------------------------------------------------------------"
-echo "build quickdesk-agent + built-in skills (Rust workspace)"
+echo "build quickdesk-skill-host + built-in skills (Rust workspace)"
 echo "---------------------------------------------------------------"
 
 {
@@ -34,10 +34,10 @@ done
 echo "[*] build mode: $build_mode"
 echo
 
-agent_dir="$script_path/../quickdesk-agent"
+skill_host_dir="$script_path/../quickdesk-skill-host"
 output_path="$script_path/../output/arm64"
 
-echo "[*] agent workspace dir: $agent_dir"
+echo "[*] skill-host workspace dir: $skill_host_dir"
 echo "[*] output path: $output_path"
 
 if ! command -v cargo &> /dev/null; then
@@ -46,8 +46,8 @@ if ! command -v cargo &> /dev/null; then
     exit 1
 fi
 
-cd "$agent_dir"
-echo "[*] building quickdesk-agent workspace..."
+cd "$skill_host_dir"
+echo "[*] building quickdesk-skill-host workspace..."
 
 if [ "$build_mode" = "debug" ]; then
     cargo build
@@ -56,7 +56,7 @@ if [ "$build_mode" = "debug" ]; then
         cd "$old_cd"
         exit 1
     fi
-    cargo_out="$agent_dir/target/debug"
+    cargo_out="$skill_host_dir/target/debug"
     dest_dir="$output_path/Debug"
 else
     cargo build --release
@@ -65,17 +65,17 @@ else
         cd "$old_cd"
         exit 1
     fi
-    cargo_out="$agent_dir/target/release"
+    cargo_out="$skill_host_dir/target/release"
     dest_dir="$output_path/Release"
 fi
 
-# copy agent binary
+# copy skill-host binary
 mkdir -p "$dest_dir"
-cp "$cargo_out/quickdesk-agent" "$dest_dir/"
-echo "[*] copied quickdesk-agent to $dest_dir"
+cp "$cargo_out/quickdesk-skill-host" "$dest_dir/"
+echo "[*] copied quickdesk-skill-host to $dest_dir"
 
 # copy skill binaries and SKILL.md into per-skill subdirectories
-skills_src="$agent_dir/skills"
+skills_src="$skill_host_dir/skills"
 for skill in sys-info file-ops shell-runner; do
     mkdir -p "$dest_dir/skills/$skill"
     cp "$cargo_out/$skill" "$dest_dir/skills/$skill/"
@@ -86,7 +86,7 @@ done
 echo
 echo
 echo "---------------------------------------------------------------"
-echo "[*] quickdesk-agent build finished!"
+echo "[*] quickdesk-skill-host build finished!"
 echo "---------------------------------------------------------------"
 
 cd "$old_cd"

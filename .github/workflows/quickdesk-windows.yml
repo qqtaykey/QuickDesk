@@ -84,9 +84,9 @@ jobs:
         shell: cmd
         run: call scripts\build_mcp_win.bat Release
 
-      - name: Build Agent
+      - name: Build Skill Host
         shell: cmd
-        run: call scripts\build_agent_win.bat Release
+        run: call scripts\build_skill_host_win.bat Release
 
       - name: Build WebClient
         shell: cmd

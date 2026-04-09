@@ -18,7 +18,7 @@
 #include "../manager/TurnServerManager.h"
 #include "../manager/RemoteDeviceManager.h"
 #include "../manager/PresetManager.h"
-#include "../manager/AgentManager.h"
+#include "../manager/SkillHostManager.h"
 #include "../manager/AuthManager.h"
 #include "../manager/CloudDeviceManager.h"
 #include "../common/ProcessStatus.h"
@@ -69,8 +69,8 @@ class MainController : public QObject {
     Q_PROPERTY(int mcpHttpPort READ mcpHttpPort WRITE setMcpHttpPort NOTIFY mcpHttpPortChanged)
     Q_PROPERTY(QString mcpHttpUrl READ mcpHttpUrl NOTIFY mcpServiceRunningChanged)
 
-    // AI Agent
-    Q_PROPERTY(bool agentEnabled READ agentEnabled WRITE setAgentEnabled NOTIFY agentEnabledChanged)
+    // Skill Host
+    Q_PROPERTY(bool skillHostEnabled READ skillHostEnabled WRITE setSkillHostEnabled NOTIFY skillHostEnabledChanged)
     Q_PROPERTY(QStringList extraSkillsDirs READ extraSkillsDirs WRITE setExtraSkillsDirs NOTIFY extraSkillsDirsChanged)
     Q_PROPERTY(QString trustConfirmMode READ trustConfirmMode WRITE setTrustConfirmMode NOTIFY trustConfirmModeChanged)
 
@@ -174,9 +174,9 @@ public:
 
     Q_INVOKABLE void showRemoteWindowForDevice(const QString& deviceId);
 
-    // AI Agent control
-    bool agentEnabled() const;
-    void setAgentEnabled(bool enabled);
+    // Skill Host control
+    bool skillHostEnabled() const;
+    void setSkillHostEnabled(bool enabled);
     QStringList extraSkillsDirs() const;
     void setExtraSkillsDirs(const QStringList& dirs);
     QString trustConfirmMode() const;
@@ -220,7 +220,7 @@ signals:
     void mcpConnectedClientsChanged();
     void mcpTransportModeChanged();
     void mcpHttpPortChanged();
-    void agentEnabledChanged();
+    void skillHostEnabledChanged();
     void extraSkillsDirsChanged();
     void trustConfirmModeChanged();
 
@@ -264,7 +264,7 @@ private:
     std::unique_ptr<AuthManager> m_authManager;
     std::unique_ptr<CloudDeviceManager> m_cloudDeviceManager;
     std::unique_ptr<WebSocketApiServer> m_wsApiServer;
-    std::unique_ptr<AgentManager> m_agentManager;
+    std::unique_ptr<SkillHostManager> m_skillHostManager;
 
     QString m_deviceId;
     QString m_accessCode;
@@ -282,7 +282,7 @@ private:
     void onAccessCodeRefreshTimer();
     void updateAccessCodeRefreshTimer(int remainingSeconds = -1);
     QString getDefaultServerUrl() const;
-    QString getAgentBinaryPath() const;
+    QString getSkillHostBinaryPath() const;
     void setupWebSocketApiEvents();
 
     // MCP HTTP process management

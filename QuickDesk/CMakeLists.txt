@@ -18,7 +18,7 @@ set(MANAGER_SOURCES
     src/manager/SharedMemoryManager.cpp
     src/manager/RemoteDeviceManager.cpp
     src/manager/PresetManager.cpp
-    src/manager/AgentManager.cpp
+    src/manager/SkillHostManager.cpp
     src/manager/AuthManager.cpp
     src/manager/CloudDeviceManager.cpp
 )
@@ -33,7 +33,7 @@ set(MANAGER_HEADERS
     src/manager/SharedMemoryManager.h
     src/manager/RemoteDeviceManager.h
     src/manager/PresetManager.h
-    src/manager/AgentManager.h
+    src/manager/SkillHostManager.h
     src/manager/AuthManager.h
     src/manager/CloudDeviceManager.h
 )
@@ -54,7 +54,7 @@ set(API_SOURCES
     src/api/OcrCache.cpp
     src/api/UiStateService.cpp
     src/api/VerificationService.cpp
-    src/api/AgentHandler.cpp
+    src/api/SkillHandler.cpp
     src/api/TrustHandler.cpp
 )
 
@@ -66,7 +66,7 @@ set(API_HEADERS
     src/api/OcrCache.h
     src/api/UiStateService.h
     src/api/VerificationService.h
-    src/api/AgentHandler.h
+    src/api/SkillHandler.h
     src/api/TrustHandler.h
 )
 

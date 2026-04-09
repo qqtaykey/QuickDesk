@@ -287,9 +287,9 @@ fn parse_frontmatter(content: &str) -> anyhow::Result<SkillMeta> {
 /// Resolve the path to a binary skill executable.
 /// Search order:
 ///   1. `<skill_dir>/<package>(.exe)` — the skill's own subdirectory
-///   2. `<agent_exe_dir>/skills/<package>/<package>(.exe)` — installed layout
-///   3. `<agent_exe_dir>/skills/<package>(.exe)` — legacy flat layout
-///   4. `<agent_exe_dir>/<package>(.exe)` — fallback
+///   2. `<skill_host_exe_dir>/skills/<package>/<package>(.exe)` — installed layout
+///   3. `<skill_host_exe_dir>/skills/<package>(.exe)` — legacy flat layout
+///   4. `<skill_host_exe_dir>/<package>(.exe)` — fallback
 fn resolve_binary_path(package: &str, skill_dir: &Path) -> anyhow::Result<PathBuf> {
     let bin_name = if cfg!(target_os = "windows") {
         format!("{}.exe", package)
@@ -303,7 +303,7 @@ fn resolve_binary_path(package: &str, skill_dir: &Path) -> anyhow::Result<PathBu
         return Ok(in_skill);
     }
 
-    // 2-4. Fallback via agent executable directory
+    // 2-4. Fallback via skill-host executable directory
     if let Ok(exe) = std::env::current_exe() {
         if let Some(exe_dir) = exe.parent() {
             let sub = exe_dir.join("skills").join(package).join(&bin_name);
@@ -322,7 +322,7 @@ fn resolve_binary_path(package: &str, skill_dir: &Path) -> anyhow::Result<PathBu
     }
 
     anyhow::bail!(
-        "binary '{}' not found in '{}' or agent directory",
+        "binary '{}' not found in '{}' or skill-host directory",
         bin_name,
         skill_dir.display()
     )
@@ -355,9 +355,9 @@ fn build_start_command(
 
 fn get_user_skills_dir() -> PathBuf {
     if let Some(home) = dirs_home() {
-        home.join(".quickdesk-agent").join("skills")
+        home.join(".quickdesk-skill-host").join("skills")
     } else {
-        PathBuf::from(".quickdesk-agent/skills")
+        PathBuf::from(".quickdesk-skill-host/skills")
     }
 }
 

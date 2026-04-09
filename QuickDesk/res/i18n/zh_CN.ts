@@ -756,23 +756,23 @@
     </message>
     <message>
         <location filename="../../qml/views/MainWindow.qml" line="813"/>
-        <source>AI [%1]: Off</source>
-        <translation>AI [%1]：已关闭</translation>
+        <source>MCP [%1]: Off</source>
+        <translation>MCP [%1]：已关闭</translation>
     </message>
     <message>
         <location filename="../../qml/views/MainWindow.qml" line="815"/>
-        <source>AI [%1]: %2 agent(s)</source>
-        <translation>AI [%1]：%2 个代理</translation>
+        <source>MCP [%1]: %2 client(s)</source>
+        <translation>MCP [%1]：%2 个客户端</translation>
     </message>
     <message>
         <location filename="../../qml/views/MainWindow.qml" line="816"/>
-        <source>AI [%1]: Ready</source>
-        <translation>AI [%1]：就绪</translation>
+        <source>MCP [%1]: Ready</source>
+        <translation>MCP [%1]：就绪</translation>
     </message>
     <message>
         <location filename="../../qml/views/MainWindow.qml" line="837"/>
-        <source>Click to configure AI integration</source>
-        <translation>点击配置AI集成</translation>
+        <source>Click to configure MCP integration</source>
+        <translation>点击配置MCP集成</translation>
     </message>
     <message>
         <location filename="../../qml/views/MainWindow.qml" line="888"/>
@@ -1475,23 +1475,23 @@
     </message>
     <message>
         <location filename="../../qml/pages/SettingsPage.qml" line="698"/>
-        <source>AI Agent</source>
-        <translation>AI Agent</translation>
+        <source>Skills</source>
+        <translation>Skills</translation>
     </message>
     <message>
         <location filename="../../qml/pages/SettingsPage.qml" line="704"/>
-        <source>Enable host-side AI agent for remote tool execution</source>
-        <translation>开启被控端AI agent远程工具执行能力</translation>
+        <source>Enable host-side skill execution for remote tool operations</source>
+        <translation>开启被控端技能执行用于远程工具操作</translation>
     </message>
     <message>
         <location filename="../../qml/pages/SettingsPage.qml" line="720"/>
-        <source>AI Agent enabled</source>
-        <translation>AI Agent已启用</translation>
+        <source>Skills enabled</source>
+        <translation>Skills已启用</translation>
     </message>
     <message>
         <location filename="../../qml/pages/SettingsPage.qml" line="720"/>
-        <source>AI Agent disabled</source>
-        <translation>AI Agent已禁用</translation>
+        <source>Skills disabled</source>
+        <translation>Skills已禁用</translation>
     </message>
     <message>
         <location filename="../../qml/pages/SettingsPage.qml" line="739"/>
@@ -1555,8 +1555,8 @@
     </message>
     <message>
         <location filename="../../qml/pages/SettingsPage.qml" line="869"/>
-        <source>Skills directory added. Agent will reload.</source>
-        <translation>Skills目录已添加。Agent启动重新加载。</translation>
+        <source>Skills directory added. Skill host will reload.</source>
+        <translation>Skills目录已添加。Skill Host将重新加载。</translation>
     </message>
 </context>
 <context>

@@ -8,7 +8,7 @@
 #include "OcrCache.h"
 #include "UiStateService.h"
 #include "VerificationService.h"
-#include "AgentHandler.h"
+#include "SkillHandler.h"
 #include "TrustHandler.h"
 
 #include <QObject>
@@ -79,9 +79,9 @@ private:
     QJsonObject handleScreenDiffSummary(const QJsonObject& params);
     QJsonObject handleAssertScreenState(const QJsonObject& params);
 
-    // Agent bridge
-    QJsonObject handleAgentExec(const QJsonObject& params);
-    QJsonObject handleAgentListTools(const QJsonObject& params);
+    // Skill bridge
+    QJsonObject handleSkillExec(const QJsonObject& params);
+    QJsonObject handleSkillListTools(const QJsonObject& params);
 
     // Trust layer
     QJsonObject handleRequestConfirmation(const QJsonObject& params);
@@ -100,7 +100,7 @@ private:
     QMap<QString, QString> m_clipboardCache;  // deviceId -> last received text
     UiStateService       m_uiState;
     VerificationService  m_verification;
-    AgentHandler         m_agent;
+    SkillHandler         m_skillHandler;
     TrustHandler         m_trust;
 };
 

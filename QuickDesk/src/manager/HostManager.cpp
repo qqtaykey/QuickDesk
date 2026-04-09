@@ -262,8 +262,8 @@ void HostManager::onMessageReceived(const QJsonObject& message)
         handleRefreshAccessCodeResponse(message);
     } else if (type == "disconnectResponse") {
         handleDisconnectResponse(message);
-    } else if (type == "agentMessage") {
-        handleAgentMessage(message);
+    } else if (type == "skillMessage") {
+        handleSkillMessage(message);
     } else {
         LOG_WARN("Unknown message type from host: {}", type.toStdString());
     }
@@ -521,22 +521,22 @@ QJsonObject HostManager::getIceConfig() const
     return m_iceConfig;
 }
 
-void HostManager::sendAgentBridgeSend(const QString& jsonData)
+void HostManager::sendSkillBridgeSend(const QString& jsonData)
 {
     if (!m_messaging || !m_messaging->isReady()) {
         return;
     }
 
     QJsonObject message;
-    message["type"] = "agentBridgeSend";
+    message["type"] = "skillBridgeSend";
     message["data"] = jsonData;
     m_messaging->sendMessage(message);
 }
 
-void HostManager::handleAgentMessage(const QJsonObject& message)
+void HostManager::handleSkillMessage(const QJsonObject& message)
 {
     QString data = message["data"].toString();
-    emit agentMessage(data);
+    emit skillMessage(data);
 }
 
 } // namespace quickdesk

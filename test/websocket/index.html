@@ -223,24 +223,24 @@ const API_METHODS = {
     "screenDiffSummary": { desc: "Diff current screen vs baseline hash", params: { deviceId: "conn_1", fromHash: "" } },
     "assertScreenState": { desc: "Assert conditions (no polling)", params: { deviceId: "conn_1", expectations: [{ type: "text_present", value: "" }] } },
   },
-  "Agent": {
-    "agentListTools": { desc: "List remote agent tools", params: { device_id: "conn_1" } },
-    "agentExec": { desc: "Execute a tool on remote agent (custom)", params: { device_id: "conn_1", tool: "", args: {} } },
+  "Skills": {
+    "skillListTools": { desc: "List remote skill host tools", params: { deviceId: "conn_1" } },
+    "skillExec": { desc: "Execute a tool on remote skill host (custom)", params: { deviceId: "conn_1", tool: "", args: {} } },
   },
-  "Agent: sys-info": {
-    "get_system_info": { desc: "OS, CPU, memory, disk, hostname, uptime", params: { device_id: "conn_1" }, _agent: true, _args: {} },
-    "list_processes": { desc: "Running processes with CPU% and memory", params: { device_id: "conn_1", sort_by: "cpu", limit: 20 }, _agent: true, _argsMap: { sort_by: "sort_by", limit: "limit" } },
+  "Skills: sys-info": {
+    "get_system_info": { desc: "OS, CPU, memory, disk, hostname, uptime", params: { deviceId: "conn_1" }, _skill: true, _args: {} },
+    "list_processes": { desc: "Running processes with CPU% and memory", params: { deviceId: "conn_1", sort_by: "cpu", limit: 20 }, _skill: true, _argsMap: { sort_by: "sort_by", limit: "limit" } },
   },
-  "Agent: file-ops": {
-    "read_file": { desc: "Read file contents", params: { device_id: "conn_1", path: "" }, _agent: true, _argsMap: { path: "path" } },
-    "write_file": { desc: "Write content to a file", params: { device_id: "conn_1", path: "", content: "" }, _agent: true, _argsMap: { path: "path", content: "content" } },
-    "list_directory": { desc: "List files and directories", params: { device_id: "conn_1", path: "C:\\" }, _agent: true, _argsMap: { path: "path" } },
-    "create_directory": { desc: "Create a directory", params: { device_id: "conn_1", path: "" }, _agent: true, _argsMap: { path: "path" } },
-    "move_file": { desc: "Move or rename a file/directory", params: { device_id: "conn_1", source: "", destination: "" }, _agent: true, _argsMap: { source: "source", destination: "destination" } },
-    "get_file_info": { desc: "File metadata: size, time, type", params: { device_id: "conn_1", path: "" }, _agent: true, _argsMap: { path: "path" } },
+  "Skills: file-ops": {
+    "read_file": { desc: "Read file contents", params: { deviceId: "conn_1", path: "" }, _skill: true, _argsMap: { path: "path" } },
+    "write_file": { desc: "Write content to a file", params: { deviceId: "conn_1", path: "", content: "" }, _skill: true, _argsMap: { path: "path", content: "content" } },
+    "list_directory": { desc: "List files and directories", params: { deviceId: "conn_1", path: "C:\\" }, _skill: true, _argsMap: { path: "path" } },
+    "create_directory": { desc: "Create a directory", params: { deviceId: "conn_1", path: "" }, _skill: true, _argsMap: { path: "path" } },
+    "move_file": { desc: "Move or rename a file/directory", params: { deviceId: "conn_1", source: "", destination: "" }, _skill: true, _argsMap: { source: "source", destination: "destination" } },
+    "get_file_info": { desc: "File metadata: size, time, type", params: { deviceId: "conn_1", path: "" }, _skill: true, _argsMap: { path: "path" } },
   },
-  "Agent: shell": {
-    "run_command": { desc: "Execute a shell command", params: { device_id: "conn_1", command: "", timeout_secs: 60, working_dir: "" }, _agent: true, _argsMap: { command: "command", timeout_secs: "timeout_secs", working_dir: "working_dir" } },
+  "Skills: shell": {
+    "run_command": { desc: "Execute a shell command", params: { deviceId: "conn_1", command: "", timeout_secs: 60, working_dir: "" }, _skill: true, _argsMap: { command: "command", timeout_secs: "timeout_secs", working_dir: "working_dir" } },
   },
   "Events": {
     "getRecentEvents": { desc: "Get cached recent events", params: { eventType: "", limit: 20 } },
@@ -251,7 +251,7 @@ const API_METHODS = {
     "waitForScreenChange": { desc: "Wait for screen content to change", params: { deviceId: "conn_1", timeoutMs: 5000 } },
   },
   "Trust": {
-    "requestConfirmation": { desc: "Request user confirmation for an operation", params: { device_id: "conn_1", tool_name: "run_command", arguments: { command: "dir" }, risk_level: "high", reasons: ["base risk for tool"], timeout_secs: 60 } },
+    "requestConfirmation": { desc: "Request user confirmation for an operation", params: { deviceId: "conn_1", tool_name: "run_command", arguments: { command: "dir" }, risk_level: "high", reasons: ["base risk for tool"], timeout_secs: 60 } },
     "emergencyStop": { desc: "Activate emergency stop", params: { reason: "test" } },
     "deactivateEmergency": { desc: "Deactivate emergency stop", params: {} },
   },
@@ -460,15 +460,15 @@ function selectMethod(name, def) {
   }
 
   // Update raw JSON tab
-  if (def._agent) {
+  if (def._skill) {
     const argsMap = def._argsMap || {};
     const args = {};
     for (const [paramKey, argKey] of Object.entries(argsMap)) {
       if (def.params[paramKey] !== undefined) args[argKey] = def.params[paramKey];
     }
     document.getElementById('rawJson').value = JSON.stringify({
-      method: 'agentExec',
-      params: { device_id: document.getElementById('connSelect').value || def.params.device_id || 'conn_1', tool: name, args }
+      method: 'skillExec',
+      params: { deviceId: document.getElementById('connSelect').value || def.params.deviceId || 'conn_1', tool: name, args }
     }, null, 2);
   } else {
     const rawParams = { ...def.params };
@@ -509,7 +509,7 @@ function sendFromForm() {
     if ('deviceId' in currentMethod.def.params) params.deviceId = deviceVal;
     if ('device_id' in currentMethod.def.params) params.device_id = deviceVal;
   }
-  if (currentMethod.def._agent) {
+  if (currentMethod.def._skill) {
     const argsMap = currentMethod.def._argsMap || {};
     const args = {};
     for (const [paramKey, argKey] of Object.entries(argsMap)) {
@@ -517,8 +517,8 @@ function sendFromForm() {
         args[argKey] = params[paramKey];
       }
     }
-    sendMessage('agentExec', {
-      device_id: params.device_id || 'conn_1',
+    sendMessage('skillExec', {
+      deviceId: params.deviceId || 'conn_1',
       tool: currentMethod.name,
       args
     });

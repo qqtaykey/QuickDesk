@@ -3,7 +3,7 @@
 #include "MainController.h"
 #include "../manager/ProcessManager.h"
 #include "../manager/NativeMessaging.h"
-#include "../manager/AgentManager.h"
+#include "../manager/SkillHostManager.h"
 #include "../api/WebSocketServer.h"
 #include "../api/TrustHandler.h"
 #include "../api/OcrEngine.h"
@@ -40,9 +40,9 @@ MainController::MainController(QObject* parent)
     m_authManager = std::make_unique<AuthManager>(m_serverManager.get(), this);
     m_cloudDeviceManager = std::make_unique<CloudDeviceManager>(m_serverManager.get(), m_authManager.get(), this);
 
-    // Create AgentManager and wire it to HostManager (host-side agent bridge)
-    m_agentManager = std::make_unique<AgentManager>(this);
-    m_agentManager->setHostManager(m_hostManager.get());
+    // Create SkillHostManager and wire it to HostManager (host-side skill bridge)
+    m_skillHostManager = std::make_unique<SkillHostManager>(this);
+    m_skillHostManager->setHostManager(m_hostManager.get());
 
     // Connect ProcessManager signals
     connect(m_processManager.get(), &ProcessManager::hostProcessStarted,
@@ -529,17 +529,17 @@ void MainController::onHostProcessStarted()
     QJsonObject iceConfig = m_turnServerManager->getEffectiveIceConfig();
     m_hostManager->setIceConfig(iceConfig);
 
-    // Start quickdesk-agent if enabled
-    if (core::LocalConfigCenter::instance().agentEnabled()) {
-        QString agentPath = getAgentBinaryPath();
-        if (QFile::exists(agentPath)) {
+    // Start quickdesk-skill-host if enabled
+    if (core::LocalConfigCenter::instance().skillHostEnabled()) {
+        QString skillHostPath = getSkillHostBinaryPath();
+        if (QFile::exists(skillHostPath)) {
             QStringList skillsDirs;
             skillsDirs << QCoreApplication::applicationDirPath() + "/skills";
             skillsDirs << extraSkillsDirs();
-            m_agentManager->startAgent(agentPath, skillsDirs);
+            m_skillHostManager->startSkillHost(skillHostPath, skillsDirs);
         } else {
-            LOG_WARN("quickdesk-agent not found at {}, agent features disabled",
-                     agentPath.toStdString());
+            LOG_WARN("quickdesk-skill-host not found at {}, skill features disabled",
+                     skillHostPath.toStdString());
         }
     } else {
         LOG_INFO("AI Agent disabled in settings, skipping agent start");
@@ -589,8 +589,8 @@ void MainController::onHostProcessStopped(int exitCode)
 {
     LOG_INFO("Host process stopped with exit code: {}", exitCode);
 
-    if (m_agentManager) {
-        m_agentManager->stopAgent();
+    if (m_skillHostManager) {
+        m_skillHostManager->stopSkillHost();
     }
 
     // Update server status
@@ -1168,24 +1168,23 @@ QString MainController::getMcpBinaryPath() const {
     return QDir::toNativeSeparators(QDir::cleanPath(mcpPath));
 }
 
-QString MainController::getAgentBinaryPath() const {
+QString MainController::getSkillHostBinaryPath() const {
     auto appDir = QCoreApplication::applicationDirPath();
 #ifdef Q_OS_WIN
-    auto agentPath = appDir + "/quickdesk-agent.exe";
+    auto skillHostPath = appDir + "/quickdesk-skill-host.exe";
 #elif defined(Q_OS_MAC)
-    auto agentPath = appDir + "/../../../quickdesk-agent";
-    QFileInfo fileInfo(agentPath);
+    auto skillHostPath = appDir + "/../../../quickdesk-skill-host";
+    QFileInfo fileInfo(skillHostPath);
     if (!fileInfo.exists() || !fileInfo.isExecutable()) {
-        LOG_INFO("using Contents/Frameworks/quickdesk-agent");  
-        // appDir = Contents/MacOS, agent binary is in Contents/Frameworks
-        agentPath = appDir + "/../Frameworks/quickdesk-agent";
+        LOG_INFO("using Contents/Frameworks/quickdesk-skill-host");
+        skillHostPath = appDir + "/../Frameworks/quickdesk-skill-host";
     } else {
-        LOG_INFO("using out of bundle quickdesk-agent");
+        LOG_INFO("using out of bundle quickdesk-skill-host");
     }
 #else
-    auto agentPath = appDir + "/quickdesk-agent";
+    auto skillHostPath = appDir + "/quickdesk-skill-host";
 #endif
-    return QDir::toNativeSeparators(QDir::cleanPath(agentPath));
+    return QDir::toNativeSeparators(QDir::cleanPath(skillHostPath));
 }
 
 QJsonObject MainController::buildMcpServerConfig(const QString& transport) const {
@@ -1324,35 +1323,35 @@ int MainController::writeMcpConfig(const QString& clientType) {
     return 0;
 }
 
-// AI Agent control
-bool MainController::agentEnabled() const {
-    return core::LocalConfigCenter::instance().agentEnabled();
+// Skill Host control
+bool MainController::skillHostEnabled() const {
+    return core::LocalConfigCenter::instance().skillHostEnabled();
 }
 
-void MainController::setAgentEnabled(bool enabled) {
-    if (agentEnabled() == enabled) return;
-    core::LocalConfigCenter::instance().setAgentEnabled(enabled);
+void MainController::setSkillHostEnabled(bool enabled) {
+    if (skillHostEnabled() == enabled) return;
+    core::LocalConfigCenter::instance().setSkillHostEnabled(enabled);
 
     if (enabled) {
-        QString agentPath = getAgentBinaryPath();
-        if (QFile::exists(agentPath)) {
+        QString skillHostPath = getSkillHostBinaryPath();
+        if (QFile::exists(skillHostPath)) {
             QStringList skillsDirs;
             skillsDirs << QCoreApplication::applicationDirPath() + "/skills";
             skillsDirs << extraSkillsDirs();
-            m_agentManager->startAgent(agentPath, skillsDirs);
+            m_skillHostManager->startSkillHost(skillHostPath, skillsDirs);
         }
     } else {
-        m_agentManager->stopAgent();
-        // Notify clients that agent capabilities are gone
+        m_skillHostManager->stopSkillHost();
+        // Notify clients that skill capabilities are gone
         if (m_hostManager) {
             QJsonObject msg;
             msg["type"] = QStringLiteral("capabilitiesChanged");
             msg["tools"] = QJsonArray();
             QByteArray bytes = QJsonDocument(msg).toJson(QJsonDocument::Compact);
-            m_hostManager->sendAgentBridgeSend(QString::fromUtf8(bytes));
+            m_hostManager->sendSkillBridgeSend(QString::fromUtf8(bytes));
         }
     }
-    emit agentEnabledChanged();
+    emit skillHostEnabledChanged();
 }
 
 QStringList MainController::extraSkillsDirs() const {
@@ -1373,17 +1372,17 @@ void MainController::setExtraSkillsDirs(const QStringList& dirs) {
     QString json = QString::fromUtf8(QJsonDocument(arr).toJson(QJsonDocument::Compact));
     core::LocalConfigCenter::instance().setExtraSkillsDirs(json);
 
-    // Restart agent to pick up new directories
-    if (agentEnabled() && m_agentManager->isRunning()) {
-        m_agentManager->stopAgent();
+    // Restart skill host to pick up new directories
+    if (skillHostEnabled() && m_skillHostManager->isRunning()) {
+        m_skillHostManager->stopSkillHost();
         QTimer::singleShot(500, this, [this]() {
-            if (!agentEnabled()) return;
-            QString agentPath = getAgentBinaryPath();
-            if (QFile::exists(agentPath)) {
+            if (!skillHostEnabled()) return;
+            QString skillHostPath = getSkillHostBinaryPath();
+            if (QFile::exists(skillHostPath)) {
                 QStringList skillsDirs;
                 skillsDirs << QCoreApplication::applicationDirPath() + "/skills";
                 skillsDirs << extraSkillsDirs();
-                m_agentManager->startAgent(agentPath, skillsDirs);
+                m_skillHostManager->startSkillHost(skillHostPath, skillsDirs);
             }
         });
     }

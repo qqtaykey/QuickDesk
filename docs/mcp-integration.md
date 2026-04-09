@@ -489,16 +489,16 @@ assert_text_present(device_id=dev_id, text="Are you sure")
 | `get_signaling_status` | Signaling server connection status. |
 | `refresh_access_code` | Generate a new access code for the local host. |
 
-### Remote Agent (Host-Side Skills)
+### Remote Skill Host (Host-Side Skills)
 
-These tools invoke skills running on the remote host machine via the QuickDesk Agent. The agent starts automatically when the host launches and reports its available tools when a client connects. Use `agent_list_tools` to discover available tools before calling `agent_exec`.
+These tools invoke skills running on the remote host machine via the QuickDesk skill host. The skill host starts automatically when the host launches and reports its available tools when a client connects. Use `skill_list_tools` to discover available tools before calling `skill_exec`.
 
 | Tool | Description |
 |------|-------------|
-| `agent_list_tools` | List all tools available on the remote host agent. Returns tool names, descriptions, and input schemas. |
-| `agent_exec` | Execute a tool on the remote host agent. Pass the tool name and arguments as a JSON object. |
+| `skill_list_tools` | List all tools available on the remote skill host. Returns tool names, descriptions, and input schemas. |
+| `skill_exec` | Execute a tool on the remote skill host. Pass the tool name and arguments as a JSON object. |
 
-#### Built-in Agent Tools
+#### Built-in Skill Host Tools
 
 The following tools are provided by built-in skills that ship with QuickDesk (zero external dependencies):
 
@@ -526,29 +526,29 @@ The following tools are provided by built-in skills that ship with QuickDesk (ze
 |------|-------------|------------|
 | `run_command` | Execute a shell command. Returns stdout, stderr, and exit code. | `command`, `timeout_secs` (default 60), `working_dir` |
 
-#### Agent Tool Usage
+#### Skill Host Tool Usage
 
 ```
 // Discover available tools on the remote host
-agent_list_tools(device_id=dev_id)
+skill_list_tools(device_id=dev_id)
     → returns all tools with descriptions and parameter schemas
 
 // Get system information
-agent_exec(device_id=dev_id, tool="get_system_info", args={})
+skill_exec(device_id=dev_id, tool="get_system_info", args={})
     → OS, CPU, memory, disk, hostname, uptime
 
 // Run a command on the remote host
-agent_exec(device_id=dev_id, tool="run_command",
+skill_exec(device_id=dev_id, tool="run_command",
            args={"command": "ipconfig /all"})
     → stdout, stderr, exit_code
 
 // Read a remote file
-agent_exec(device_id=dev_id, tool="read_file",
+skill_exec(device_id=dev_id, tool="read_file",
            args={"path": "C:\\Users\\admin\\config.ini"})
     → file contents
 ```
 
-> **Note:** Agent tools run directly on the remote host without needing a visible desktop session. They are faster and more reliable than opening a terminal via screenshot-based automation for tasks like reading files, running commands, and checking system status.
+> **Note:** Skill host tools run directly on the remote host without needing a visible desktop session. They are faster and more reliable than opening a terminal via screenshot-based automation for tasks like reading files, running commands, and checking system status.
 
 ### Events (Reactive Automation)
 
@@ -993,9 +993,9 @@ All API operations are logged to `logs/quickdesk_audit.log` (rotating, 10MB x 5 
 
 ---
 
-## Host-Side AI Agent
+## Host-Side Skill Host
 
-QuickDesk includes a host-side AI Agent (`quickdesk-agent`) that runs structured tools directly on the remote machine, complementing the screen-based MCP tools.
+QuickDesk includes a host-side skill host (`quickdesk-skill-host`) that runs structured tools directly on the remote machine, complementing the screen-based MCP tools.
 
 ### Built-in Skills
 
@@ -1005,20 +1005,20 @@ QuickDesk includes a host-side AI Agent (`quickdesk-agent`) that runs structured
 | **File Operations** | `file-ops` | `read_file`, `write_file`, `list_directory`, `create_directory`, `move_file`, `get_file_info` |
 | **Shell Runner** | `shell-runner` | `run_command` |
 
-### Agent MCP Tools
+### Skill Host MCP Tools
 
-Two MCP tools bridge AI clients to the host agent:
+Two MCP tools bridge AI clients to the skill host:
 
 | Tool | Description |
 |------|-------------|
-| `agent_exec` | Execute a tool on the remote host agent. Parameters: `device_id`, `tool_name`, `arguments` |
-| `agent_list_tools` | List all tools available on the remote host agent. Parameters: `device_id` |
+| `skill_exec` | Execute a tool on the remote skill host. Parameters: `device_id`, `tool_name`, `arguments` |
+| `skill_list_tools` | List all tools available on the remote skill host. Parameters: `device_id` |
 
-### Example: Run a shell command via agent
+### Example: Run a shell command via skill host
 
 ```json
 {
-  "name": "agent_exec",
+  "name": "skill_exec",
   "arguments": {
     "device_id": "123456789",
     "tool_name": "run_command",
@@ -1045,9 +1045,9 @@ skills/
 
 Users can add custom skills directories in **Settings > AI > Skills Directories**. Each skill directory must contain a `SKILL.md` with OpenClaw-compatible frontmatter and the corresponding binary.
 
-### Agent Toggle
+### Skill Host Toggle
 
-The AI Agent can be enabled or disabled in **Settings > AI > AI Agent**. This setting is persisted and controls whether the `quickdesk-agent` process starts with the host. When disabled, no agent capabilities are reported to connected clients.
+The skill host can be enabled or disabled in **Settings > AI > AI Agent**. This setting is persisted and controls whether the `quickdesk-skill-host` process starts with the host. When disabled, no skill host capabilities are reported to connected clients.
 
 ---
 
@@ -1070,7 +1070,7 @@ QuickDesk MCP includes a persistent device memory system (SQLite) that automatic
 | `search_operation_history` | Search operation history with filters (tool, keyword, success) |
 | `get_failure_memory` | Get failure records and pattern analysis |
 
-Device profiles are auto-created/updated on connection. `agent_exec` calls are automatically logged.
+Device profiles are auto-created/updated on connection. `skill_exec` calls are automatically logged.
 
 ---
 
@@ -1092,11 +1092,11 @@ Record AI operation sequences as reusable workflows with parameterized replay.
 ### Typical Flow
 
 ```
-start_recording → execute agent_exec calls → stop_recording → get reusable workflow
+start_recording → execute skill_exec calls → stop_recording → get reusable workflow
 replay_workflow → replay on another device
 ```
 
-During recording, all `agent_exec` calls are automatically captured as workflow steps.
+During recording, all `skill_exec` calls are automatically captured as workflow steps.
 
 ---
 
@@ -1129,7 +1129,7 @@ Risk assessment, confirmation approval, and emergency stop for high-risk operati
 
 ### Automatic Integration
 
-`agent_exec` has built-in trust layer integration:
+`skill_exec` has built-in trust layer integration:
 1. Check emergency stop → reject if active
 2. Risk assessment → reject if policy-blocked
 3. Confirmation required → show Qt dialog for user approval

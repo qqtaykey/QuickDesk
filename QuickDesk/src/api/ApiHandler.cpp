@@ -46,7 +46,7 @@ ApiHandler::ApiHandler(MainController* controller, QObject* parent)
     , m_controller(controller)
     , m_uiState(controller)
     , m_verification(controller)
-    , m_agent(controller)
+    , m_skillHandler(controller)
     , m_trust(controller) {
     registerHandlers();
 
@@ -179,12 +179,12 @@ void ApiHandler::registerHandlers() {
     m_handlers["assertScreenState"] = [this](const QJsonObject& p) {
         return handleAssertScreenState(p);
     };
-    // Agent bridge
-    m_handlers["agentExec"] = [this](const QJsonObject& p) {
-        return handleAgentExec(p);
+    // Skill bridge
+    m_handlers["skillExec"] = [this](const QJsonObject& p) {
+        return handleSkillExec(p);
     };
-    m_handlers["agentListTools"] = [this](const QJsonObject& p) {
-        return handleAgentListTools(p);
+    m_handlers["skillListTools"] = [this](const QJsonObject& p) {
+        return handleSkillListTools(p);
     };
 
     // Trust layer
@@ -1103,14 +1103,14 @@ QJsonObject ApiHandler::makeError(int code, const QString& message) {
     return resp;
 }
 
-QJsonObject ApiHandler::handleAgentExec(const QJsonObject& params)
+QJsonObject ApiHandler::handleSkillExec(const QJsonObject& params)
 {
-    return makeResult(m_agent.handleAgentExec(params));
+    return makeResult(m_skillHandler.handleSkillExec(params));
 }
 
-QJsonObject ApiHandler::handleAgentListTools(const QJsonObject& params)
+QJsonObject ApiHandler::handleSkillListTools(const QJsonObject& params)
 {
-    return makeResult(m_agent.handleAgentListTools(params));
+    return makeResult(m_skillHandler.handleSkillListTools(params));
 }
 
 QJsonObject ApiHandler::handleRequestConfirmation(const QJsonObject& params)

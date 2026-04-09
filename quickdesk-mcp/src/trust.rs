@@ -339,14 +339,14 @@ impl TrustEngine {
             "screenshot" | "getUiState" | "getScreenText" | "findElement"
             | "getHostInfo" | "getStatus" | "getPerformanceStats"
             | "get_system_info" | "list_processes" | "list_directory"
-            | "get_file_info" | "read_file" | "agent_list_tools"
+            | "get_file_info" | "read_file" | "skill_list_tools"
             | "getClipboard" | "wait_for_event" => RiskLevel::Safe,
 
             "clickText" | "typeText" | "pressKey" | "scrollScreen"
             | "mouseClick" | "mouseDrag" | "setClipboard"
             | "write_file" | "create_directory" | "move_file" => RiskLevel::Medium,
 
-            "run_command" | "sendAction" | "agent_exec"
+            "run_command" | "sendAction" | "skill_exec"
             | "startFileUpload" => RiskLevel::High,
 
             _ => RiskLevel::Low,

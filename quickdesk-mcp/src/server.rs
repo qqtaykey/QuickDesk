@@ -380,10 +380,10 @@ struct AssertScreenStateParam {
 
 #[derive(Deserialize, JsonSchema)]
 #[allow(dead_code)]
-struct AgentExecParam {
+struct SkillExecParam {
     /// Remote session on the host (`deviceId`)
     device_id: String,
-    /// Tool name to invoke on the remote agent (e.g. "run_shell", "list_processes")
+    /// Tool name to invoke on the remote skill host (e.g. "run_shell", "list_processes")
     tool: String,
     /// Arguments to pass to the tool as a JSON object
     #[serde(default, deserialize_with = "deserialize_args")]
@@ -409,7 +409,7 @@ where
 
 #[derive(Deserialize, JsonSchema)]
 #[allow(dead_code)]
-struct AgentListToolsParam {
+struct SkillListToolsParam {
     /// Remote session on the host (`deviceId`)
     device_id: String,
 }
@@ -1470,10 +1470,10 @@ If no attempt succeeds, returns a summary of all failures.")]
         Ok(())
     }
 
-    #[tool(description = "Execute a tool on the remote host agent (e.g. run_shell, list_processes). \
-The agent runs on the host machine and can call any skill tool. \
-Use agent_list_tools first to discover available tools and their parameters.")]
-    async fn agent_exec(&self, params: Parameters<AgentExecParam>) -> String {
+    #[tool(description = "Execute a tool on the remote skill host (e.g. run_shell, list_processes). \
+The skill host runs on the host machine and can call any skill tool. \
+Use skill_list_tools first to discover available tools and their parameters.")]
+    async fn skill_exec(&self, params: Parameters<SkillExecParam>) -> String {
         let p = params.0;
         let args = p.args.unwrap_or(json!({}));
         if let Err(e) = self.check_trust_and_confirm(&p.device_id, &p.tool, &args).await {
@@ -1487,7 +1487,7 @@ Use agent_list_tools first to discover available tools and their parameters.")]
             "tool": p.tool,
             "args": args,
         });
-        let (success, result_str, error_msg) = match self.ws.request("agentExec", req).await {
+        let (success, result_str, error_msg) = match self.ws.request("skillExec", req).await {
             Ok(v) => {
                 let s = serde_json::to_string_pretty(&v).unwrap_or_default();
                 (true, s, String::new())
@@ -1517,15 +1517,15 @@ Use agent_list_tools first to discover available tools and their parameters.")]
         result_str
     }
 
-    #[tool(description = "List all tools available on the remote host agent. \
+    #[tool(description = "List all tools available on the remote skill host. \
 Returns the tool names, descriptions, and input schemas so you know how to call them \
-with agent_exec.")]
-    async fn agent_list_tools(&self, params: Parameters<AgentListToolsParam>) -> String {
+with skill_exec.")]
+    async fn skill_list_tools(&self, params: Parameters<SkillListToolsParam>) -> String {
         let p = params.0;
         let req = json!({
             "deviceId": p.device_id,
         });
-        match self.ws.request("agentListTools", req).await {
+        match self.ws.request("skillListTools", req).await {
             Ok(v) => serde_json::to_string_pretty(&v).unwrap_or_default(),
             Err(e) => format!("Error: {e}"),
         }
@@ -1678,7 +1678,7 @@ via the QuickDesk WebSocket API. Supports argument overrides for parameterized s
             });
 
             let (success, result_val, error) =
-                match self.ws.request("agentExec", req).await {
+                match self.ws.request("skillExec", req).await {
                     Ok(v) => (true, v, String::new()),
                     Err(e) => (false, json!(null), e),
                 };

@@ -782,13 +782,13 @@ ApplicationWindow {
                     
                     Text {
                         text: {
-                            if (!root.mainController) return "AI"
+                            if (!root.mainController) return "MCP"
                             var mode = root.mainController.mcpTransportMode === "http"
                                        ? "HTTP" : "stdio"
-                            if (!root.mainController.mcpServiceRunning) return qsTr("AI [%1]: Off").arg(mode)
+                            if (!root.mainController.mcpServiceRunning) return qsTr("MCP [%1]: Off").arg(mode)
                             var clients = root.mainController.mcpConnectedClients
-                            if (clients > 0) return qsTr("AI [%1]: %2 agent(s)").arg(mode).arg(clients)
-                            return qsTr("AI [%1]: Ready").arg(mode)
+                            if (clients > 0) return qsTr("MCP [%1]: %2 client(s)").arg(mode).arg(clients)
+                            return qsTr("MCP [%1]: Ready").arg(mode)
                         }
                         font.pixelSize: Theme.fontSizeSmall
                         color: root.mainController && root.mainController.mcpServiceRunning
@@ -809,7 +809,7 @@ ApplicationWindow {
                 
                 QDToolTip {
                     visible: mcpMouseArea.containsMouse
-                    text: qsTr("Click to configure AI integration")
+                    text: qsTr("Click to configure MCP integration")
                 }
             }
             

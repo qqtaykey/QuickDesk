@@ -95,8 +95,8 @@ public:
     // Clipboard
     Q_INVOKABLE void syncClipboard(const QString& deviceId, const QString& text);
 
-    // Agent bridge
-    Q_INVOKABLE void sendAgentCommand(const QString& deviceId,
+    // Skill bridge
+    Q_INVOKABLE void sendSkillCommand(const QString& deviceId,
                                       const QString& jsonData);
 
     // Video control
@@ -171,7 +171,7 @@ signals:
     void videoFrameReady(const QString& deviceId, int frameIndex);
     void clipboardReceived(const QString& deviceId, const QString& text);
 
-    void agentBridgeResponseReceived(const QString& deviceId,
+    void skillBridgeResponseReceived(const QString& deviceId,
                                      const QJsonObject& response);
     void errorOccurred(const QString& deviceId, 
                        const QString& code, 
@@ -271,7 +271,7 @@ private:
     void handleFileDownloadProgress(const QJsonObject& message);
     void handleFileDownloadComplete(const QJsonObject& message);
     void handleFileDownloadError(const QJsonObject& message);
-    void handleAgentBridgeResponse(const QJsonObject& message);
+    void handleSkillBridgeResponse(const QJsonObject& message);
     
     void sendMouseEvent(const QString& deviceId, const QString& eventType,
                         int x, int y, int button,

@@ -67,8 +67,8 @@ jobs:
       - name: Build MCP Bridge
         run: bash scripts/build_mcp_mac.sh Release
 
-      - name: Build Agent
-        run: bash scripts/build_agent_mac.sh Release
+      - name: Build Skill Host
+        run: bash scripts/build_skill_host_mac.sh Release
 
       - name: Build WebClient
         run: bash scripts/build_webclient_mac.sh

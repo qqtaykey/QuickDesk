@@ -756,23 +756,23 @@
     </message>
     <message>
         <location filename="../../qml/views/MainWindow.qml" line="813"/>
-        <source>AI [%1]: Off</source>
-        <translation>AI [%1]: Off</translation>
+        <source>MCP [%1]: Off</source>
+        <translation>MCP [%1]: Off</translation>
     </message>
     <message>
         <location filename="../../qml/views/MainWindow.qml" line="815"/>
-        <source>AI [%1]: %2 agent(s)</source>
-        <translation>AI [%1]: %2 agent(s)</translation>
+        <source>MCP [%1]: %2 client(s)</source>
+        <translation>MCP [%1]: %2 client(s)</translation>
     </message>
     <message>
         <location filename="../../qml/views/MainWindow.qml" line="816"/>
-        <source>AI [%1]: Ready</source>
-        <translation>AI [%1]: Ready</translation>
+        <source>MCP [%1]: Ready</source>
+        <translation>MCP [%1]: Ready</translation>
     </message>
     <message>
         <location filename="../../qml/views/MainWindow.qml" line="837"/>
-        <source>Click to configure AI integration</source>
-        <translation>Click to configure AI integration</translation>
+        <source>Click to configure MCP integration</source>
+        <translation>Click to configure MCP integration</translation>
     </message>
     <message>
         <location filename="../../qml/views/MainWindow.qml" line="888"/>
@@ -1475,23 +1475,23 @@
     </message>
     <message>
         <location filename="../../qml/pages/SettingsPage.qml" line="698"/>
-        <source>AI Agent</source>
-        <translation>AI Agent</translation>
+        <source>Skills</source>
+        <translation>Skills</translation>
     </message>
     <message>
         <location filename="../../qml/pages/SettingsPage.qml" line="704"/>
-        <source>Enable host-side AI agent for remote tool execution</source>
-        <translation>Enable host-side AI agent for remote tool execution</translation>
+        <source>Enable host-side skill execution for remote tool operations</source>
+        <translation>Enable host-side skill execution for remote tool operations</translation>
     </message>
     <message>
         <location filename="../../qml/pages/SettingsPage.qml" line="720"/>
-        <source>AI Agent enabled</source>
-        <translation>AI Agent enabled</translation>
+        <source>Skills enabled</source>
+        <translation>Skills enabled</translation>
     </message>
     <message>
         <location filename="../../qml/pages/SettingsPage.qml" line="720"/>
-        <source>AI Agent disabled</source>
-        <translation>AI Agent disabled</translation>
+        <source>Skills disabled</source>
+        <translation>Skills disabled</translation>
     </message>
     <message>
         <location filename="../../qml/pages/SettingsPage.qml" line="739"/>
@@ -1555,8 +1555,8 @@
     </message>
     <message>
         <location filename="../../qml/pages/SettingsPage.qml" line="869"/>
-        <source>Skills directory added. Agent will reload.</source>
-        <translation>Skills directory added. Agent will reload.</translation>
+        <source>Skills directory added. Skill host will reload.</source>
+        <translation>Skills directory added. Skill host will reload.</translation>
     </message>
 </context>
 <context>

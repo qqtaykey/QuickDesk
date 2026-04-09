@@ -1,14 +1,14 @@
 // Copyright 2026 QuickDesk Authors
-// quickdesk-agent — host-side agent that manages skill MCP servers and
-// bridges tool calls between the Qt AgentManager and skill subprocesses.
+// quickdesk-skill-host — host-side skill host that manages skill MCP servers
+// and bridges tool calls between the Qt SkillHostManager and skill subprocesses.
 //
 // Communication with Qt (stdin/stdout JSON Lines):
-//   Qt → agent:  {"id":"req-1","type":"toolCall","tool":"run_command","args":{...}}
-//   Qt → agent:  {"id":"req-2","type":"listTools"}
-//   Qt → agent:  {"id":"req-3","type":"reloadSkill","skill":"docker-mcp"}
-//   agent → Qt:  {"type":"capabilitiesReady","tools":[...]}
-//   agent → Qt:  {"type":"skillLoadFailed","skill":"...","reason":"...","missing":[...]}
-//   agent → Qt:  {"id":"req-1","type":"toolResult","result":"..."}
+//   Qt → skill-host:  {"id":"req-1","type":"toolCall","tool":"run_command","args":{...}}
+//   Qt → skill-host:  {"id":"req-2","type":"listTools"}
+//   Qt → skill-host:  {"id":"req-3","type":"reloadSkill","skill":"docker-mcp"}
+//   skill-host → Qt:  {"type":"capabilitiesReady","tools":[...]}
+//   skill-host → Qt:  {"type":"skillLoadFailed","skill":"...","reason":"...","missing":[...]}
+//   skill-host → Qt:  {"id":"req-1","type":"toolResult","result":"..."}
 
 mod capability_reporter;
 mod dep_checker;
@@ -21,7 +21,7 @@ use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tracing::{error, info, warn};
 
 #[derive(Parser, Debug)]
-#[command(about = "QuickDesk host agent")]
+#[command(about = "QuickDesk skill host")]
 struct Args {
     /// Directories containing skill sub-directories with SKILL.md files (can be specified multiple times)
     #[arg(long, default_value = "skills")]
@@ -34,13 +34,13 @@ async fn main() -> anyhow::Result<()> {
         .with_writer(std::io::stderr)
         .with_env_filter(
             tracing_subscriber::EnvFilter::from_default_env()
-                .add_directive("quickdesk_agent=info".parse().unwrap()),
+                .add_directive("quickdesk_skill_host=info".parse().unwrap()),
         )
         .init();
 
     let args = Args::parse();
 
-    info!("quickdesk-agent starting, skills_dirs={:?}", args.skills_dir);
+    info!("quickdesk-skill-host starting, skills_dirs={:?}", args.skills_dir);
 
     let mut registry = skill_registry::SkillRegistry::new(&args.skills_dir);
     registry.load().await;
@@ -77,7 +77,7 @@ async fn main() -> anyhow::Result<()> {
         }
     }
 
-    info!("quickdesk-agent stdin closed, exiting");
+    info!("quickdesk-skill-host stdin closed, exiting");
     Ok(())
 }
 

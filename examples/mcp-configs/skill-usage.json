@@ -1,16 +1,16 @@
 {
-  "_comment": "Example: Using QuickDesk Agent tools via MCP",
+  "_comment": "Example: Using QuickDesk Skill tools via MCP",
   "_note": "These are example MCP tool call payloads, not client config files",
 
-  "list_agent_tools": {
-    "name": "agent_list_tools",
+  "list_skill_tools": {
+    "name": "skill_list_tools",
     "arguments": {
       "connection_id": "conn_1"
     }
   },
 
   "run_shell_command": {
-    "name": "agent_exec",
+    "name": "skill_exec",
     "arguments": {
       "connection_id": "conn_1",
       "tool_name": "run_command",
@@ -22,7 +22,7 @@
   },
 
   "get_system_info": {
-    "name": "agent_exec",
+    "name": "skill_exec",
     "arguments": {
       "connection_id": "conn_1",
       "tool_name": "get_system_info",
@@ -31,7 +31,7 @@
   },
 
   "list_processes": {
-    "name": "agent_exec",
+    "name": "skill_exec",
     "arguments": {
       "connection_id": "conn_1",
       "tool_name": "list_processes",
@@ -43,7 +43,7 @@
   },
 
   "read_file": {
-    "name": "agent_exec",
+    "name": "skill_exec",
     "arguments": {
       "connection_id": "conn_1",
       "tool_name": "read_file",
@@ -54,7 +54,7 @@
   },
 
   "list_directory": {
-    "name": "agent_exec",
+    "name": "skill_exec",
     "arguments": {
       "connection_id": "conn_1",
       "tool_name": "list_directory",

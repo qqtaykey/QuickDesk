@@ -40,7 +40,7 @@ public:
 
     LCC_FUNCTION_DEC_BOOL(trayMessageShown, TrayMessageShown, false) // Whether the tray minimize hint has been shown
 
-    LCC_FUNCTION_DEC_BOOL(agentEnabled, AgentEnabled, true) // AI Agent on/off
+    LCC_FUNCTION_DEC_BOOL(skillHostEnabled, SkillHostEnabled, true) // AI Agent on/off
     LCC_FUNCTION_DEC_STRING(mcpTransportMode, McpTransportMode, "stdio") // MCP transport: "stdio" or "http"
     LCC_FUNCTION_DEC_STRING(extraSkillsDirs, ExtraSkillsDirs, "") // JSON array of user-added skills directories
     LCC_FUNCTION_DEC_STRING(trustConfirmMode, TrustConfirmMode, "manual") // "manual" = show dialog, "auto_approve" = approve all
