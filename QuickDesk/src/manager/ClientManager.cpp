@@ -415,6 +415,19 @@ bool ClientManager::supportsLockWorkstation(const QString& deviceId) const
     return it.value().supportsLockWorkstation;
 }
 
+void ClientManager::togglePrivacyScreen(const QString& deviceId, bool enabled)
+{
+    sendAction(deviceId, enabled ? "enablePrivacyScreen" : "disablePrivacyScreen");
+}
+
+bool ClientManager::supportsPrivacyScreen(const QString& deviceId) const
+{
+    auto it = m_connections.find(deviceId);
+    if (it == m_connections.end())
+        return false;
+    return it.value().supportsPrivacyScreen;
+}
+
 void ClientManager::startFileUpload(const QString& deviceId, const QUrl& fileUrl)
 {
     if (!m_messaging || !m_messaging->isReady()) {
@@ -1232,18 +1245,20 @@ void ClientManager::handleHostCapabilities(const QJsonObject& message)
     bool supportsSAS = message["supportsSendAttentionSequence"].toBool();
     bool supportsLock = message["supportsLockWorkstation"].toBool();
     bool supportsFile = message["supportsFileTransfer"].toBool();
+    bool supportsPrivacy = message["supportsPrivacyScreen"].toBool();
 
     auto it = m_connections.find(deviceId);
     if (it != m_connections.end()) {
         it->supportsSendAttentionSequence = supportsSAS;
         it->supportsLockWorkstation = supportsLock;
         it->supportsFileTransfer = supportsFile;
+        it->supportsPrivacyScreen = supportsPrivacy;
     }
 
-    LOG_INFO("Host capabilities for {}: SAS={} Lock={} FileTransfer={}",
-             deviceId.toStdString(), supportsSAS, supportsLock, supportsFile);
+    LOG_INFO("Host capabilities for {}: SAS={} Lock={} FileTransfer={} PrivacyScreen={}",
+             deviceId.toStdString(), supportsSAS, supportsLock, supportsFile, supportsPrivacy);
 
-    emit hostCapabilitiesChanged(deviceId, supportsSAS, supportsLock, supportsFile);
+    emit hostCapabilitiesChanged(deviceId, supportsSAS, supportsLock, supportsFile, supportsPrivacy);
 }
 
 void ClientManager::handleFileTransferProgress(const QJsonObject& message)

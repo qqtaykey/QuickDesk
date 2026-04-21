@@ -45,6 +45,9 @@ public:
     LCC_FUNCTION_DEC_STRING(extraSkillsDirs, ExtraSkillsDirs, "") // JSON array of user-added skills directories
     LCC_FUNCTION_DEC_STRING(trustConfirmMode, TrustConfirmMode, "manual") // "manual" = show dialog, "auto_approve" = approve all
 
+    // Privacy screen
+    LCC_FUNCTION_DEC_BOOL(autoPrivacyScreenOnConnect, AutoPrivacyScreenOnConnect, false) // Auto-enable privacy screen when a client connects
+
     // User authentication
     LCC_FUNCTION_DEC_STRING(userToken, UserToken, "")    // Persisted user session token
     LCC_FUNCTION_DEC_STRING(userId, UserId, "")          // Persisted user ID

@@ -33,6 +33,8 @@ Item {
     property bool supportsSendAttentionSequence: false
     property bool supportsLockWorkstation: false
     property bool supportsFileTransfer: false
+    property bool supportsPrivacyScreen: false
+    property bool privacyScreenActive: false
     property bool emergencyStopActive: false
 
     // Active file transfer count (for badge display)
@@ -475,6 +477,24 @@ Item {
                 if (root.clientManager) {
                     root.clientManager.sendAction(root.deviceId, "lockWorkstationAction")
                     root.showToast(qsTr("Lock screen sent"), QDToast.Type.Success)
+                }
+            }
+        }
+
+        QDMenuItem {
+            visible: root.supportsPrivacyScreen
+            text: root.privacyScreenActive ? qsTr("Disable Privacy Screen") : qsTr("Privacy Screen")
+            iconText: root.privacyScreenActive ? FluentIconGlyph.redEyeGlyph : FluentIconGlyph.hideGlyph
+            onTriggered: {
+                var newState = !root.privacyScreenActive
+                console.log("Toggle privacy screen:", newState, "for:", root.deviceId)
+                if (root.clientManager) {
+                    root.clientManager.togglePrivacyScreen(root.deviceId, newState)
+                    root.privacyScreenActive = newState
+                    root.showToast(
+                        newState ? qsTr("Privacy Screen: On") : qsTr("Privacy Screen: Off"),
+                        QDToast.Type.Success
+                    )
                 }
             }
         }

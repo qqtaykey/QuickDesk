@@ -203,6 +203,40 @@ Item {
                                 }
                             }
                         }
+
+                        // Privacy Screen Auto-Enable
+                        Row {
+                            width: parent.width
+                            spacing: Theme.spacingMedium
+
+                            Column {
+                                width: parent.width - privacyScreenSwitch.width - parent.spacing
+                                spacing: Theme.spacingXSmall
+                                anchors.verticalCenter: parent.verticalCenter
+
+                                Text {
+                                    text: qsTr("Auto Privacy Screen")
+                                    font.pixelSize: Theme.fontSizeMedium
+                                    color: Theme.text
+                                }
+                                Text {
+                                    text: qsTr("Automatically black out the physical screen when a remote client connects")
+                                    font.pixelSize: Theme.fontSizeSmall
+                                    color: Theme.textSecondary
+                                    wrapMode: Text.WordWrap
+                                    width: parent.width
+                                }
+                            }
+
+                            QDSwitch {
+                                id: privacyScreenSwitch
+                                anchors.verticalCenter: parent.verticalCenter
+                                checked: configViewModel.autoPrivacyScreenOnConnect
+                                onToggled: {
+                                    configViewModel.autoPrivacyScreenOnConnect = checked
+                                }
+                            }
+                        }
                     }
                 }
                 

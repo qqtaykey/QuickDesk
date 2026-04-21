@@ -71,6 +71,9 @@ public:
     // Skill bridge — send JSON data from SkillHostManager to the connected client
     Q_INVOKABLE void sendSkillBridgeSend(const QString& jsonData);
 
+    // Privacy screen
+    Q_INVOKABLE void togglePrivacyScreen(bool enabled);
+
     // State getters
     QString deviceId() const;
     QString accessCode() const;
@@ -108,6 +111,9 @@ signals:
     void errorOccurred(const QString& code, const QString& message);
     void refreshAccessCodeResult(bool success, const QString& errorCode, const QString& errorMessage);
 
+    // Privacy screen state changed (e.g. Ctrl+Alt+P exit or client disconnect)
+    void privacyScreenStateChanged(bool enabled);
+
     // Skill bridge — forwarded from Chromium host to SkillHostManager
     void skillMessage(const QString& jsonData);
 
@@ -144,6 +150,7 @@ private:
     void handleSignalingStateChanged(const QJsonObject& message);
     void handleRefreshAccessCodeResponse(const QJsonObject& message);
     void handleDisconnectResponse(const QJsonObject& message);
+    void handlePrivacyScreenStateChanged(const QJsonObject& message);
     void handleSkillMessage(const QJsonObject& message);
 };
 

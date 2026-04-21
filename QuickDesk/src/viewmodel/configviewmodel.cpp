@@ -10,6 +10,7 @@ ConfigViewModel::ConfigViewModel(QObject* parent)
     connect(&core::LocalConfigCenter::instance(), &core::LocalConfigCenter::signalLanguageChanged, this, &ConfigViewModel::languageChanged);
     connect(&core::LocalConfigCenter::instance(), &core::LocalConfigCenter::signalAccessCodeRefreshIntervalChanged, this, &ConfigViewModel::accessCodeRefreshIntervalChanged);
     connect(&core::LocalConfigCenter::instance(), &core::LocalConfigCenter::signalPreferredVideoCodecChanged, this, &ConfigViewModel::preferredVideoCodecChanged);
+    connect(&core::LocalConfigCenter::instance(), &core::LocalConfigCenter::signalAutoPrivacyScreenOnConnectChanged, this, &ConfigViewModel::autoPrivacyScreenOnConnectChanged);
 }
 
 ConfigViewModel::~ConfigViewModel()
@@ -68,4 +69,14 @@ void ConfigViewModel::setAutoStart(bool value)
     }
     infra::AutoStartManager::setAutoStartEnabled(value);
     Q_EMIT autoStartChanged(value);
+}
+
+bool ConfigViewModel::autoPrivacyScreenOnConnect()
+{
+    return core::LocalConfigCenter::instance().autoPrivacyScreenOnConnect();
+}
+
+void ConfigViewModel::setAutoPrivacyScreenOnConnect(bool value)
+{
+    core::LocalConfigCenter::instance().setAutoPrivacyScreenOnConnect(value);
 }

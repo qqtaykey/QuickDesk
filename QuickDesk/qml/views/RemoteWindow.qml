@@ -433,6 +433,12 @@ Window {
                 var stats = devId ? remoteWindow.getPerformanceStats(devId) : null
                 return stats ? (stats.supportsFileTransfer || false) : false
             }
+            supportsPrivacyScreen: {
+                var devId = currentTabIndex >= 0 && currentTabIndex < connectionModel.count 
+                    ? connectionModel.deviceIdAt(currentTabIndex) : ""
+                var stats = devId ? remoteWindow.getPerformanceStats(devId) : null
+                return stats ? (stats.supportsPrivacyScreen || false) : false
+            }
             emergencyStopActive: remoteWindow.emergencyStopActive
             videoInfo: {
                 var devId = currentTabIndex >= 0 && currentTabIndex < connectionModel.count 
@@ -628,13 +634,14 @@ Window {
     Connections {
         target: remoteWindow.clientManager
 
-        function onHostCapabilitiesChanged(deviceId, supportsSendAttentionSequence, supportsLockWorkstation, supportsFileTransfer) {
+        function onHostCapabilitiesChanged(deviceId, supportsSendAttentionSequence, supportsLockWorkstation, supportsFileTransfer, supportsPrivacyScreen) {
             var current = remoteWindow.performanceStatsMap[deviceId] || {}
             var newStatsMap = Object.assign({}, remoteWindow.performanceStatsMap)
             newStatsMap[deviceId] = Object.assign({}, current, {
                 supportsSendAttentionSequence: supportsSendAttentionSequence,
                 supportsLockWorkstation: supportsLockWorkstation,
-                supportsFileTransfer: supportsFileTransfer
+                supportsFileTransfer: supportsFileTransfer,
+                supportsPrivacyScreen: supportsPrivacyScreen
             })
             remoteWindow.performanceStatsMap = newStatsMap
         }

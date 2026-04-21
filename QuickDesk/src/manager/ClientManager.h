@@ -48,6 +48,7 @@ struct ConnectionInfo {
     bool supportsSendAttentionSequence = false;
     bool supportsLockWorkstation = false;
     bool supportsFileTransfer = false;
+    bool supportsPrivacyScreen = false;
 };
 
 /**
@@ -113,6 +114,10 @@ public:
     Q_INVOKABLE void sendAction(const QString& deviceId, const QString& action);
     Q_INVOKABLE bool supportsSendAttentionSequence(const QString& deviceId) const;
     Q_INVOKABLE bool supportsLockWorkstation(const QString& deviceId) const;
+
+    // Privacy screen
+    Q_INVOKABLE void togglePrivacyScreen(const QString& deviceId, bool enabled);
+    Q_INVOKABLE bool supportsPrivacyScreen(const QString& deviceId) const;
 
     // File transfer (Client -> Host upload)
     Q_INVOKABLE void startFileUpload(const QString& deviceId, const QUrl& fileUrl);
@@ -193,7 +198,8 @@ signals:
     void hostCapabilitiesChanged(const QString& deviceId,
                                  bool supportsSendAttentionSequence,
                                  bool supportsLockWorkstation,
-                                 bool supportsFileTransfer);
+                                 bool supportsFileTransfer,
+                                 bool supportsPrivacyScreen);
 
     void fileTransferProgress(const QString& deviceId,
                               const QString& transferId,

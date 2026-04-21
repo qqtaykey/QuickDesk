@@ -9,6 +9,7 @@ class ConfigViewModel : public QObject {
     Q_PROPERTY(int accessCodeRefreshInterval READ accessCodeRefreshInterval WRITE setAccessCodeRefreshInterval NOTIFY accessCodeRefreshIntervalChanged)
     Q_PROPERTY(QString preferredVideoCodec READ preferredVideoCodec WRITE setPreferredVideoCodec NOTIFY preferredVideoCodecChanged)
     Q_PROPERTY(bool autoStart READ autoStart WRITE setAutoStart NOTIFY autoStartChanged)
+    Q_PROPERTY(bool autoPrivacyScreenOnConnect READ autoPrivacyScreenOnConnect WRITE setAutoPrivacyScreenOnConnect NOTIFY autoPrivacyScreenOnConnectChanged)
 
 public:
     ConfigViewModel(QObject* parent = nullptr);
@@ -29,10 +30,14 @@ public:
     bool autoStart();
     void setAutoStart(bool value);
 
+    bool autoPrivacyScreenOnConnect();
+    void setAutoPrivacyScreenOnConnect(bool value);
+
 signals:
     void darkThemeChanged(int value);
     void languageChanged(const QString& value);
     void accessCodeRefreshIntervalChanged(int value);
     void preferredVideoCodecChanged(const QString& value);
     void autoStartChanged(bool value);
+    void autoPrivacyScreenOnConnectChanged(bool value);
 };

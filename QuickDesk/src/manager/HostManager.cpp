@@ -2,6 +2,7 @@
 
 #include "HostManager.h"
 #include "NativeMessaging.h"
+#include "core/localconfigcenter.h"
 #include "infra/log/log.h"
 #include <QJsonArray>
 
@@ -264,6 +265,8 @@ void HostManager::onMessageReceived(const QJsonObject& message)
         handleDisconnectResponse(message);
     } else if (type == "skillMessage") {
         handleSkillMessage(message);
+    } else if (type == "privacyScreenStateChanged") {
+        handlePrivacyScreenStateChanged(message);
     } else {
         LOG_WARN("Unknown message type from host: {}", type.toStdString());
     }
@@ -355,6 +358,12 @@ void HostManager::handleClientConnected(const QJsonObject& message)
     emit clientCountChanged();
     emit clientListChanged();
     emit clientConnected(clientId, message);
+
+    // Auto-enable privacy screen if configured
+    if (core::LocalConfigCenter::instance().autoPrivacyScreenOnConnect()) {
+        LOG_INFO("Auto-enabling privacy screen on client connect");
+        togglePrivacyScreen(true);
+    }
 }
 
 void HostManager::handleClientDisconnected(const QJsonObject& message)
@@ -531,6 +540,25 @@ void HostManager::sendSkillBridgeSend(const QString& jsonData)
     message["type"] = "skillBridgeSend";
     message["data"] = jsonData;
     m_messaging->sendMessage(message);
+}
+
+void HostManager::togglePrivacyScreen(bool enabled)
+{
+    if (!m_messaging || !m_messaging->isReady()) {
+        return;
+    }
+
+    QJsonObject message;
+    message["type"] = "togglePrivacyScreen";
+    message["enabled"] = enabled;
+    m_messaging->sendMessage(message);
+}
+
+void HostManager::handlePrivacyScreenStateChanged(const QJsonObject& message)
+{
+    bool enabled = message["enabled"].toBool();
+    LOG_INFO("Privacy screen state changed: {}", enabled ? "ON" : "OFF");
+    emit privacyScreenStateChanged(enabled);
 }
 
 void HostManager::handleSkillMessage(const QJsonObject& message)
