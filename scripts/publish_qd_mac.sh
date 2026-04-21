@@ -251,13 +251,16 @@ fi
 if [ -f "$frameworks_dir/quickdesk-skill-host" ]; then
     codesign --force --sign - "$frameworks_dir/quickdesk-skill-host"
 fi
-# Sign built-in skill binaries
+# Sign every Mach-O binary under built-in skills (matches build_skill_host_mac.sh layout;
+# new crates under skills/ are picked up without editing this list).
 if [ -d "$frameworks_dir/skills" ]; then
-    for skill_bin in "$frameworks_dir/skills/sys-info" "$frameworks_dir/skills/file-ops" "$frameworks_dir/skills/shell-runner"; do
-        if [ -f "$skill_bin" ]; then
-            codesign --force --sign - "$skill_bin"
-        fi
-    done
+    while IFS= read -r -d '' skill_bin; do
+        case "$(file -b "$skill_bin" 2>/dev/null)" in
+            Mach-O*)
+                codesign --force --sign - "$skill_bin"
+                ;;
+        esac
+    done < <(find "$frameworks_dir/skills" -type f -print0)
 fi
 find "$frameworks_dir" -name "*.framework" -maxdepth 1 -exec codesign --force --sign - {} \;
 find "$frameworks_dir" -name "*.dylib" -maxdepth 1 -exec codesign --force --sign - {} \;
