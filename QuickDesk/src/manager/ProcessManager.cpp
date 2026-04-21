@@ -38,14 +38,22 @@ ProcessManager::~ProcessManager()
     m_hostAutoRestart = false;
     m_clientAutoRestart = false;
 
-    // In the destructor, kill immediately — brief wait is acceptable.
-    if (m_hostProcess && m_hostProcess->state() != QProcess::NotRunning) {
-        m_hostProcess->kill();
-        m_hostProcess->waitForFinished(1000);
+    // Disconnect signals before killing to prevent the finished() signal from
+    // cascading into other objects that may already be destroyed during
+    // application shutdown.
+    if (m_hostProcess) {
+        m_hostProcess->disconnect(this);
+        if (m_hostProcess->state() != QProcess::NotRunning) {
+            m_hostProcess->kill();
+            m_hostProcess->waitForFinished(1000);
+        }
     }
-    if (m_clientProcess && m_clientProcess->state() != QProcess::NotRunning) {
-        m_clientProcess->kill();
-        m_clientProcess->waitForFinished(1000);
+    if (m_clientProcess) {
+        m_clientProcess->disconnect(this);
+        if (m_clientProcess->state() != QProcess::NotRunning) {
+            m_clientProcess->kill();
+            m_clientProcess->waitForFinished(1000);
+        }
     }
 }
 

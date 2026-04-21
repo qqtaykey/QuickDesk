@@ -78,7 +78,7 @@ private:
     void handleSkillHostMessage(const QJsonObject& message);
 
     QPointer<HostManager> m_hostManager;
-    QProcess*             m_skillHostProcess = nullptr;
+    QPointer<QProcess>    m_skillHostProcess;
     QByteArray            m_readBuffer;  // accumulates partial lines from stdout
     QJsonArray            m_cachedTools; // tools from the last capabilitiesReady
 };
