@@ -27,6 +27,7 @@ export class DataChannelHandler extends EventTarget {
         this.supportsSendAttentionSequence = false;
         this.supportsLockWorkstation = false;
         this.supportsFileTransfer = false;
+        this.supportsPrivacyScreen = false;
 
         this._nextFileTransferId = 1;
         this._activeUploads = new Map();
@@ -296,15 +297,25 @@ export class DataChannelHandler extends EventTarget {
     }
 
     /**
-     * Send a remote action (Ctrl+Alt+Del or Lock Screen).
-     * @param {'sendAttentionSequence'|'lockWorkstation'} action 
+     * Send a remote action.
+     * @param {'sendAttentionSequence'|'lockWorkstation'|'enablePrivacyScreen'|'disablePrivacyScreen'} action 
      */
     sendAction(action) {
         if (!this._actionsReady) {
             console.warn('[DataChannel] Actions channel not ready');
             return;
         }
-        const actionEnum = action === 'sendAttentionSequence' ? 1 : 2;
+        const actionMap = {
+            'sendAttentionSequence': 1,
+            'lockWorkstation': 2,
+            'enablePrivacyScreen': 3,
+            'disablePrivacyScreen': 4,
+        };
+        const actionEnum = actionMap[action];
+        if (actionEnum === undefined) {
+            console.warn(`[DataChannel] Unknown action: ${action}`);
+            return;
+        }
         const requestId = this._nextActionRequestId++;
         const bytes = [0x08, actionEnum, 0x10, ...this._encodeVarint(requestId)];
         this.actionsChannel.send(new Uint8Array(bytes).buffer);
@@ -817,11 +828,12 @@ export class DataChannelHandler extends EventTarget {
         this.supportsSendAttentionSequence = hostSet.has('sendAttentionSequenceAction');
         this.supportsLockWorkstation = hostSet.has('lockWorkstationAction');
         this.supportsFileTransfer = hostSet.has('fileTransfer');
+        this.supportsPrivacyScreen = hostSet.has('privacyScreen');
 
-        console.log(`[DataChannel] Host caps: SAS=${this.supportsSendAttentionSequence} Lock=${this.supportsLockWorkstation} FileTransfer=${this.supportsFileTransfer}`);
+        console.log(`[DataChannel] Host caps: SAS=${this.supportsSendAttentionSequence} Lock=${this.supportsLockWorkstation} FileTransfer=${this.supportsFileTransfer} PrivacyScreen=${this.supportsPrivacyScreen}`);
 
         // Create "actions" outgoing data channel if any action is supported.
-        if ((this.supportsSendAttentionSequence || this.supportsLockWorkstation) && this._pc) {
+        if ((this.supportsSendAttentionSequence || this.supportsLockWorkstation || this.supportsPrivacyScreen) && this._pc) {
             this.actionsChannel = this._pc.createDataChannel('actions', { ordered: true });
             this.actionsChannel.binaryType = 'arraybuffer';
             this.actionsChannel.onopen = () => {
@@ -844,6 +856,7 @@ export class DataChannelHandler extends EventTarget {
                 supportsSendAttentionSequence: this.supportsSendAttentionSequence,
                 supportsLockWorkstation: this.supportsLockWorkstation,
                 supportsFileTransfer: this.supportsFileTransfer,
+                supportsPrivacyScreen: this.supportsPrivacyScreen,
             }
         }));
     }

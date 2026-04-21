@@ -194,11 +194,11 @@ class RemoteDesktopApp {
             });
 
             this.dcHandler.addEventListener('hostCapabilities', (e) => {
-                const { supportsSendAttentionSequence, supportsLockWorkstation, supportsFileTransfer } = e.detail;
+                const { supportsSendAttentionSequence, supportsLockWorkstation, supportsFileTransfer, supportsPrivacyScreen } = e.detail;
                 this._log(t('log.negotiatedCaps', { sas: supportsSendAttentionSequence, lock: supportsLockWorkstation, ft: supportsFileTransfer }));
                 if (this.floatingToolbar) {
                     this.floatingToolbar.setActionSupport(
-                        supportsSendAttentionSequence, supportsLockWorkstation, supportsFileTransfer);
+                        supportsSendAttentionSequence, supportsLockWorkstation, supportsFileTransfer, supportsPrivacyScreen);
                 }
             });
 
@@ -475,7 +475,7 @@ class RemoteDesktopApp {
 
     _sendInitialConfig() {
         this.dcHandler.sendCapabilities(
-            'sendAttentionSequenceAction lockWorkstationAction fileTransfer');
+            'sendAttentionSequenceAction lockWorkstationAction fileTransfer privacyScreen');
         this.dcHandler.sendAudioControl({ enable: true });
         this._log(t('log.sentConfig'));
     }
@@ -506,6 +506,18 @@ class RemoteDesktopApp {
                 if (this.dcHandler) {
                     this.dcHandler.sendAction('lockWorkstation');
                     this._log(t('log.sentLock'));
+                }
+                break;
+            case 'enablePrivacyScreen':
+                if (this.dcHandler) {
+                    this.dcHandler.sendAction('enablePrivacyScreen');
+                    this._log(t('log.privacyScreenEnabled'));
+                }
+                break;
+            case 'disablePrivacyScreen':
+                if (this.dcHandler) {
+                    this.dcHandler.sendAction('disablePrivacyScreen');
+                    this._log(t('log.privacyScreenDisabled'));
                 }
                 break;
             case 'uploadFile':

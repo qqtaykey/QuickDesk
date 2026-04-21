@@ -32,6 +32,8 @@ export class FloatingToolbar extends EventTarget {
         this._supportsSAS = false;
         this._supportsLock = false;
         this._supportsFileTransfer = false;
+        this._supportsPrivacyScreen = false;
+        this._privacyScreenActive = false;
 
         this._remoteWidth = 0;
         this._remoteHeight = 0;
@@ -117,6 +119,7 @@ export class FloatingToolbar extends EventTarget {
             { type: 'separator', id: 'actionSeparator', hidden: true },
             { textKey: 'menu.sendCAD', icon: '⌨', action: 'sendAttentionSequence', id: 'sasMenuItem', hidden: true },
             { textKey: 'menu.lockScreen', icon: '🔒', action: 'lockWorkstation', id: 'lockMenuItem', hidden: true },
+            { textKey: 'menu.privacyScreen', icon: '👁', action: 'togglePrivacyScreen', id: 'privacyScreenMenuItem', hidden: true },
             { type: 'separator', id: 'uploadSeparator', hidden: true },
             { textKey: 'menu.uploadFile', icon: '📤', action: 'uploadFile', id: 'uploadMenuItem', hidden: true },
             { textKey: 'menu.downloadFile', icon: '📥', action: 'downloadFile', id: 'downloadMenuItem', hidden: true },
@@ -328,6 +331,14 @@ export class FloatingToolbar extends EventTarget {
                 this.dispatchEvent(new CustomEvent('action', { detail: { action } }));
                 this._hideMenu();
                 break;
+            case 'togglePrivacyScreen':
+                this._privacyScreenActive = !this._privacyScreenActive;
+                this._updatePrivacyScreenLabel();
+                this.dispatchEvent(new CustomEvent('action', { 
+                    detail: { action: this._privacyScreenActive ? 'enablePrivacyScreen' : 'disablePrivacyScreen' } 
+                }));
+                this._hideMenu();
+                break;
             case 'uploadFile':
                 this.dispatchEvent(new CustomEvent('action', { detail: { action: 'uploadFile' } }));
                 this._hideMenu();
@@ -481,21 +492,24 @@ export class FloatingToolbar extends EventTarget {
         this._menuElement.style.display = 'none';
     }
 
-    setActionSupport(supportsSAS, supportsLock, supportsFileTransfer = false) {
+    setActionSupport(supportsSAS, supportsLock, supportsFileTransfer = false, supportsPrivacyScreen = false) {
         this._supportsSAS = supportsSAS;
         this._supportsLock = supportsLock;
         this._supportsFileTransfer = supportsFileTransfer;
+        this._supportsPrivacyScreen = supportsPrivacyScreen;
 
         const sasItem = this._menuElement.querySelector('#sasMenuItem');
         const lockItem = this._menuElement.querySelector('#lockMenuItem');
         const actionSep = this._menuElement.querySelector('#actionSeparator');
         const uploadItem = this._menuElement.querySelector('#uploadMenuItem');
         const uploadSep = this._menuElement.querySelector('#uploadSeparator');
+        const privacyItem = this._menuElement.querySelector('#privacyScreenMenuItem');
 
         if (sasItem) sasItem.style.display = supportsSAS ? '' : 'none';
         if (lockItem) lockItem.style.display = supportsLock ? '' : 'none';
+        if (privacyItem) privacyItem.style.display = supportsPrivacyScreen ? '' : 'none';
         if (actionSep) actionSep.style.display = 
-            (supportsSAS || supportsLock) ? '' : 'none';
+            (supportsSAS || supportsLock || supportsPrivacyScreen) ? '' : 'none';
         if (uploadItem) uploadItem.style.display = supportsFileTransfer ? '' : 'none';
         if (uploadSep) uploadSep.style.display = supportsFileTransfer ? '' : 'none';
 
@@ -525,7 +539,16 @@ export class FloatingToolbar extends EventTarget {
         }
         this._hideMenu();
         this._buildMenu();
-        this.setActionSupport(this._supportsSAS, this._supportsLock, this._supportsFileTransfer);
+        this.setActionSupport(this._supportsSAS, this._supportsLock, this._supportsFileTransfer, this._supportsPrivacyScreen);
+    }
+
+    /** @private */
+    _updatePrivacyScreenLabel() {
+        const item = this._menuElement.querySelector('#privacyScreenMenuItem');
+        if (!item) return;
+        const icon = this._privacyScreenActive ? '👁‍🗨' : '👁';
+        const textKey = this._privacyScreenActive ? 'menu.disablePrivacyScreen' : 'menu.privacyScreen';
+        item.innerHTML = `<span class="menu-icon">${icon}</span><span class="menu-text">${t(textKey)}</span>`;
     }
 
     setVisible(visible) {
