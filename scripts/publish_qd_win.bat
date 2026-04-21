@@ -123,16 +123,6 @@ if exist "%src_out_path%\quickdesk_host.exe" (
     echo [!] warning: quickdesk_host.exe not found
 )
 
-if exist "%src_out_path%\quickdesk_host_uiaccess.exe" (
-    copy /Y "%src_out_path%\quickdesk_host_uiaccess.exe" "%publish_path%\" >nul
-    echo [*] copied quickdesk_host_uiaccess.exe from src/out
-) else if exist "%thirdparty_path%\quickdesk_host_uiaccess.exe" (
-    copy /Y "%thirdparty_path%\quickdesk_host_uiaccess.exe" "%publish_path%\" >nul
-    echo [*] copied quickdesk_host_uiaccess.exe from 3rdparty
-) else (
-    echo [!] warning: quickdesk_host_uiaccess.exe not found
-)
-
 if exist "%src_out_path%\quickdesk_client.exe" (
     copy /Y "%src_out_path%\quickdesk_client.exe" "%publish_path%\" >nul
     echo [*] copied quickdesk_client.exe from src/out

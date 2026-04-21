@@ -64,7 +64,8 @@ void HostManager::connectToServer(const QString& serverUrl, const QString& saved
     // Only serverUrl is needed - Host will auto-generate deviceId and accessCode
     message["signalingServerUrl"] = serverUrl;
 
-#ifdef Q_OS_WIN    
+#ifdef Q_OS_WIN
+    // 改用system模式提升权限了，这里不再区分是否使用UIAccess了，统一告诉Host不使用提升的权限运行
     message["useElevatedHost"] = false;
 #endif
 
