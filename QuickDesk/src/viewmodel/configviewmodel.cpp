@@ -11,6 +11,7 @@ ConfigViewModel::ConfigViewModel(QObject* parent)
     connect(&core::LocalConfigCenter::instance(), &core::LocalConfigCenter::signalAccessCodeRefreshIntervalChanged, this, &ConfigViewModel::accessCodeRefreshIntervalChanged);
     connect(&core::LocalConfigCenter::instance(), &core::LocalConfigCenter::signalPreferredVideoCodecChanged, this, &ConfigViewModel::preferredVideoCodecChanged);
     connect(&core::LocalConfigCenter::instance(), &core::LocalConfigCenter::signalAutoPrivacyScreenOnConnectChanged, this, &ConfigViewModel::autoPrivacyScreenOnConnectChanged);
+    connect(&core::LocalConfigCenter::instance(), &core::LocalConfigCenter::signalApiKeyChanged, this, &ConfigViewModel::apiKeyChanged);
 }
 
 ConfigViewModel::~ConfigViewModel()
@@ -79,4 +80,14 @@ bool ConfigViewModel::autoPrivacyScreenOnConnect()
 void ConfigViewModel::setAutoPrivacyScreenOnConnect(bool value)
 {
     core::LocalConfigCenter::instance().setAutoPrivacyScreenOnConnect(value);
+}
+
+QString ConfigViewModel::apiKey()
+{
+    return core::LocalConfigCenter::instance().apiKey();
+}
+
+void ConfigViewModel::setApiKey(const QString& value)
+{
+    core::LocalConfigCenter::instance().setApiKey(value);
 }

@@ -1354,6 +1354,7 @@
     </message>
     <message>
         <location filename="../../qml/pages/SettingsPage.qml" line="318"/>
+        <location filename="../../qml/pages/SettingsPage.qml" line="378"/>
         <source>Update</source>
         <translation>Update</translation>
     </message>
@@ -1368,215 +1369,250 @@
         <translation>Server URL updated. Restart to apply changes.</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/SettingsPage.qml" line="351"/>
+        <location filename="../../qml/pages/SettingsPage.qml" line="350"/>
+        <source>API Key</source>
+        <translation>API Key</translation>
+    </message>
+    <message>
+        <location filename="../../qml/pages/SettingsPage.qml" line="357"/>
+        <source>If your signaling server has API Key protection enabled, enter the key here. No recompilation needed.</source>
+        <translation>If your signaling server has API Key protection enabled, enter the key here. No recompilation needed.</translation>
+    </message>
+    <message>
+        <location filename="../../qml/pages/SettingsPage.qml" line="371"/>
+        <source>Enter API Key</source>
+        <translation>Enter API Key</translation>
+    </message>
+    <message>
+        <location filename="../../qml/pages/SettingsPage.qml" line="385"/>
+        <source>API Key updated. Restart to apply changes.</source>
+        <translation>API Key updated. Restart to apply changes.</translation>
+    </message>
+    <message>
+        <location filename="../../qml/pages/SettingsPage.qml" line="391"/>
+        <source>Clear</source>
+        <translation>Clear</translation>
+    </message>
+    <message>
+        <location filename="../../qml/pages/SettingsPage.qml" line="398"/>
+        <source>API Key cleared. Restart to apply changes.</source>
+        <translation>API Key cleared. Restart to apply changes.</translation>
+    </message>
+    <message>
+        <location filename="../../qml/pages/SettingsPage.qml" line="405"/>
+        <source>API Key is configured (%1 characters)</source>
+        <translation>API Key is configured (%1 characters)</translation>
+    </message>
+    <message>
+        <location filename="../../qml/pages/SettingsPage.qml" line="420"/>
         <source>TURN/STUN Servers</source>
         <translation>TURN/STUN Servers</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/SettingsPage.qml" line="386"/>
+        <location filename="../../qml/pages/SettingsPage.qml" line="455"/>
         <source>TURN Server</source>
         <translation>TURN Server</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/SettingsPage.qml" line="386"/>
+        <location filename="../../qml/pages/SettingsPage.qml" line="455"/>
         <source>STUN Server</source>
         <translation>STUN Server</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/SettingsPage.qml" line="406"/>
+        <location filename="../../qml/pages/SettingsPage.qml" line="475"/>
         <source>No custom servers configured</source>
         <translation>No custom servers configured</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/SettingsPage.qml" line="421"/>
-        <location filename="../../qml/pages/SettingsPage.qml" line="452"/>
+        <location filename="../../qml/pages/SettingsPage.qml" line="490"/>
+        <location filename="../../qml/pages/SettingsPage.qml" line="521"/>
         <source>Add TURN Server</source>
         <translation>Add TURN Server</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/SettingsPage.qml" line="430"/>
+        <location filename="../../qml/pages/SettingsPage.qml" line="499"/>
         <source>turn:your-server.com:3478</source>
         <translation>turn:your-server.com:3478</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/SettingsPage.qml" line="440"/>
+        <location filename="../../qml/pages/SettingsPage.qml" line="509"/>
         <source>Username</source>
         <translation>Username</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/SettingsPage.qml" line="446"/>
+        <location filename="../../qml/pages/SettingsPage.qml" line="515"/>
         <source>Password</source>
         <translation>Password</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/SettingsPage.qml" line="468"/>
+        <location filename="../../qml/pages/SettingsPage.qml" line="537"/>
         <source>TURN server added. Restart to apply changes.</source>
         <translation>TURN server added. Restart to apply changes.</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/SettingsPage.qml" line="470"/>
-        <location filename="../../qml/pages/SettingsPage.qml" line="507"/>
+        <location filename="../../qml/pages/SettingsPage.qml" line="539"/>
+        <location filename="../../qml/pages/SettingsPage.qml" line="576"/>
         <source>Invalid server URL format</source>
         <translation>Invalid server URL format</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/SettingsPage.qml" line="483"/>
-        <location filename="../../qml/pages/SettingsPage.qml" line="496"/>
+        <location filename="../../qml/pages/SettingsPage.qml" line="552"/>
+        <location filename="../../qml/pages/SettingsPage.qml" line="565"/>
         <source>Add STUN Server</source>
         <translation>Add STUN Server</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/SettingsPage.qml" line="492"/>
+        <location filename="../../qml/pages/SettingsPage.qml" line="561"/>
         <source>stun:stun.l.google.com:19302</source>
         <translation>stun:stun.l.google.com:19302</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/SettingsPage.qml" line="505"/>
+        <location filename="../../qml/pages/SettingsPage.qml" line="574"/>
         <source>STUN server added. Restart to apply changes.</source>
         <translation>STUN server added. Restart to apply changes.</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/SettingsPage.qml" line="520"/>
+        <location filename="../../qml/pages/SettingsPage.qml" line="589"/>
         <source>Application</source>
         <translation>Application</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/SettingsPage.qml" line="538"/>
+        <location filename="../../qml/pages/SettingsPage.qml" line="607"/>
         <source>Language</source>
         <translation>Language</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/SettingsPage.qml" line="566"/>
+        <location filename="../../qml/pages/SettingsPage.qml" line="635"/>
         <source>Language updated. Restart to apply changes.</source>
         <translation>Language updated. Restart to apply changes.</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/SettingsPage.qml" line="592"/>
+        <location filename="../../qml/pages/SettingsPage.qml" line="661"/>
         <source>Video Codec</source>
         <translation>Video Codec</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/SettingsPage.qml" line="598"/>
+        <location filename="../../qml/pages/SettingsPage.qml" line="667"/>
         <source>Preferred video codec for remote connections</source>
         <translation>Preferred video codec for remote connections</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/SettingsPage.qml" line="624"/>
+        <location filename="../../qml/pages/SettingsPage.qml" line="693"/>
         <source>Video codec updated. Effective on next connection.</source>
         <translation>Video codec updated. Effective on next connection.</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/SettingsPage.qml" line="646"/>
+        <location filename="../../qml/pages/SettingsPage.qml" line="715"/>
         <source>Theme</source>
         <translation>Theme</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/SettingsPage.qml" line="654"/>
+        <location filename="../../qml/pages/SettingsPage.qml" line="723"/>
         <source>Light</source>
         <translation>Light</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/SettingsPage.qml" line="654"/>
+        <location filename="../../qml/pages/SettingsPage.qml" line="723"/>
         <source>Dark</source>
         <translation>Dark</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/SettingsPage.qml" line="681"/>
+        <location filename="../../qml/pages/SettingsPage.qml" line="750"/>
         <source>Launch at Startup</source>
         <translation>Launch at Startup</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/SettingsPage.qml" line="687"/>
+        <location filename="../../qml/pages/SettingsPage.qml" line="756"/>
         <source>Automatically start the application when you log in</source>
         <translation>Automatically start the application when you log in</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/SettingsPage.qml" line="713"/>
+        <location filename="../../qml/pages/SettingsPage.qml" line="782"/>
         <source>AI</source>
         <translation>AI</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/SettingsPage.qml" line="732"/>
+        <location filename="../../qml/pages/SettingsPage.qml" line="801"/>
         <source>Skills</source>
         <translation>Skills</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/SettingsPage.qml" line="738"/>
+        <location filename="../../qml/pages/SettingsPage.qml" line="807"/>
         <source>Enable host-side skill execution for remote tool operations</source>
         <translation>Enable host-side skill execution for remote tool operations</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/SettingsPage.qml" line="754"/>
+        <location filename="../../qml/pages/SettingsPage.qml" line="823"/>
         <source>Skills enabled</source>
         <translation>Skills enabled</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/SettingsPage.qml" line="754"/>
+        <location filename="../../qml/pages/SettingsPage.qml" line="823"/>
         <source>Skills disabled</source>
         <translation>Skills disabled</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/SettingsPage.qml" line="773"/>
+        <location filename="../../qml/pages/SettingsPage.qml" line="842"/>
         <source>Operation Confirmation</source>
         <translation>Operation Confirmation</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/SettingsPage.qml" line="779"/>
+        <location filename="../../qml/pages/SettingsPage.qml" line="848"/>
         <source>How to handle high-risk operation requests from AI agent</source>
         <translation>How to handle high-risk operation requests from AI agent</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/SettingsPage.qml" line="791"/>
+        <location filename="../../qml/pages/SettingsPage.qml" line="860"/>
         <source>Manual Confirm</source>
         <translation>Manual Confirm</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/SettingsPage.qml" line="791"/>
+        <location filename="../../qml/pages/SettingsPage.qml" line="860"/>
         <source>Auto Approve</source>
         <translation>Auto Approve</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/SettingsPage.qml" line="801"/>
+        <location filename="../../qml/pages/SettingsPage.qml" line="870"/>
         <source>Operations will be auto-approved</source>
         <translation>Operations will be auto-approved</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/SettingsPage.qml" line="802"/>
+        <location filename="../../qml/pages/SettingsPage.qml" line="871"/>
         <source>Operations require manual confirmation</source>
         <translation>Operations require manual confirmation</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/SettingsPage.qml" line="818"/>
+        <location filename="../../qml/pages/SettingsPage.qml" line="887"/>
         <source>Skills Directories</source>
         <translation>Skills Directories</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/SettingsPage.qml" line="825"/>
+        <location filename="../../qml/pages/SettingsPage.qml" line="894"/>
         <source>Built-in skills are loaded from the installation directory. Add extra directories below.</source>
         <translation>Built-in skills are loaded from the installation directory. Add extra directories below.</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/SettingsPage.qml" line="864"/>
+        <location filename="../../qml/pages/SettingsPage.qml" line="933"/>
         <source>Skills directory removed</source>
         <translation>Skills directory removed</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/SettingsPage.qml" line="873"/>
+        <location filename="../../qml/pages/SettingsPage.qml" line="942"/>
         <source>No extra directories configured</source>
         <translation>No extra directories configured</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/SettingsPage.qml" line="889"/>
+        <location filename="../../qml/pages/SettingsPage.qml" line="958"/>
         <source>C:path	oskills</source>
         <translation>C:\\path\\to\\skills</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/SettingsPage.qml" line="894"/>
+        <location filename="../../qml/pages/SettingsPage.qml" line="963"/>
         <source>Add</source>
         <translation>Add</translation>
     </message>
     <message>
-        <location filename="../../qml/pages/SettingsPage.qml" line="903"/>
+        <location filename="../../qml/pages/SettingsPage.qml" line="972"/>
         <source>Skills directory added. Skill host will reload.</source>
         <translation>Skills directory added. Skill host will reload.</translation>
     </message>
@@ -1612,27 +1648,27 @@
 <context>
     <name>quickdesk::ClientManager</name>
     <message>
-        <location filename="../../src/manager/ClientManager.cpp" line="1004"/>
+        <location filename="../../src/manager/ClientManager.cpp" line="1010"/>
         <source>Authentication failed</source>
         <translation>Authentication failed</translation>
     </message>
     <message>
-        <location filename="../../src/manager/ClientManager.cpp" line="1005"/>
+        <location filename="../../src/manager/ClientManager.cpp" line="1011"/>
         <source>Channel error</source>
         <translation>Channel error</translation>
     </message>
     <message>
-        <location filename="../../src/manager/ClientManager.cpp" line="1006"/>
+        <location filename="../../src/manager/ClientManager.cpp" line="1012"/>
         <source>Connection timeout</source>
         <translation>Connection timeout</translation>
     </message>
     <message>
-        <location filename="../../src/manager/ClientManager.cpp" line="1007"/>
+        <location filename="../../src/manager/ClientManager.cpp" line="1013"/>
         <source>Network error</source>
         <translation>Network error</translation>
     </message>
     <message>
-        <location filename="../../src/manager/ClientManager.cpp" line="1008"/>
+        <location filename="../../src/manager/ClientManager.cpp" line="1014"/>
         <source>Connection failed (error code: %1)</source>
         <translation>Connection failed (error code: %1)</translation>
     </message>
@@ -1640,12 +1676,12 @@
 <context>
     <name>quickdesk::HostManager</name>
     <message>
-        <location filename="../../src/manager/HostManager.cpp" line="217"/>
+        <location filename="../../src/manager/HostManager.cpp" line="224"/>
         <source>Remote Device %1</source>
         <translation>Remote Device %1</translation>
     </message>
     <message>
-        <location filename="../../src/manager/HostManager.cpp" line="219"/>
+        <location filename="../../src/manager/HostManager.cpp" line="226"/>
         <source>Unknown Device</source>
         <translation>Unknown Device</translation>
     </message>
@@ -1699,7 +1735,7 @@ Access Code: %2</translation>
 <context>
     <name>quickdesk::PresetManager</name>
     <message>
-        <location filename="../../src/manager/PresetManager.cpp" line="101"/>
+        <location filename="../../src/manager/PresetManager.cpp" line="108"/>
         <source>Unable to connect to server for %1 minutes</source>
         <translation>Unable to connect to server for %1 minutes</translation>
     </message>

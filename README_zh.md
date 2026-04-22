@@ -293,7 +293,15 @@ bash scripts/package_qd_mac.sh Release
 
 ### API Key（可选）
 
-如果你部署了自己的信令服务器并启用了 API Key，可以在编译时注入 API Key 使客户端能够通过认证：
+如果你部署了自己的信令服务器并启用了 API Key，有两种方式配置 API Key：
+
+**方式一：运行时配置（推荐）**
+
+在 QuickDesk **设置 → 网络 → API Key** 中填入信令服务器的 API Key。推荐使用此方式——无需重新编译，每个部署可以使用不同的 Key。
+
+**方式二：编译时注入**
+
+也可以在编译时注入 API Key 作为编译时默认值：
 
 ```bash
 # Windows
@@ -304,7 +312,9 @@ scripts\build_qd_win.bat Release
 ENV_QUICKDESK_API_KEY=your-secret-key bash scripts/build_qd_mac.sh Release
 ```
 
-不设置 `ENV_QUICKDESK_API_KEY` 时，编译出的客户端只能连接未开启 API Key 保护的信令服务器。
+> **优先级**：运行时 API Key（来自设置界面）优先于编译时注入的 Key。如果两者都设置了，使用运行时的值。
+
+不配置任何 API Key 时，客户端只能连接未开启 API Key 保护的信令服务器。
 
 > **WebClient 说明：** WebClient 是运行在浏览器中的静态网页，嵌入到 JS 中的 API Key 可通过 DevTools 看到，因此 WebClient 采用 **Origin 域名白名单** 验证而非 API Key。在信令服务器配置 `ALLOWED_ORIGINS` 来限制允许访问的域名。浏览器会自动发送 `Origin` 请求头且 JavaScript 无法伪造，只有从官方域名加载的 WebClient 才能通过验证。
 
@@ -345,6 +355,7 @@ cp .env.example .env && vim .env
 
 在 QuickDesk **设置 → 网络** 中配置：
 - 信令服务器地址：`ws://your-server.com:8000` 或 `wss://your-server.com:8000`
+- API Key：填入信令服务器配置的 API Key（如果启用了 API Key 保护）
 - 自定义 STUN 服务器：`stun:your-server.com:3478`
 - 自定义 TURN 服务器：`turn:your-server.com:3478`（需提供用户名和密码）
 

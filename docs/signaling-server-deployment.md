@@ -117,7 +117,7 @@ After deployment, log in to the admin panel to complete the following:
 1. **Change admin password**: Admin Panel → Admin Users → Edit, change username/password
 2. **Configure ICE servers**: Admin Panel → Settings → ICE / TURN / STUN, add your TURN/STUN servers
 3. **Configure security**:
-   - **API Key**: Admin Panel → Settings → API Key. When set, only native clients (QuickDesk desktop) carrying this key can connect to the signaling server, preventing unauthorized client access
+   - **API Key**: Admin Panel → Settings → API Key. When set, only clients carrying this key can connect to the signaling server, preventing unauthorized client access. Native clients (QuickDesk desktop) can configure the API Key in **Settings → Network → API Key** at runtime — no recompilation needed
    - **Allowed Origins**: Admin Panel → Settings → Allowed Origins. When the WebClient is deployed on a separate domain (e.g. `https://web.quickdesk.cc`), browsers block cross-origin requests by default. Add the WebClient's domain here so the signaling server allows CORS requests from those origins. Separate multiple domains with commas
 4. **Configure WebClient URL** (optional): Admin Panel → Preset → WebClient URL. Enter the WebClient deployment address (e.g. `https://web.quickdesk.cc`). The native client will display this link in its UI so users can quickly access the WebClient
 5. **Configure SMS** (optional): Admin Panel → Settings → Aliyun SMS, fill in AccessKey, signature and template to enable phone number verification

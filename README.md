@@ -290,7 +290,15 @@ bash scripts/package_qd_mac.sh Release
 
 ### API Key (Optional)
 
-If you deploy your own signaling server with API Key enabled, you can inject the API Key at build time so your clients can authenticate:
+If you deploy your own signaling server with API Key enabled, there are two ways to configure the API Key:
+
+**Method 1: Runtime Configuration (Recommended)**
+
+In QuickDesk **Settings → Network → API Key**, enter your signaling server's API Key. This is the recommended approach — no recompilation needed, and each deployment can use its own key.
+
+**Method 2: Build-time Injection**
+
+You can also inject the API Key at build time as a compile-time default:
 
 ```bash
 # Windows
@@ -301,7 +309,9 @@ scripts\build_qd_win.bat Release
 ENV_QUICKDESK_API_KEY=your-secret-key bash scripts/build_qd_mac.sh Release
 ```
 
-Without `ENV_QUICKDESK_API_KEY`, the build produces an open-source client that can only connect to signaling servers without API Key protection.
+> **Priority**: Runtime API Key (from Settings) takes precedence over the build-time key. If both are set, the runtime value is used.
+
+Without either configuration, the client can only connect to signaling servers without API Key protection.
 
 > **WebClient note:** The WebClient is a static web page running in the browser. Since API keys embedded in JavaScript are visible via DevTools, the WebClient uses **Origin whitelist** validation instead of API Key. Configure `ALLOWED_ORIGINS` on the signaling server to restrict which domains can access it. Browsers automatically send the `Origin` header and JavaScript cannot forge it, so only the WebClient served from your official domain will be allowed.
 
@@ -342,6 +352,7 @@ Pre-built Docker images are automatically published to `ghcr.io/barry-ran/quickd
 
 In QuickDesk **Settings → Network**:
 - Signaling server address: `ws://your-server.com:8000` or `wss://your-server.com:8000`
+- API Key: Enter the API Key configured on your signaling server (if enabled)
 - Custom STUN server: `stun:your-server.com:3478`
 - Custom TURN server: `turn:your-server.com:3478` (username and password required)
 

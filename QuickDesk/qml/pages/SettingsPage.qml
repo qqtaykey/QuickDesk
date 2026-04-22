@@ -339,6 +339,75 @@ Item {
                             }
                         }
                         
+                        // API Key Section
+                        Column {
+                            width: parent.width
+                            spacing: Theme.spacingSmall
+                            
+                            Rectangle { width: parent.width; height: 1; color: Theme.border }
+                            
+                            Text {
+                                text: qsTr("API Key")
+                                font.pixelSize: Theme.fontSizeLarge
+                                font.weight: Font.DemiBold
+                                color: Theme.text
+                            }
+                            
+                            Text {
+                                text: qsTr("If your signaling server has API Key protection enabled, enter the key here. No recompilation needed.")
+                                font.pixelSize: Theme.fontSizeSmall
+                                color: Theme.textSecondary
+                                wrapMode: Text.WordWrap
+                                width: parent.width
+                            }
+                            
+                            Row {
+                                width: parent.width
+                                spacing: Theme.spacingSmall
+                                
+                                QDTextField {
+                                    id: apiKeyField
+                                    width: parent.width - updateApiKeyBtn.width - clearApiKeyBtn.width - parent.spacing * 2
+                                    placeholderText: qsTr("Enter API Key")
+                                    echoMode: TextInput.Password
+                                    text: configViewModel.apiKey
+                                }
+                                
+                                QDButton {
+                                    id: updateApiKeyBtn
+                                    text: qsTr("Update")
+                                    iconText: FluentIconGlyph.saveGlyph
+                                    buttonType: QDButton.Type.Primary
+                                    enabled: apiKeyField.text !== configViewModel.apiKey
+                                    
+                                    onClicked: {
+                                        configViewModel.apiKey = apiKeyField.text.trim()
+                                        root.showToast(qsTr("API Key updated. Restart to apply changes."), QDToast.Type.Success)
+                                    }
+                                }
+                                
+                                QDButton {
+                                    id: clearApiKeyBtn
+                                    text: qsTr("Clear")
+                                    iconText: FluentIconGlyph.deleteGlyph
+                                    visible: configViewModel.apiKey.length > 0
+                                    
+                                    onClicked: {
+                                        apiKeyField.text = ""
+                                        configViewModel.apiKey = ""
+                                        root.showToast(qsTr("API Key cleared. Restart to apply changes."), QDToast.Type.Success)
+                                    }
+                                }
+                            }
+                            
+                            Text {
+                                visible: configViewModel.apiKey.length > 0
+                                text: qsTr("API Key is configured (%1 characters)").arg(configViewModel.apiKey.length)
+                                font.pixelSize: Theme.fontSizeSmall
+                                color: Theme.accent
+                            }
+                        }
+                        
                         // TURN/STUN Servers Section (hidden - ICE config is always fetched from signaling server)
                         Column {
                             visible: true

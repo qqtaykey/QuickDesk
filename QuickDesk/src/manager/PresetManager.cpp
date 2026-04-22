@@ -5,6 +5,7 @@
 #include "infra/http/httprequest.h"
 #include "infra/log/log.h"
 #include "../language/languagemanage.h"
+#include "core/localconfigcenter.h"
 
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -72,9 +73,15 @@ void PresetManager::fetchPreset()
 
     QUrl url(httpUrl);
     QList<QPair<QString, QString>> headers;
-    constexpr const char* kApiKey = QUICKDESK_API_KEY;
-    if (kApiKey[0] != '\0') {
-        headers.append(qMakePair(QStringLiteral("X-API-Key"), QString::fromLatin1(kApiKey)));
+    // Runtime API key from settings takes precedence over compile-time key
+    QString runtimeApiKey = core::LocalConfigCenter::instance().apiKey();
+    if (!runtimeApiKey.isEmpty()) {
+        headers.append(qMakePair(QStringLiteral("X-API-Key"), runtimeApiKey));
+    } else {
+        constexpr const char* kApiKey = QUICKDESK_API_KEY;
+        if (kApiKey[0] != '\0') {
+            headers.append(qMakePair(QStringLiteral("X-API-Key"), QString::fromLatin1(kApiKey)));
+        }
     }
 
     LOG_INFO("Fetching preset from: {}", httpUrl.toStdString());

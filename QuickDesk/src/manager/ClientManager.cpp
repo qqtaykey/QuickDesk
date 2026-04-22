@@ -97,6 +97,12 @@ QString ClientManager::connectToHost(const QString& deviceId,
     message["accessCode"] = accessCode;
     message["serverUrl"] = serverUrl;
     
+    // Pass runtime API key so client process can authenticate with signaling server
+    QString apiKey = core::LocalConfigCenter::instance().apiKey();
+    if (!apiKey.isEmpty()) {
+        message["apiKey"] = apiKey;
+    }
+    
     QString videoCodec = core::LocalConfigCenter::instance().preferredVideoCodec();
     if (!videoCodec.isEmpty()) {
         message["preferredVideoCodec"] = videoCodec;
