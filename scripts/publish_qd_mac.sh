@@ -80,6 +80,8 @@ cp -R "$release_path/QuickDesk.app" "$publish_path/"
 
 macos_dir="$publish_path/QuickDesk.app/Contents/MacOS"
 frameworks_dir="$publish_path/QuickDesk.app/Contents/Frameworks"
+resources_dir="$publish_path/QuickDesk.app/Contents/Resources"
+mkdir -p "$resources_dir"
 
 echo "[*] copying host and client..."
 thirdparty_path="$script_path/../QuickDesk/3rdparty/quickdesk-remoting/arm64"
@@ -128,11 +130,18 @@ else
 fi
 
 echo "[*] copying built-in skills..."
+# Apple's bundle convention requires Contents/Frameworks/ to contain only
+# frameworks / dylibs / executables. The skills directory holds mixed
+# content (Mach-O binaries + SKILL.md), which prevents codesign from
+# sealing the bundle ("code has no resources but signature indicates they
+# must be present") and triggers the "app is damaged" Gatekeeper error.
+# Place it under Contents/Resources/ instead, which is the documented
+# location for arbitrary application resources.
 skills_output="$script_path/../output/arm64/$build_mode/skills"
 if [ -d "$skills_output" ]; then
-    mkdir -p "$frameworks_dir/skills"
-    cp -R "$skills_output/"* "$frameworks_dir/skills/"
-    echo "[*] copied skills directory"
+    mkdir -p "$resources_dir/skills"
+    cp -R "$skills_output/"* "$resources_dir/skills/"
+    echo "[*] copied skills directory to Contents/Resources/skills"
 else
     echo "[!] warning: skills directory not found (run build_skill_host_mac.sh first)"
 fi
@@ -150,6 +159,7 @@ echo "[*] cleaning unnecessary Qt dependencies..."
 
 plugins_dir="$publish_path/QuickDesk.app/Contents/PlugIns"
 frameworks_dir="$publish_path/QuickDesk.app/Contents/Frameworks"
+resources_dir="$publish_path/QuickDesk.app/Contents/Resources"
 
 # PlugIns
 rm -rf "$plugins_dir/iconengines"
@@ -236,36 +246,63 @@ rm -rf "$publish_path/QuickDesk.app/Contents/translations"
 find "$frameworks_dir/quickdesk_host.app" -name "*.log" -delete 2>/dev/null
 
 echo "[*] ad-hoc code signing (inside-out)..."
-# Sign nested components first, then the outer bundle.
-# Ad-hoc signing gives each binary a stable code identity (CDHash)
-# so that macOS TCC can recognize the app in permission lists.
-if [ -d "$frameworks_dir/quickdesk_host.app" ]; then
-    codesign --force --sign - "$frameworks_dir/quickdesk_host.app"
-fi
-if [ -f "$frameworks_dir/quickdesk_client" ]; then
-    codesign --force --sign - "$frameworks_dir/quickdesk_client"
-fi
-if [ -f "$frameworks_dir/quickdesk-mcp" ]; then
-    codesign --force --sign - "$frameworks_dir/quickdesk-mcp"
-fi
-if [ -f "$frameworks_dir/quickdesk-skill-host" ]; then
-    codesign --force --sign - "$frameworks_dir/quickdesk-skill-host"
-fi
-# Sign every Mach-O binary under built-in skills (matches build_skill_host_mac.sh layout;
-# new crates under skills/ are picked up without editing this list).
-if [ -d "$frameworks_dir/skills" ]; then
-    while IFS= read -r -d '' skill_bin; do
-        case "$(file -b "$skill_bin" 2>/dev/null)" in
+# Strict inside-out order is required so that codesign can seal the outer
+# bundle. Any unsigned Mach-O found while sealing the parent will produce
+# "code object is not signed at all" and the bundle ends up with
+# "Sealed Resources=none", which Gatekeeper reports as "app is damaged".
+#
+# Order:
+#   1. Mach-O resources under Contents/Resources/ (skills/*)
+#   2. Plugin dylibs under Contents/PlugIns/
+#   3. Loose dylibs and frameworks under Contents/Frameworks/
+#   4. Helper executables and nested .app bundles under Contents/Frameworks/
+#   5. The outer .app bundle (with --deep --strict self-verification)
+
+sign_mach_o_tree() {
+    local root="$1"
+    [ -d "$root" ] || return 0
+    while IFS= read -r -d '' bin; do
+        case "$(file -b "$bin" 2>/dev/null)" in
             Mach-O*)
-                codesign --force --sign - "$skill_bin"
+                codesign --force --sign - --timestamp=none "$bin" || return 1
                 ;;
         esac
-    done < <(find "$frameworks_dir/skills" -type f -print0)
+    done < <(find "$root" -type f -print0)
+}
+
+# 1) Mach-O binaries shipped as resources (built-in skills).
+#    New crates under Contents/Resources/skills/ are picked up automatically.
+sign_mach_o_tree "$resources_dir/skills" || { echo "[!] sign skills failed"; cd "$old_cd"; exit 1; }
+
+# 2) Qt plugin dylibs.
+find "$plugins_dir" -name "*.dylib" -exec codesign --force --sign - --timestamp=none {} \;
+
+# 3) Frameworks (.framework) and loose dylibs at the top level of Frameworks/.
+find "$frameworks_dir" -maxdepth 1 -name "*.dylib" -exec codesign --force --sign - --timestamp=none {} \;
+find "$frameworks_dir" -maxdepth 1 -name "*.framework" -exec codesign --force --sign - --timestamp=none {} \;
+
+# 4) Helper executables and nested app bundles in Frameworks/.
+if [ -d "$frameworks_dir/quickdesk_host.app" ]; then
+    codesign --force --sign - --timestamp=none --deep "$frameworks_dir/quickdesk_host.app"
 fi
-find "$frameworks_dir" -name "*.framework" -maxdepth 1 -exec codesign --force --sign - {} \;
-find "$frameworks_dir" -name "*.dylib" -maxdepth 1 -exec codesign --force --sign - {} \;
-find "$plugins_dir" -name "*.dylib" -exec codesign --force --sign - {} \;
-codesign --force --sign - "$publish_path/QuickDesk.app"
+for helper in quickdesk_client quickdesk-mcp quickdesk-skill-host; do
+    if [ -f "$frameworks_dir/$helper" ]; then
+        codesign --force --sign - --timestamp=none "$frameworks_dir/$helper"
+    fi
+done
+
+# 5) Outer bundle. --deep here is a safety net only — every nested binary
+#    has already been signed individually above so codesign just seals
+#    Contents/_CodeSignature/CodeResources.
+codesign --force --sign - --timestamp=none --deep "$publish_path/QuickDesk.app"
+
+echo "[*] verifying signature (this MUST succeed or the dmg will be 'damaged')..."
+if ! codesign --verify --deep --strict --verbose=2 "$publish_path/QuickDesk.app"; then
+    echo "[!] code signature verification failed"
+    cd "$old_cd"
+    exit 1
+fi
+codesign -dv --verbose=2 "$publish_path/QuickDesk.app" 2>&1 | grep -E 'Sealed Resources|Identifier|TeamIdentifier|Signature' || true
 echo "[*] code signing done"
 
 echo

@@ -283,6 +283,12 @@ private:
     void updateAccessCodeRefreshTimer(int remainingSeconds = -1);
     QString getDefaultServerUrl() const;
     QString getSkillHostBinaryPath() const;
+    // Locate the directory that holds built-in skills (sys-info, file-ops, ...).
+    // Layout differs by platform / build mode:
+    //   - macOS bundle:   <App>.app/Contents/Resources/skills
+    //   - macOS dev tree: output/arm64/<mode>/skills (next to the binary)
+    //   - Windows/Linux:  <executable dir>/skills
+    QString getBuiltinSkillsDir() const;
     void setupWebSocketApiEvents();
 
     // MCP HTTP process management

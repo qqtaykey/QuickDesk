@@ -534,7 +534,7 @@ void MainController::onHostProcessStarted()
         QString skillHostPath = getSkillHostBinaryPath();
         if (QFile::exists(skillHostPath)) {
             QStringList skillsDirs;
-            skillsDirs << QCoreApplication::applicationDirPath() + "/skills";
+            skillsDirs << getBuiltinSkillsDir();
             skillsDirs << extraSkillsDirs();
             m_skillHostManager->startSkillHost(skillHostPath, skillsDirs);
         } else {
@@ -1187,6 +1187,24 @@ QString MainController::getSkillHostBinaryPath() const {
     return QDir::toNativeSeparators(QDir::cleanPath(skillHostPath));
 }
 
+QString MainController::getBuiltinSkillsDir() const {
+    auto appDir = QCoreApplication::applicationDirPath();
+#if defined(Q_OS_MAC)
+    // Dev tree first (output/arm64/<mode>/skills, next to the dev-built
+    // quickdesk-skill-host binary). Falls back to the packaged location
+    // under Contents/Resources/skills for the .app bundle.
+    QString devSkills = appDir + "/../../../skills";
+    if (QFileInfo(devSkills).isDir()) {
+        return QDir::cleanPath(devSkills);
+    }
+    return QDir::cleanPath(appDir + "/../Resources/skills");
+#else
+    // Windows / Linux: skills directory sits right next to the executable
+    // (see publish_qd_win.bat).
+    return QDir::toNativeSeparators(QDir::cleanPath(appDir + "/skills"));
+#endif
+}
+
 QJsonObject MainController::buildMcpServerConfig(const QString& transport) const {
     QJsonObject serverConfig;
     if (transport == "http") {
@@ -1336,7 +1354,7 @@ void MainController::setSkillHostEnabled(bool enabled) {
         QString skillHostPath = getSkillHostBinaryPath();
         if (QFile::exists(skillHostPath)) {
             QStringList skillsDirs;
-            skillsDirs << QCoreApplication::applicationDirPath() + "/skills";
+            skillsDirs << getBuiltinSkillsDir();
             skillsDirs << extraSkillsDirs();
             m_skillHostManager->startSkillHost(skillHostPath, skillsDirs);
         }
@@ -1380,7 +1398,7 @@ void MainController::setExtraSkillsDirs(const QStringList& dirs) {
             QString skillHostPath = getSkillHostBinaryPath();
             if (QFile::exists(skillHostPath)) {
                 QStringList skillsDirs;
-                skillsDirs << QCoreApplication::applicationDirPath() + "/skills";
+                skillsDirs << getBuiltinSkillsDir();
                 skillsDirs << extraSkillsDirs();
                 m_skillHostManager->startSkillHost(skillHostPath, skillsDirs);
             }
