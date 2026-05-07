@@ -5,6 +5,8 @@
 const DEVICE_EVENTS = new Set([
   'device_online',
   'device_offline',
+  'device_logged_in',
+  'device_logged_out',
   'device_access_code_changed',
   'device_remark_changed',
 ]);

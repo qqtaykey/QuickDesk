@@ -116,7 +116,7 @@ Item {
 
                             Rectangle {
                                 width: 8; height: 8; radius: 4
-                                color: modelData.online ? Theme.success : Theme.textDisabled
+                                color: (modelData.online && modelData.logged_in) ? Theme.success : Theme.textDisabled
                             }
 
                             Text {
@@ -131,7 +131,7 @@ Item {
                             }
 
                             QDIconButton {
-                                visible: modelData.online === true
+                                visible: modelData.online === true && modelData.logged_in === true
                                 iconSource: FluentIconGlyph.remoteGlyph
                                 buttonSize: QDIconButton.Size.Small
 
@@ -163,7 +163,7 @@ Item {
                                 }
                             }
                             onDoubleClicked: {
-                                if (modelData.online !== true) return
+                                if (modelData.online !== true || modelData.logged_in !== true) return
                                 var accessCode = root.mainController.cloudDeviceManager.getDeviceAccessCode(modelData.device_id)
                                 if (accessCode)
                                     root.connectToDevice(modelData.device_id, accessCode)

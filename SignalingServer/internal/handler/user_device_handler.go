@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"log"
 	"net/http"
 	"quickdesk/signaling/internal/models"
 	"time"
@@ -443,7 +444,8 @@ func (h *UserDeviceHandler) DeviceLogin(c *gin.Context) {
 		return
 	}
 
-	h.db.Model(&models.Device{}).Where("device_id = ?", deviceID).Update("logged_in", true)
+	result := h.db.Model(&models.Device{}).Where("device_id = ?", deviceID).Update("logged_in", true)
+	log.Printf("DeviceLogin: device_id=%s, rows_affected=%d, error=%v", deviceID, result.RowsAffected, result.Error)
 
 	h.notifySync(authedUserID, gin.H{
 		"type":      "device_logged_in",

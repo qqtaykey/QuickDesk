@@ -70,7 +70,12 @@ void CloudDeviceManager::fetchMyDevices()
                 QJsonArray devices = doc.object()["devices"].toArray();
                 m_myDevices.clear();
                 for (const auto& v : devices) {
-                    m_myDevices.append(v.toObject().toVariantMap());
+                    QJsonObject obj = v.toObject();
+                    m_myDevices.append(obj.toVariantMap());
+                    LOG_INFO("[CloudDeviceManager]   device={} online={} logged_in={}",
+                             obj["device_id"].toString().toStdString(),
+                             obj["online"].toBool(),
+                             obj["logged_in"].toBool());
                 }
                 LOG_INFO("[CloudDeviceManager] Fetched {} devices", m_myDevices.size());
                 emit myDevicesChanged();
@@ -496,6 +501,7 @@ void CloudDeviceManager::handleSyncMessage(const QJsonObject& msg)
     QString type = msg["type"].toString();
 
     if (type == "device_online" || type == "device_offline" ||
+        type == "device_logged_in" || type == "device_logged_out" ||
         type == "device_access_code_changed" || type == "device_remark_changed") {
         // Refresh device list
         fetchMyDevices();

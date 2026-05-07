@@ -23,13 +23,13 @@
           <p>{{ $t('devices.noDevices') }}</p>
         </div>
         <div v-for="d in myDevices" :key="d.device_id" class="device-item">
-          <div :class="['device-status', d.online ? 'online' : 'offline']"></div>
+          <div :class="['device-status', (d.online && d.logged_in) ? 'online' : 'offline']"></div>
           <div class="device-info">
             <div class="device-name">{{ d.remark || d.device_name || d.device_id }}</div>
             <div class="device-id">{{ d.device_id }}</div>
           </div>
           <div class="device-actions">
-            <button v-if="d.online" class="btn btn-primary btn-sm" @click="connectDevice(d.device_id, d.access_code)">{{ $t('devices.connect') }}</button>
+            <button v-if="d.online && d.logged_in" class="btn btn-primary btn-sm" @click="connectDevice(d.device_id, d.access_code)">{{ $t('devices.connect') }}</button>
             <button class="icon-btn" :title="$t('devices.setRemark')" @click="setRemark(d)">✏️</button>
           </div>
         </div>
