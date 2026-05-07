@@ -1,6 +1,6 @@
 services:
   signaling-server:
-    image: ghcr.io/barry-ran/quickdesk-signaling:latest
+    image: ghcr.io/barry-ran/quickdesk-signaling:${IMAGE_TAG:-latest}
     container_name: quickdesk-signaling
     restart: always
     ports:

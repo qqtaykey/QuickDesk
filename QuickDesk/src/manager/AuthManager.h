@@ -33,7 +33,7 @@ public:
     Q_INVOKABLE void registerUser(const QString& username, const QString& password,
                                    const QString& phone, const QString& email,
                                    const QString& smsCode = QString());
-    Q_INVOKABLE void logout();
+    Q_INVOKABLE void logout(const QString& deviceId = QString());
     Q_INVOKABLE void fetchUserInfo();
 
     bool isLoggedIn() const;
@@ -49,7 +49,6 @@ signals:
     void loginFailed(const QString& errorCode, const QString& errorMsg);
     void registerSuccess();
     void registerFailed(const QString& errorCode, const QString& errorMsg);
-    void loggingOut(); // emitted before token is cleared
     void loggedOut();
     void smsCodeSent();
     void smsCodeFailed(const QString& errorCode, const QString& errorMsg);

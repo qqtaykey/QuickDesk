@@ -263,14 +263,20 @@ const userTokenTTL = 7 * 24 * time.Hour
 
 // UserAuth manages user session tokens in Redis.
 type UserAuth struct {
-	db  *gorm.DB
-	rdb *redis.Client
-	sms *service.SmsService
+	db             *gorm.DB
+	rdb            *redis.Client
+	sms            *service.SmsService
+	logoutNotifier func(userID uint, deviceID string)
 }
 
 // NewUserAuth creates a new UserAuth instance.
 func NewUserAuth(db *gorm.DB, rdb *redis.Client) *UserAuth {
 	return &UserAuth{db: db, rdb: rdb}
+}
+
+// SetLogoutNotifier sets the callback to notify other devices when a device logs out.
+func (a *UserAuth) SetLogoutNotifier(fn func(userID uint, deviceID string)) {
+	a.logoutNotifier = fn
 }
 
 // SetSmsService injects the SMS service (may be nil if SMS is disabled).
@@ -504,6 +510,31 @@ func (a *UserAuth) Logout(c *gin.Context) {
 		apiErrorBadRequest(c, CodeInvalidRequest, "token不能为空")
 		return
 	}
+
+	// Get user ID from token before deleting it
+	val, err := a.rdb.Get(context.Background(), a.redisKey(token)).Result()
+	if err == nil {
+		userID, _ := strconv.ParseUint(val, 10, 64)
+		if userID > 0 {
+			// Get device_id from request (optional query param or JSON body)
+			deviceID := c.Query("device_id")
+			if deviceID == "" {
+				var body struct {
+					DeviceID string `json:"device_id"`
+				}
+				c.ShouldBindJSON(&body)
+				deviceID = body.DeviceID
+			}
+			if deviceID != "" {
+				// Clear logged_in for this specific device
+				a.db.Model(&models.Device{}).Where("device_id = ? AND user_id = ?", deviceID, userID).Update("logged_in", false)
+				if a.logoutNotifier != nil {
+					a.logoutNotifier(uint(userID), deviceID)
+				}
+			}
+		}
+	}
+
 	a.rdb.Del(context.Background(), a.redisKey(token))
 	c.JSON(http.StatusOK, gin.H{"message": "退出登录成功"})
 }

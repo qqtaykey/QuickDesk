@@ -434,7 +434,7 @@ ApplicationWindow {
                         text: qsTr("Logout")
                         iconText: FluentIconGlyph.signOutGlyph
                         isDestructive: true
-                        onTriggered: root.mainController.authManager.logout()
+                        onTriggered: root.mainController.authManager.logout(root.mainController.deviceId)
                     }
                 }
             }

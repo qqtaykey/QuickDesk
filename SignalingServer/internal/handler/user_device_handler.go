@@ -206,7 +206,10 @@ func (h *UserDeviceHandler) AutoBindDevice(c *gin.Context) {
 	}
 
 	// Update device ownership
-	h.db.Model(&models.Device{}).Where("device_id = ?", req.DeviceID).Update("user_id", authedUserID)
+	h.db.Model(&models.Device{}).Where("device_id = ?", req.DeviceID).Updates(map[string]interface{}{
+		"user_id":   authedUserID,
+		"logged_in": true,
+	})
 
 	// Upsert UserDevice: reactivate if exists but inactive, create otherwise
 	var existing models.UserDevice
@@ -234,6 +237,12 @@ func (h *UserDeviceHandler) AutoBindDevice(c *gin.Context) {
 	}
 
 	recomputeDeviceCount(h.db, authedUserID)
+
+	// Notify other devices this device is now logged in
+	h.notifySync(authedUserID, gin.H{
+		"type":      "device_logged_in",
+		"device_id": req.DeviceID,
+	})
 
 	c.JSON(http.StatusOK, gin.H{"message": "设备自动绑定成功", "binding": existing})
 }

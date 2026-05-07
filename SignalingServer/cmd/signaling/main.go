@@ -118,6 +118,12 @@ func main() {
 		// User authentication (public, no API key required)
 		userAuth := handler.NewUserAuth(db, redisClient)
 		userAuth.SetSmsService(smsService)
+		userAuth.SetLogoutNotifier(func(userID uint, deviceID string) {
+			wsHandler.NotifyUserSync(userID, map[string]interface{}{
+				"type":      "device_logged_out",
+				"device_id": deviceID,
+			})
+		})
 		v1.POST("/user/register", userAuth.Register)
 		v1.POST("/user/login", userAuth.Login)
 		v1.POST("/user/login-sms", userAuth.LoginWithSms)

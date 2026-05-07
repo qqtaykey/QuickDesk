@@ -8,6 +8,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QUrl>
+#include <QUrlQuery>
 
 namespace quickdesk {
 
@@ -241,7 +242,7 @@ void AuthManager::loginWithSms(const QString& phone, const QString& smsCode)
         });
 }
 
-void AuthManager::logout()
+void AuthManager::logout(const QString& deviceId)
 {
     if (m_token.isEmpty()) {
         clearSession();
@@ -249,10 +250,15 @@ void AuthManager::logout()
     }
 
     QUrl url(httpBaseUrl() + "api/v1/user/logout");
+    if (!deviceId.isEmpty()) {
+        QUrlQuery query;
+        query.addQueryItem("device_id", deviceId);
+        url.setQuery(query);
+    }
     QList<QPair<QString, QString>> headers;
     headers.append(qMakePair(QStringLiteral("Authorization"), QStringLiteral("Bearer ") + m_token));
 
-    LOG_INFO("[AuthManager] Logging out user: {}", m_username.toStdString());
+    LOG_INFO("[AuthManager] Logging out user: {}, device: {}", m_username.toStdString(), deviceId.toStdString());
 
     infra::HttpRequest::instance().sendPostRequest(
         url, headers, QString(), kRequestTimeoutMs,
@@ -297,8 +303,6 @@ void AuthManager::fetchUserInfo()
 
 void AuthManager::clearSession()
 {
-    emit loggingOut();
-
     m_isLoggedIn = false;
     m_username.clear();
     m_userId = 0;

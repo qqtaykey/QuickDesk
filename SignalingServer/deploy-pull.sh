@@ -66,19 +66,14 @@ echo "Port:     $PORT"
 echo "Domain:   ${DOMAIN:-<none>}"
 echo ""
 
-# ---- 1. Update image tag in docker-compose.yml ----
-if [ "$VERSION" != "latest" ]; then
-    sed -i "s|image: ${IMAGE_BASE}:.*|image: ${IMAGE_BASE}:${VERSION}|" docker-compose.yml
-fi
-
 export SERVER_PORT="$PORT"
+export IMAGE_TAG="$VERSION"
 
-# ---- 2. Pull and start ----
-echo "[1/3] Pulling image..."
+echo "[1/3] Pulling image ${IMAGE_BASE}:${IMAGE_TAG}..."
 docker compose pull
 
 echo "[2/3] Starting services..."
-docker compose up -d
+docker compose up -d --force-recreate
 
 # ---- 3. Health check ----
 echo "[3/3] Waiting for server to become healthy..."

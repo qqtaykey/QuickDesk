@@ -97,16 +97,21 @@ fi
 
 echo "Loaded: $LOADED_IMAGE"
 
-# Tag to match what docker-compose.yml expects
-EXPECTED_IMAGE=$(grep -E '^\s*image:' docker-compose.yml | head -1 | awk '{print $2}' | tr -d '\r')
-if [ -n "$EXPECTED_IMAGE" ] && [ "$LOADED_IMAGE" != "$EXPECTED_IMAGE" ]; then
-    echo "Tagging $LOADED_IMAGE → $EXPECTED_IMAGE"
-    docker tag "$LOADED_IMAGE" "$EXPECTED_IMAGE"
+# Extract tag from loaded image for docker-compose
+if echo "$LOADED_IMAGE" | grep -q ':'; then
+    IMAGE_TAG=$(echo "$LOADED_IMAGE" | grep -oP ':\K.+')
+else
+    # Image has no tag (loaded by ID), tag it as 'latest'
+    IMAGE_TAG="latest"
+    EXPECTED="ghcr.io/barry-ran/quickdesk-signaling:latest"
+    echo "No tag found, tagging as: $EXPECTED"
+    docker tag "$LOADED_IMAGE" "$EXPECTED"
 fi
+export IMAGE_TAG
 
 # ---- 2. Start ----
-echo "[2/3] Starting services..."
-docker compose up -d
+echo "[2/3] Starting services (IMAGE_TAG=$IMAGE_TAG)..."
+docker compose up -d --force-recreate
 
 # ---- 3. Health check ----
 echo "[3/3] Waiting for server to become healthy..."
