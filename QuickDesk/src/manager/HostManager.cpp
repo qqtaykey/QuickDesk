@@ -3,6 +3,7 @@
 #include "HostManager.h"
 #include "NativeMessaging.h"
 #include "core/localconfigcenter.h"
+#include "infra/env/applicationcontext.h"
 #include "infra/log/log.h"
 #include <QJsonArray>
 
@@ -63,6 +64,9 @@ void HostManager::connectToServer(const QString& serverUrl, const QString& saved
     message["type"] = "connect";
     // Only serverUrl is needed - Host will auto-generate deviceId and accessCode
     message["signalingServerUrl"] = serverUrl;
+
+    // Send app version so host can report it to signaling server
+    message["appVersion"] = infra::ApplicationContext::instance().applicationVersion();
 
     // Pass runtime API key so host process can authenticate with signaling server
     QString apiKey = core::LocalConfigCenter::instance().apiKey();
