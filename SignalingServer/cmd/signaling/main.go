@@ -83,9 +83,9 @@ func main() {
 	}
 
 	// Initialize handlers
-	apiHandler := handler.NewAPIHandler(deviceService, authService, presetService, settingsService, cfg)
+	apiHandler := handler.NewAPIHandler(deviceService, authService, presetService, settingsService, cfg, db)
 	wsHandler := handler.NewWSHandler(deviceService, authService, db, redisClient)
-	
+
 	apiHandler.SetWSHandler(wsHandler)
 
 	gin.SetMode(gin.ReleaseMode)
@@ -93,6 +93,7 @@ func main() {
 	router.Use(gin.Recovery())
 	router.Use(middleware.LoggerMiddleware())
 	router.Use(middleware.CORSMiddleware(settingsService))
+	router.Use(apiHandler.APIRequestCounterMiddleware())
 
 	apiKeyAuth := middleware.NewAPIKeyAuth(settingsService)
 

@@ -12,6 +12,7 @@ import (
 	"quickdesk/signaling/internal/models"
 	"quickdesk/signaling/internal/service"
 	"runtime"
+	"sync/atomic"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -20,6 +21,7 @@ import (
 	"github.com/shirou/gopsutil/v3/host"
 	"github.com/shirou/gopsutil/v3/mem"
 	psnet "github.com/shirou/gopsutil/v3/net"
+	"gorm.io/gorm"
 )
 
 type APIHandler struct {
@@ -29,20 +31,31 @@ type APIHandler struct {
 	settingsService *service.SettingsService
 	config          *config.Config
 	wsHandler       *WSHandler
+	db              *gorm.DB
+	apiRequestCount int64
 	lastNetIO       psnet.IOCountersStat
 	lastNetIOTime   time.Time
 	uploadSpeed     float64
 	downloadSpeed   float64
 }
 
-func NewAPIHandler(deviceService *service.DeviceService, authService *service.AuthService, presetService *service.PresetService, settingsService *service.SettingsService, cfg *config.Config) *APIHandler {
+func NewAPIHandler(deviceService *service.DeviceService, authService *service.AuthService, presetService *service.PresetService, settingsService *service.SettingsService, cfg *config.Config, db *gorm.DB) *APIHandler {
 	return &APIHandler{
 		deviceService:   deviceService,
 		authService:     authService,
 		presetService:   presetService,
 		settingsService: settingsService,
 		config:          cfg,
+		db:              db,
 		lastNetIOTime:   time.Now(),
+	}
+}
+
+// APIRequestCounterMiddleware increments the API request counter for each request
+func (h *APIHandler) APIRequestCounterMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		atomic.AddInt64(&h.apiRequestCount, 1)
+		c.Next()
 	}
 }
 
@@ -438,11 +451,39 @@ func (h *APIHandler) GetConnectionStatus(c *gin.Context) {
 		"currentConnections":   wsConnections,
 		"todayConnections":     wsConnections,
 		"webSocketConnections": wsConnections,
-		"apiRequests":          0,
+		"apiRequests":          atomic.LoadInt64(&h.apiRequestCount),
 	})
 }
 
 // GetActivity handles GET /admin/activity
 func (h *APIHandler) GetActivity(c *gin.Context) {
-	c.JSON(http.StatusOK, []gin.H{})
+	var histories []models.ConnectionHistory
+	h.db.Order("created_at DESC").Limit(50).Find(&histories)
+
+	activity := make([]gin.H, 0, len(histories))
+	for _, hist := range histories {
+		action := "远程连接"
+		details := fmt.Sprintf("用户 %d 连接设备 %s", hist.UserID, hist.DeviceID)
+		if hist.DeviceName != "" {
+			details = fmt.Sprintf("用户 %d 连接设备 %s (%s)", hist.UserID, hist.DeviceID, hist.DeviceName)
+		}
+		if hist.ErrorMsg != "" {
+			details += " - " + hist.ErrorMsg
+		}
+
+		status := hist.Status
+		if status == "" {
+			status = "success"
+		}
+
+		activity = append(activity, gin.H{
+			"time":     hist.CreatedAt.Format("2006-01-02 15:04:05"),
+			"deviceId": hist.DeviceID,
+			"action":   action,
+			"details":  details,
+			"status":   status,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{"activity": activity})
 }

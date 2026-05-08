@@ -29,8 +29,11 @@ const (
 
 // WebSocket message types
 type WSMessage struct {
-	Type     string `json:"type"`
-	Password string `json:"password,omitempty"`
+	Type       string `json:"type"`
+	Password   string `json:"password,omitempty"`
+	OS         string `json:"os,omitempty"`
+	OSVersion  string `json:"os_version,omitempty"`
+	AppVersion string `json:"app_version,omitempty"`
 }
 
 var upgrader = websocket.Upgrader{
@@ -130,17 +133,22 @@ func (h *WSHandler) HandleWebSocket(c *gin.Context) {
 	
 	// Host connection: Auto-register if not exists, create temp password
 	if !isClient {
+		// Read device info from query params
+		osInfo := c.DefaultQuery("os", "Unknown")
+		osVersion := c.DefaultQuery("os_version", "Unknown")
+		appVersion := c.DefaultQuery("app_version", "Unknown")
+
 		// Check if device exists
 		_, err := h.deviceService.GetByDeviceID(c.Request.Context(), deviceID)
 		if err != nil {
 			// Device doesn't exist, register it
 			log.Printf("Device %s not registered, auto-registering...", deviceID)
 			req := &service.RegisterDeviceRequest{
-				OS:         "Unknown",
-				OSVersion:  "Unknown",
-				AppVersion: "1.0.0",
+				OS:         osInfo,
+				OSVersion:  osVersion,
+				AppVersion: appVersion,
 			}
-			
+
 			// Use provided device_id
 			device, err := h.deviceService.RegisterDeviceWithID(c.Request.Context(), deviceID, req)
 			if err != nil {
@@ -148,7 +156,7 @@ func (h *WSHandler) HandleWebSocket(c *gin.Context) {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to register device"})
 				return
 			}
-			
+
 			// Generate and set temporary password
 			tempPassword := h.authService.GenerateTemporaryPassword()
 			if accessCode == "" {
@@ -158,10 +166,13 @@ func (h *WSHandler) HandleWebSocket(c *gin.Context) {
 			if err != nil {
 				log.Printf("Failed to set temporary password: %v", err)
 			}
-			
+
 			log.Printf("Device registered: device_id=%s, temp_password=%s", device.DeviceID, accessCode)
 		} else {
-			// Device exists, update temporary password if provided
+			// Device exists, update device info and temporary password
+			if osInfo != "Unknown" || osVersion != "Unknown" || appVersion != "Unknown" {
+				h.deviceService.UpdateDeviceInfo(c.Request.Context(), deviceID, osInfo, osVersion, appVersion)
+			}
 			if accessCode != "" {
 				err = h.authService.SetTemporaryPassword(c.Request.Context(), deviceID, accessCode)
 				if err != nil {
@@ -296,6 +307,18 @@ func (h *WSHandler) HandleWebSocket(c *gin.Context) {
 					}
 				}
 				continue // Don't forward this message to clients
+			}
+			if !isClient && wsMsg.Type == "set_device_info" {
+				// Host is reporting its device info (OS, version, etc.)
+				if wsMsg.OS != "" || wsMsg.OSVersion != "" || wsMsg.AppVersion != "" {
+					h.deviceService.UpdateDeviceInfo(context.Background(), deviceID, wsMsg.OS, wsMsg.OSVersion, wsMsg.AppVersion)
+					log.Printf("Device info updated for %s: os=%s, os_version=%s, app_version=%s",
+						deviceID, wsMsg.OS, wsMsg.OSVersion, wsMsg.AppVersion)
+					h.sendToConnection(conn, map[string]interface{}{
+						"type": "device_info_set",
+					})
+				}
+				continue
 			}
 		}
 		

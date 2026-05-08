@@ -142,29 +142,7 @@ const connectionStatus = ref({
   apiRequests: 0
 })
 
-const activityList = ref([
-  {
-    time: '2026-03-06 14:45:35',
-    deviceId: '642407192',
-    action: '设备登录',
-    details: '设备 642407192 成功登录',
-    status: 'success'
-  },
-  {
-    time: '2026-03-06 14:40:12',
-    deviceId: '123456789',
-    action: '设备注册',
-    details: '新设备 123456789 注册成功',
-    status: 'success'
-  },
-  {
-    time: '2026-03-06 14:35:45',
-    deviceId: '987654321',
-    action: '密码验证',
-    details: '设备 987654321 密码验证失败',
-    status: 'failed'
-  }
-])
+const activityList = ref([])
 
 function rowClassName({ row }) {
   return row.status === 'success' ? 'success-row' : 'failed-row'
@@ -214,8 +192,12 @@ let systemStatusTimer = null
 
 async function refreshSystemStatus() {
   try {
-    const systemData = await getSystemStatus()
+    const [systemData, connectionData] = await Promise.all([
+      getSystemStatus(),
+      getConnectionStatus()
+    ])
     systemStatus.value = systemData
+    connectionStatus.value = connectionData
     updateOverview(systemData)
   } catch (e) {
     console.error('Failed to refresh system status:', e.message)
@@ -224,7 +206,7 @@ async function refreshSystemStatus() {
 
 function startSystemStatusAutoRefresh() {
   if (systemStatusTimer) clearInterval(systemStatusTimer)
-  systemStatusTimer = setInterval(refreshSystemStatus, 1000)
+  systemStatusTimer = setInterval(refreshSystemStatus, 5000)
 }
 
 function stopSystemStatusAutoRefresh() {

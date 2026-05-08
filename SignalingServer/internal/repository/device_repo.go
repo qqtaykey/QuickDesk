@@ -42,9 +42,13 @@ func (r *DeviceRepository) Update(ctx context.Context, device *models.Device) er
 
 // SetOnline updates the online status of a device
 func (r *DeviceRepository) SetOnline(ctx context.Context, deviceID string, online bool) error {
+	updates := map[string]interface{}{"online": online}
+	if online {
+		updates["last_seen"] = time.Now()
+	}
 	return r.db.WithContext(ctx).Model(&models.Device{}).
 		Where("device_id = ?", deviceID).
-		Update("online", online).Error
+		Updates(updates).Error
 }
 
 // UpdateLastSeen updates the last_seen timestamp of a device
@@ -52,6 +56,26 @@ func (r *DeviceRepository) UpdateLastSeen(ctx context.Context, deviceID string) 
 	return r.db.WithContext(ctx).Model(&models.Device{}).
 		Where("device_id = ?", deviceID).
 		Update("last_seen", time.Now()).Error
+}
+
+// UpdateDeviceInfo updates OS, OSVersion, and AppVersion for a device
+func (r *DeviceRepository) UpdateDeviceInfo(ctx context.Context, deviceID, os, osVersion, appVersion string) error {
+	updates := map[string]interface{}{}
+	if os != "" {
+		updates["os"] = os
+	}
+	if osVersion != "" {
+		updates["os_version"] = osVersion
+	}
+	if appVersion != "" {
+		updates["app_version"] = appVersion
+	}
+	if len(updates) == 0 {
+		return nil
+	}
+	return r.db.WithContext(ctx).Model(&models.Device{}).
+		Where("device_id = ?", deviceID).
+		Updates(updates).Error
 }
 
 // List retrieves devices with pagination

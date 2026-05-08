@@ -85,9 +85,16 @@ func (s *DeviceService) RegisterDevice(ctx context.Context, req *RegisterDeviceR
 	if req.DeviceID != "" {
 		existingDevice, err := s.repo.GetByDeviceID(ctx, req.DeviceID)
 		if err == nil {
-			// Device exists, update last_seen and return
+			// Device exists, update last_seen and device info
 			log.Printf("Device already exists: device_id=%s", req.DeviceID)
 			s.repo.UpdateLastSeen(ctx, req.DeviceID)
+			// Update device info if provided (handles app upgrades)
+			if req.OS != "" || req.OSVersion != "" || req.AppVersion != "" {
+				s.repo.UpdateDeviceInfo(ctx, req.DeviceID, req.OS, req.OSVersion, req.AppVersion)
+				existingDevice.OS = req.OS
+				existingDevice.OSVersion = req.OSVersion
+				existingDevice.AppVersion = req.AppVersion
+			}
 			return existingDevice, false, nil
 		}
 		if err != gorm.ErrRecordNotFound {
@@ -181,4 +188,11 @@ func (s *DeviceService) IsDeviceOnline(ctx context.Context, deviceID string) (bo
 // GetAllDevices returns all devices
 func (s *DeviceService) GetAllDevices(ctx context.Context) ([]models.Device, error) {
 	return s.repo.GetAll(ctx)
+}
+
+// UpdateDeviceInfo updates OS, OSVersion, and AppVersion for a device
+func (s *DeviceService) UpdateDeviceInfo(ctx context.Context, deviceID, os, osVersion, appVersion string) {
+	if err := s.repo.UpdateDeviceInfo(ctx, deviceID, os, osVersion, appVersion); err != nil {
+		log.Printf("Failed to update device info for %s: %v", deviceID, err)
+	}
 }
