@@ -155,6 +155,15 @@ AI Config
 - Custom signaling server address
 - Custom STUN/TURN servers
 - Complete server deployment solution (Go signaling server + PostgreSQL + Redis + coturn)
+- **Web Admin Panel** — full-featured management dashboard for the signaling server:
+  - Real-time monitoring with ECharts trend charts (connections, new devices over 24h/7d/30d)
+  - Device management with search, filter, sort, pagination, batch operations, and device groups
+  - User management with batch enable/disable/delete/set-level
+  - Admin TOTP two-factor authentication (QR code setup, Google Authenticator compatible)
+  - Operation audit logs with filtering by action/admin/time range
+  - IP whitelist (CIDR support) for admin panel access control
+  - Webhook notifications (device online/offline, new device/user, connection failures)
+  - CSV data export for devices, users, and activity logs
 
 ## Architecture
 
