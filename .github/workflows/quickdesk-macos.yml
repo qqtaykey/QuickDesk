@@ -29,8 +29,15 @@ env:
 
 jobs:
   build:
-    name: Build
-    runs-on: macos-14
+    name: Build (${{ matrix.arch }})
+    strategy:
+      matrix:
+        include:
+          - runner: macos-14
+            arch: arm64
+          - runner: macos-13
+            arch: x64
+    runs-on: ${{ matrix.runner }}
     env:
       QT_VERSION: '6.8.3'
     steps:
@@ -56,25 +63,26 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             quickdesk-mcp/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('quickdesk-mcp/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-
+            quickdesk-skill-host/target
+          key: ${{ runner.os }}-${{ matrix.arch }}-cargo-${{ hashFiles('quickdesk-mcp/Cargo.lock', 'quickdesk-skill-host/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-${{ matrix.arch }}-cargo-
 
       - name: Build
         env:
           ENV_QUICKDESK_API_KEY: ${{ secrets.QUICKDESK_API_KEY }}
-        run: bash scripts/build_qd_mac.sh Release
+        run: bash scripts/build_qd_mac.sh Release ${{ matrix.arch }}
 
       - name: Build MCP Bridge
-        run: bash scripts/build_mcp_mac.sh Release
+        run: bash scripts/build_mcp_mac.sh Release ${{ matrix.arch }}
 
       - name: Build Skill Host
-        run: bash scripts/build_skill_host_mac.sh Release
+        run: bash scripts/build_skill_host_mac.sh Release ${{ matrix.arch }}
 
       - name: Build WebClient
         run: bash scripts/build_webclient_mac.sh
 
       - name: Publish
-        run: bash scripts/publish_qd_mac.sh Release
+        run: bash scripts/publish_qd_mac.sh Release ${{ matrix.arch }}
 
       - name: Package DMG
         run: bash scripts/package_qd_mac.sh Release
@@ -88,7 +96,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: QuickDesk-mac-arm64-${{ steps.version.outputs.ref-name }}
+          name: QuickDesk-mac-${{ matrix.arch }}-${{ steps.version.outputs.ref-name }}
           path: publish/Release/QuickDesk.dmg
 
       - name: Upload to release
@@ -97,6 +105,6 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: publish/Release/QuickDesk.dmg
-          asset_name: QuickDesk-mac-arm64-${{ steps.version.outputs.ref-name }}.dmg
+          asset_name: QuickDesk-mac-${{ matrix.arch }}-${{ steps.version.outputs.ref-name }}.dmg
           tag: ${{ github.ref }}
           overwrite: true
