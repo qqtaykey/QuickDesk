@@ -35,7 +35,7 @@ jobs:
         include:
           - runner: macos-14
             arch: arm64
-          - runner: macos-13
+          - runner: macos-14
             arch: x64
     runs-on: ${{ matrix.runner }}
     env:
@@ -55,6 +55,8 @@ jobs:
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.arch == 'x64' && 'x86_64-apple-darwin' || '' }}
 
       - name: Cache Rust dependencies
         uses: actions/cache@v4
