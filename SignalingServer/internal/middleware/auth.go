@@ -12,6 +12,7 @@ import (
 	"quickdesk/signaling/internal/service"
 
 	"github.com/gin-gonic/gin"
+	"github.com/pquerna/otp/totp"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -34,6 +35,7 @@ func (a *AdminAuth) Login(c *gin.Context) {
 	var req struct {
 		User     string `json:"user" binding:"required"`
 		Password string `json:"password" binding:"required"`
+		TOTPCode string `json:"totp_code"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
@@ -44,6 +46,17 @@ func (a *AdminAuth) Login(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
+	}
+
+	if user.TOTPEnabled {
+		if req.TOTPCode == "" {
+			c.JSON(http.StatusOK, gin.H{"error": "2fa_required"})
+			return
+		}
+		if !totp.Validate(req.TOTPCode, user.TOTPSecret) {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid TOTP code"})
+			return
+		}
 	}
 
 	token := generateToken()
@@ -75,9 +88,15 @@ func (a *AdminAuth) AuthRequired() gin.HandlerFunc {
 			return
 		}
 
-		if err := a.rdb.Exists(context.Background(), a.redisKey(token)).Err(); err != nil {
+		username, err := a.rdb.Get(context.Background(), a.redisKey(token)).Result()
+		if err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "token expired"})
 			return
+		}
+
+		c.Set("admin_username", username)
+		if user, err := a.service.GetAdminUserByUsername(context.Background(), username); err == nil {
+			c.Set("admin_id", user.ID)
 		}
 
 		c.Next()

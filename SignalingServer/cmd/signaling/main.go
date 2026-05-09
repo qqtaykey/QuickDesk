@@ -32,7 +32,8 @@ func main() {
 	if err := db.AutoMigrate(
 		&models.Device{}, &models.Preset{}, &models.AdminUser{}, &models.User{},
 		&models.UserDevice{}, &models.ConnectionHistory{}, &models.Settings{},
-		&models.UserFavorite{},
+		&models.UserFavorite{}, &models.AuditLog{}, &models.DeviceGroup{},
+		&models.DeviceGroupMember{}, &models.Webhook{},
 	); err != nil {
 		log.Printf("Warning: migration error (continuing anyway): %v", err)
 	}
@@ -82,9 +83,16 @@ func main() {
 		log.Println("Initial admin user created successfully")
 	}
 
+	// Initialize new services
+	auditService := service.NewAuditService(db)
+	webhookService := service.NewWebhookService(db)
+	groupRepo := repository.NewDeviceGroupRepository(db)
+	groupService := service.NewDeviceGroupService(groupRepo)
+
 	// Initialize handlers
 	apiHandler := handler.NewAPIHandler(deviceService, authService, presetService, settingsService, cfg, db)
 	wsHandler := handler.NewWSHandler(deviceService, authService, db, redisClient)
+	wsHandler.SetWebhookService(webhookService)
 
 	apiHandler.SetWSHandler(wsHandler)
 
@@ -174,6 +182,7 @@ func main() {
 
 		admin := v1.Group("/admin")
 		admin.Use(adminAuth.AuthRequired())
+		admin.Use(middleware.IPWhitelistMiddleware(settingsService))
 		{
 			admin.GET("/preset", apiHandler.GetAdminPreset)
 			admin.PUT("/preset", apiHandler.UpdateAdminPreset)
@@ -201,6 +210,36 @@ func main() {
 			admin.PUT("/user-list/:id/device-count", userHandler.UpdateUserDeviceCount)
 
 			admin.GET("/device-bindings", userDeviceHandler.GetAllBindings)
+
+			admin.GET("/trends", apiHandler.GetTrends)
+
+			auditHandler := handler.NewAuditHandler(auditService)
+			admin.GET("/audit-logs", auditHandler.GetAuditLogs)
+
+			totpHandler := handler.NewTOTPHandler(adminUserService, db)
+			admin.POST("/2fa/setup", totpHandler.Setup2FA)
+			admin.POST("/2fa/verify", totpHandler.Verify2FA)
+			admin.DELETE("/2fa", totpHandler.Disable2FA)
+
+			groupHandler := handler.NewDeviceGroupHandler(groupService)
+			admin.GET("/groups", groupHandler.GetGroups)
+			admin.POST("/groups", groupHandler.CreateGroup)
+			admin.PUT("/groups/:id", groupHandler.UpdateGroup)
+			admin.DELETE("/groups/:id", groupHandler.DeleteGroup)
+			admin.POST("/groups/:id/devices", groupHandler.AddDevices)
+			admin.DELETE("/groups/:id/devices", groupHandler.RemoveDevices)
+			admin.GET("/groups/:id/devices", groupHandler.GetGroupDevices)
+
+			batchHandler := handler.NewBatchHandler(db, groupService)
+			admin.POST("/devices/batch", batchHandler.BatchDevices)
+			admin.POST("/user-list/batch", batchHandler.BatchUsers)
+
+			webhookHandler := handler.NewWebhookHandler(webhookService)
+			admin.GET("/webhooks", webhookHandler.GetWebhooks)
+			admin.POST("/webhooks", webhookHandler.CreateWebhook)
+			admin.PUT("/webhooks/:id", webhookHandler.UpdateWebhook)
+			admin.DELETE("/webhooks/:id", webhookHandler.DeleteWebhook)
+			admin.POST("/webhooks/:id/test", webhookHandler.TestWebhook)
 
 			admin.GET("/settings", settingsHandler.GetSettings)
 			admin.POST("/settings", settingsHandler.UpdateSettings)

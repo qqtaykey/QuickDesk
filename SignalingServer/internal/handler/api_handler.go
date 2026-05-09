@@ -607,3 +607,80 @@ func (h *APIHandler) GetActivity(c *gin.Context) {
 
 	c.JSON(http.StatusOK, NewPaginatedResponse(activity, total, p))
 }
+
+func (h *APIHandler) GetTrends(c *gin.Context) {
+	rangeParam := c.DefaultQuery("range", "24h")
+
+	var truncFunc string
+	var since time.Time
+	now := time.Now()
+
+	switch rangeParam {
+	case "7d":
+		truncFunc = "day"
+		since = now.AddDate(0, 0, -7)
+	case "30d":
+		truncFunc = "day"
+		since = now.AddDate(0, 0, -30)
+	default:
+		truncFunc = "hour"
+		since = now.Add(-24 * time.Hour)
+	}
+
+	type bucket struct {
+		Bucket time.Time `json:"bucket"`
+		Count  int64     `json:"count"`
+	}
+
+	var connBuckets []bucket
+	h.db.Raw(
+		fmt.Sprintf("SELECT date_trunc('%s', created_at) as bucket, count(*) as count FROM connection_histories WHERE created_at >= ? GROUP BY bucket ORDER BY bucket", truncFunc),
+		since,
+	).Scan(&connBuckets)
+
+	var deviceBuckets []bucket
+	h.db.Raw(
+		fmt.Sprintf("SELECT date_trunc('%s', created_at) as bucket, count(*) as count FROM devices WHERE created_at >= ? GROUP BY bucket ORDER BY bucket", truncFunc),
+		since,
+	).Scan(&deviceBuckets)
+
+	var timeFormat string
+	if truncFunc == "hour" {
+		timeFormat = "01-02 15:04"
+	} else {
+		timeFormat = "01-02"
+	}
+
+	labels := make([]string, 0)
+	connections := make([]int64, 0)
+	newDevices := make([]int64, 0)
+
+	connMap := make(map[string]int64)
+	for _, b := range connBuckets {
+		connMap[b.Bucket.Format(timeFormat)] = b.Count
+	}
+	deviceMap := make(map[string]int64)
+	for _, b := range deviceBuckets {
+		deviceMap[b.Bucket.Format(timeFormat)] = b.Count
+	}
+
+	var step time.Duration
+	if truncFunc == "hour" {
+		step = time.Hour
+	} else {
+		step = 24 * time.Hour
+	}
+
+	for t := since.Truncate(step); !t.After(now); t = t.Add(step) {
+		label := t.Format(timeFormat)
+		labels = append(labels, label)
+		connections = append(connections, connMap[label])
+		newDevices = append(newDevices, deviceMap[label])
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"labels":      labels,
+		"connections": connections,
+		"newDevices":  newDevices,
+	})
+}

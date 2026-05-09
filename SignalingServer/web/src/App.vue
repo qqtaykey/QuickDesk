@@ -38,6 +38,18 @@
           <el-icon><User /></el-icon>
           <span v-if="!isMobile">{{ t('nav.adminUsers') }}</span>
         </el-menu-item>
+        <el-menu-item index="/device-groups" :route="{ path: '/device-groups' }">
+          <el-icon><Folder /></el-icon>
+          <span v-if="!isMobile">{{ t('nav.deviceGroups') }}</span>
+        </el-menu-item>
+        <el-menu-item index="/audit-logs" :route="{ path: '/audit-logs' }">
+          <el-icon><Document /></el-icon>
+          <span v-if="!isMobile">{{ t('nav.auditLogs') }}</span>
+        </el-menu-item>
+        <el-menu-item index="/webhooks" :route="{ path: '/webhooks' }">
+          <el-icon><LinkIcon /></el-icon>
+          <span v-if="!isMobile">{{ t('nav.webhooks') }}</span>
+        </el-menu-item>
         <el-menu-item index="/settings" :route="{ path: '/settings' }">
           <el-icon><Tools /></el-icon>
           <span v-if="!isMobile">{{ t('nav.settings') }}</span>
@@ -93,7 +105,7 @@ import { useI18n } from 'vue-i18n'
 import { useSettingsStore } from './stores/settings.js'
 import { logout } from './api/auth.js'
 import { setLocale, getLocale } from './i18n'
-import { House, Monitor, Setting, User, UserFilled, SwitchButton, Tools, Connection } from '@element-plus/icons-vue'
+import { House, Monitor, Setting, User, UserFilled, SwitchButton, Tools, Connection, Folder, Document, Link as LinkIcon } from '@element-plus/icons-vue'
 
 const { t } = useI18n()
 const route = useRoute()

@@ -20,6 +20,12 @@ export async function getConnectionStatus() {
   return res.json()
 }
 
+export async function getTrends(range_ = '24h') {
+  const res = await authFetch(`${BASE_URL}/trends?range=${range_}`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
 export async function getActivity(params = {}) {
   const query = new URLSearchParams()
   if (params.page) query.set('page', params.page)

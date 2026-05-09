@@ -40,6 +40,15 @@
       </div>
     </el-card>
 
+    <!-- Batch Toolbar -->
+    <div v-if="selectedIds.length > 0" class="batch-bar">
+      <span>{{ t('batch.selected', { count: selectedIds.length }) }}</span>
+      <el-button size="small" @click="handleBatch('enable')">{{ t('batch.enable') }}</el-button>
+      <el-button size="small" @click="handleBatch('disable')">{{ t('batch.disable') }}</el-button>
+      <el-button size="small" type="danger" @click="handleBatch('delete')">{{ t('batch.delete') }}</el-button>
+      <el-button size="small" @click="handleBatch('set-level')">{{ t('batch.setLevel') }}</el-button>
+    </div>
+
     <!-- Table -->
     <el-card shadow="never" style="margin-top: 16px">
       <el-table
@@ -49,8 +58,10 @@
         size="small"
         @sort-change="handleSortChange"
         @row-click="handleRowClick"
+        @selection-change="handleSelectionChange"
         row-class-name="clickable-row"
       >
+        <el-table-column type="selection" width="40" />
         <el-table-column prop="id" label="ID" width="60" sortable="custom" />
         <el-table-column prop="username" :label="t('userMgmt.username')" min-width="120" sortable="custom" />
         <el-table-column prop="phone" :label="t('userMgmt.phone')" min-width="120" />
@@ -167,6 +178,25 @@
         </el-button>
       </template>
     </el-dialog>
+
+    <!-- Batch Set Level Dialog -->
+    <el-dialog v-model="levelDialogVisible" :title="t('batch.setLevel')" width="400px" destroy-on-close>
+      <el-form>
+        <el-form-item :label="t('userMgmt.level')">
+          <el-select v-model="selectedLevel" style="width:100%" :placeholder="t('userMgmt.levelPlaceholder')">
+            <el-option label="V1" value="V1" />
+            <el-option label="V2" value="V2" />
+            <el-option label="V3" value="V3" />
+            <el-option label="V4" value="V4" />
+            <el-option label="V5" value="V5" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="levelDialogVisible = false">{{ t('common.cancel') }}</el-button>
+        <el-button type="primary" @click="confirmBatchLevel" :disabled="!selectedLevel">{{ t('common.confirm') }}</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -176,13 +206,14 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Edit, Delete, Search, Download } from '@element-plus/icons-vue'
-import { getUsers, createUser, updateUser, deleteUser } from '../api/users.js'
+import { getUsers, createUser, updateUser, deleteUser, batchUsers } from '../api/users.js'
 import { exportCSV } from '../utils/export.js'
 
 const { t } = useI18n()
 const router = useRouter()
 const loading = ref(false)
 const users = ref([])
+const selectedIds = ref([])
 const dialogVisible = ref(false)
 const isEdit = ref(false)
 const submitting = ref(false)
@@ -367,6 +398,42 @@ function handleExport() {
   exportCSV(columns, users.value, 'users.csv')
 }
 
+const levelDialogVisible = ref(false)
+const selectedLevel = ref('')
+
+function handleSelectionChange(rows) {
+  selectedIds.value = rows.map(r => r.id)
+}
+
+async function handleBatch(action) {
+  if (selectedIds.value.length === 0) return
+  try {
+    if (action === 'set-level') {
+      selectedLevel.value = ''
+      levelDialogVisible.value = true
+      return
+    }
+    await ElMessageBox.confirm(t('batch.confirmBatch', { count: selectedIds.value.length }), t('common.tip'), { type: 'warning' })
+    await batchUsers(action, selectedIds.value)
+    ElMessage.success(t('batch.success'))
+    loadUsers()
+  } catch (e) {
+    if (e !== 'cancel' && e?.message) ElMessage.error(e.message)
+  }
+}
+
+async function confirmBatchLevel() {
+  if (!selectedLevel.value) return
+  try {
+    await batchUsers('set-level', selectedIds.value, selectedLevel.value)
+    ElMessage.success(t('batch.success'))
+    levelDialogVisible.value = false
+    loadUsers()
+  } catch (e) {
+    ElMessage.error(e.message)
+  }
+}
+
 onMounted(loadUsers)
 </script>
 
@@ -419,5 +486,16 @@ onMounted(loadUsers)
 
 :deep(.clickable-row:hover td) {
   color: var(--el-color-primary);
+}
+
+.batch-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 10px 16px;
+  background: #ecf5ff;
+  border-radius: 4px;
+  font-size: 13px;
 }
 </style>

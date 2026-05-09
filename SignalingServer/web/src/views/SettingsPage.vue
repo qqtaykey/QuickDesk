@@ -106,6 +106,26 @@
         </el-form>
       </el-card>
 
+      <!-- IP 白名单 -->
+      <el-card class="settings-card" shadow="never">
+        <template #header>
+          <div class="card-header">
+            <el-icon><Lock /></el-icon>
+            <span>{{ t('settings.ipWhitelist') }}</span>
+          </div>
+        </template>
+        <el-form label-width="180px" label-position="top">
+          <el-form-item :label="t('settings.ipWhitelist')">
+            <div class="form-tip">{{ t('settings.ipWhitelistTip') }}</div>
+            <ListEditor
+              v-model="ipWhitelistList"
+              :placeholder="t('settings.ipWhitelistPlaceholder')"
+              :add-text="t('settings.addIp')"
+            />
+          </el-form-item>
+        </el-form>
+      </el-card>
+
       <!-- 阿里云短信配置 -->
       <el-card class="settings-card" shadow="never">
         <template #header>
@@ -192,7 +212,8 @@ const form = reactive({
   smsAccessKeyId: '',
   smsAccessKeySecret: '',
   smsSignName: '',
-  smsTemplateCode: ''
+  smsTemplateCode: '',
+  adminIpWhitelist: ''
 })
 
 const isSmsEnabled = computed(() =>
@@ -202,6 +223,7 @@ const isSmsEnabled = computed(() =>
 const turnUrlList = ref([])
 const stunUrlList = ref([])
 const allowedOriginList = ref([])
+const ipWhitelistList = ref([])
 
 function textToList(text) {
   if (!text) return []
@@ -216,12 +238,14 @@ function syncListsFromForm() {
   turnUrlList.value = textToList(form.turnUrls)
   stunUrlList.value = textToList(form.stunUrls)
   allowedOriginList.value = textToList(form.allowedOrigins)
+  ipWhitelistList.value = textToList(form.adminIpWhitelist)
 }
 
 function syncFormFromLists() {
   form.turnUrls = listToText(turnUrlList.value)
   form.stunUrls = listToText(stunUrlList.value)
   form.allowedOrigins = listToText(allowedOriginList.value)
+  form.adminIpWhitelist = listToText(ipWhitelistList.value)
 }
 
 async function loadSettings() {

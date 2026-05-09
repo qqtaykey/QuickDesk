@@ -6,15 +6,17 @@ import (
 
 // AdminUser represents an administrator account
 type AdminUser struct {
-	ID        uint      `json:"id" gorm:"primaryKey"`
-	Username  string    `json:"username" gorm:"uniqueIndex;not null"`
-	Password  string    `json:"-" gorm:"not null"` // Password hash, never expose in JSON
-	Email     string    `json:"email" gorm:"index"`
-	Role      string    `json:"role" gorm:"default:'admin'"` // admin, super_admin
-	Status    bool      `json:"status" gorm:"default:true"`  // true: active, false: disabled
-	LastLogin time.Time `json:"last_login"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID          uint      `json:"id" gorm:"primaryKey"`
+	Username    string    `json:"username" gorm:"uniqueIndex;not null"`
+	Password    string    `json:"-" gorm:"not null"` // Password hash, never expose in JSON
+	Email       string    `json:"email" gorm:"index"`
+	Role        string    `json:"role" gorm:"default:'admin'"` // admin, super_admin
+	Status      bool      `json:"status" gorm:"default:true"`  // true: active, false: disabled
+	TOTPSecret  string    `json:"-" gorm:"size:200"`
+	TOTPEnabled bool      `json:"totp_enabled" gorm:"default:false"`
+	LastLogin   time.Time `json:"last_login"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 // TableName specifies the table name for AdminUser
@@ -24,27 +26,29 @@ func (AdminUser) TableName() string {
 
 // AdminUserResponse is the response format for admin user (without sensitive data)
 type AdminUserResponse struct {
-	ID        uint      `json:"id"`
-	Username  string    `json:"username"`
-	Email     string    `json:"email"`
-	Role      string    `json:"role"`
-	Status    bool      `json:"status"`
-	LastLogin time.Time `json:"last_login"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID          uint      `json:"id"`
+	Username    string    `json:"username"`
+	Email       string    `json:"email"`
+	Role        string    `json:"role"`
+	Status      bool      `json:"status"`
+	TOTPEnabled bool      `json:"totp_enabled"`
+	LastLogin   time.Time `json:"last_login"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 // ToResponse converts AdminUser to AdminUserResponse
 func (u *AdminUser) ToResponse() AdminUserResponse {
 	return AdminUserResponse{
-		ID:        u.ID,
-		Username:  u.Username,
-		Email:     u.Email,
-		Role:      u.Role,
-		Status:    u.Status,
-		LastLogin: u.LastLogin,
-		CreatedAt: u.CreatedAt,
-		UpdatedAt: u.UpdatedAt,
+		ID:          u.ID,
+		Username:    u.Username,
+		Email:       u.Email,
+		Role:        u.Role,
+		Status:      u.Status,
+		TOTPEnabled: u.TOTPEnabled,
+		LastLogin:   u.LastLogin,
+		CreatedAt:   u.CreatedAt,
+		UpdatedAt:   u.UpdatedAt,
 	}
 }
 

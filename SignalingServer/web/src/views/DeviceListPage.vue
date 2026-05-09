@@ -35,17 +35,28 @@
       </div>
     </el-card>
 
+    <!-- Batch Toolbar -->
+    <div v-if="selectedIds.length > 0" class="batch-bar">
+      <span>{{ t('batch.selected', { count: selectedIds.length }) }}</span>
+      <el-button size="small" type="danger" @click="handleBatch('delete')">{{ t('batch.delete') }}</el-button>
+      <el-button size="small" @click="handleBatch('group')">{{ t('batch.assignGroup') }}</el-button>
+      <el-button size="small" @click="handleBatch('ungroup')">{{ t('batch.removeGroup') }}</el-button>
+    </div>
+
     <!-- Table -->
     <el-card shadow="never" style="margin-top: 16px">
       <el-table
+        ref="tableRef"
         :data="devices"
         stripe
         style="width: 100%"
         size="small"
         @sort-change="handleSortChange"
         @row-click="handleRowClick"
+        @selection-change="handleSelectionChange"
         row-class-name="clickable-row"
       >
+        <el-table-column type="selection" width="40" />
         <el-table-column prop="device_id" :label="t('devices.deviceId')" width="110" sortable="custom" />
         <el-table-column prop="device_uuid" label="UUID" min-width="180" show-overflow-tooltip />
         <el-table-column :label="t('devices.os')" min-width="120" sortable="custom" prop="os">
@@ -85,6 +96,21 @@
         />
       </div>
     </el-card>
+
+    <!-- Batch Group Dialog -->
+    <el-dialog v-model="groupDialogVisible" :title="t('batch.assignGroup')" width="400px" destroy-on-close>
+      <el-form>
+        <el-form-item :label="t('deviceGroups.name')">
+          <el-select v-model="selectedGroupId" style="width:100%" :placeholder="t('deviceGroups.filterGroup')">
+            <el-option v-for="g in groups" :key="g.id" :label="g.name" :value="g.id" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="groupDialogVisible = false">{{ t('common.cancel') }}</el-button>
+        <el-button type="primary" @click="confirmBatchGroup" :disabled="!selectedGroupId">{{ t('common.confirm') }}</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -92,15 +118,19 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Refresh, Search, Download } from '@element-plus/icons-vue'
-import { getDevices } from '../api/admin_device.js'
+import { getDevices, batchDevices } from '../api/admin_device.js'
+import { getGroups } from '../api/device_groups.js'
 import { exportCSV } from '../utils/export.js'
 
 const { t } = useI18n()
 const router = useRouter()
 const loading = ref(false)
 const devices = ref([])
+const tableRef = ref(null)
+const selectedIds = ref([])
+const groups = ref([])
 
 const filters = reactive({
   search: '',
@@ -178,6 +208,56 @@ function handleExport() {
   exportCSV(columns, devices.value, 'devices.csv')
 }
 
+function handleSelectionChange(rows) {
+  selectedIds.value = rows.map(r => r.device_id)
+}
+
+const groupDialogVisible = ref(false)
+const selectedGroupId = ref(null)
+
+async function loadGroups() {
+  try {
+    const data = await getGroups()
+    groups.value = data.groups || []
+  } catch (e) {
+    groups.value = []
+  }
+}
+
+async function handleBatch(action) {
+  if (selectedIds.value.length === 0) return
+  try {
+    if (action === 'group') {
+      await loadGroups()
+      if (groups.value.length === 0) {
+        ElMessage.warning(t('deviceGroups.noGroups'))
+        return
+      }
+      selectedGroupId.value = null
+      groupDialogVisible.value = true
+      return
+    }
+    await ElMessageBox.confirm(t('batch.confirmBatch', { count: selectedIds.value.length }), t('common.tip'), { type: 'warning' })
+    await batchDevices(action, selectedIds.value)
+    ElMessage.success(t('batch.success'))
+    loadDevices()
+  } catch (e) {
+    if (e !== 'cancel' && e?.message) ElMessage.error(e.message)
+  }
+}
+
+async function confirmBatchGroup() {
+  if (!selectedGroupId.value) return
+  try {
+    await batchDevices('group', selectedIds.value, selectedGroupId.value)
+    ElMessage.success(t('batch.success'))
+    groupDialogVisible.value = false
+    loadDevices()
+  } catch (e) {
+    ElMessage.error(e.message)
+  }
+}
+
 onMounted(loadDevices)
 </script>
 
@@ -230,5 +310,16 @@ onMounted(loadDevices)
 
 :deep(.clickable-row:hover td) {
   color: var(--el-color-primary);
+}
+
+.batch-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 10px 16px;
+  background: #ecf5ff;
+  border-radius: 4px;
+  font-size: 13px;
 }
 </style>

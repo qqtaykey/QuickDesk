@@ -12,13 +12,16 @@ export function removeToken() {
   localStorage.removeItem(TOKEN_KEY)
 }
 
-export async function login(user, password) {
+export async function login(user, password, totp_code) {
+  const body = { user, password }
+  if (totp_code) body.totp_code = totp_code
   const res = await fetch('/api/v1/admin/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ user, password })
+    body: JSON.stringify(body)
   })
   const data = await res.json()
+  if (data.error === '2fa_required') throw new Error('2fa_required')
   if (!res.ok) throw new Error(data.error || 'Login failed')
   setToken(data.token)
   return data

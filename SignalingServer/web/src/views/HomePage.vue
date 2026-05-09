@@ -72,6 +72,24 @@
       </div>
     </div>
 
+    <!-- Trends Chart -->
+    <el-card class="trends-card" style="margin-top: 20px;">
+      <template #header>
+        <div class="card-header">
+          <el-icon><DataLine /></el-icon>
+          <span>{{ t('dashboard.trends') }}</span>
+          <div class="activity-actions">
+            <el-radio-group v-model="trendRange" size="small" @change="loadTrends">
+              <el-radio-button value="24h">24h</el-radio-button>
+              <el-radio-button value="7d">7d</el-radio-button>
+              <el-radio-button value="30d">30d</el-radio-button>
+            </el-radio-group>
+          </div>
+        </div>
+      </template>
+      <div ref="chartRef" style="width:100%;height:300px"></div>
+    </el-card>
+
     <!-- Activity Section -->
     <el-card class="activity-card" style="margin-top: 20px;">
       <template #header>
@@ -143,12 +161,13 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { Monitor, Connection, Timer, Refresh, DataLine, Download } from '@element-plus/icons-vue'
-import { getStats, getSystemStatus, getConnectionStatus, getActivity } from '../api/stats.js'
+import { getStats, getSystemStatus, getConnectionStatus, getActivity, getTrends } from '../api/stats.js'
 import { exportCSV } from '../utils/export.js'
+import * as echarts from 'echarts'
 
 const { t } = useI18n()
 const loading = ref(false)
@@ -179,6 +198,10 @@ const connectionStatus = ref({
   webSocketConnections: 0,
   apiRequests: 0
 })
+
+const chartRef = ref(null)
+const trendRange = ref('24h')
+let chartInstance = null
 
 const activityList = ref([])
 
@@ -281,6 +304,37 @@ function handleExportActivity() {
   exportCSV(columns, activityList.value, 'activity.csv')
 }
 
+async function loadTrends() {
+  try {
+    const data = await getTrends(trendRange.value)
+    if (!data) return
+    await nextTick()
+    if (!chartRef.value) return
+    if (!chartInstance) {
+      chartInstance = echarts.init(chartRef.value)
+    }
+    const labels = Array.isArray(data.labels) ? data.labels : []
+    const connections = Array.isArray(data.connections) ? data.connections : []
+    const newDevices = Array.isArray(data.newDevices) ? data.newDevices : []
+    chartInstance.setOption({
+      tooltip: { trigger: 'axis' },
+      legend: { data: [t('dashboard.totalConnections'), t('dashboard.todayNewDevices')] },
+      grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+      xAxis: { type: 'category', data: labels, axisLabel: { rotate: labels.length > 24 ? 45 : 0 } },
+      yAxis: [
+        { type: 'value', name: t('dashboard.totalConnections'), minInterval: 1 },
+        { type: 'value', name: t('dashboard.todayNewDevices'), minInterval: 1 }
+      ],
+      series: [
+        { name: t('dashboard.totalConnections'), type: 'line', smooth: true, data: connections },
+        { name: t('dashboard.todayNewDevices'), type: 'line', smooth: true, yAxisIndex: 1, data: newDevices }
+      ]
+    })
+  } catch (e) {
+    console.error('Failed to load trends:', e.message)
+  }
+}
+
 let systemStatusTimer = null
 
 async function refreshSystemStatus() {
@@ -320,11 +374,22 @@ function stopSystemStatusAutoRefresh() {
 onMounted(() => {
   loadStats()
   loadActivity()
+  loadTrends()
   startSystemStatusAutoRefresh()
+  window.addEventListener('resize', handleResize)
 })
+
+function handleResize() {
+  if (chartInstance) chartInstance.resize()
+}
 
 onUnmounted(() => {
   stopSystemStatusAutoRefresh()
+  window.removeEventListener('resize', handleResize)
+  if (chartInstance) {
+    chartInstance.dispose()
+    chartInstance = null
+  }
 })
 </script>
 

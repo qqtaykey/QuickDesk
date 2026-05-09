@@ -21,8 +21,9 @@ type Settings struct {
 	StunURLs          string `gorm:"type:text" json:"stunUrls"`
 
 	// Security
-	APIKey         string `gorm:"size:500" json:"apiKey"`
-	AllowedOrigins string `gorm:"type:text" json:"allowedOrigins"`
+	APIKey           string `gorm:"size:500" json:"apiKey"`
+	AllowedOrigins   string `gorm:"type:text" json:"allowedOrigins"`
+	AdminIPWhitelist string `gorm:"type:text" json:"adminIpWhitelist"`
 
 	// Aliyun SMS
 	SmsAccessKeyID     string `gorm:"size:200" json:"smsAccessKeyId"`

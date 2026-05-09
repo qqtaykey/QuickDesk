@@ -29,3 +29,13 @@ export async function getDeviceStatus(deviceId) {
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }
+
+export async function batchDevices(action, ids, groupId) {
+  const res = await authFetch(`${BASE_URL}/devices/batch`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, ids, group_id: groupId })
+  })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}

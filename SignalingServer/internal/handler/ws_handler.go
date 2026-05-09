@@ -79,6 +79,7 @@ type WSHandler struct {
 	deviceService  *service.DeviceService
 	authService    *service.AuthService
 	apiKeyAuth     *middleware.APIKeyAuth
+	webhookService *service.WebhookService
 	db             *gorm.DB
 	rdb            *redis.Client
 }
@@ -94,6 +95,10 @@ func NewWSHandler(deviceService *service.DeviceService, authService *service.Aut
 		db:             db,
 		rdb:            rdb,
 	}
+}
+
+func (h *WSHandler) SetWebhookService(ws *service.WebhookService) {
+	h.webhookService = ws
 }
 
 func (h *WSHandler) SetAPIKeyAuth(auth *middleware.APIKeyAuth) {

@@ -90,6 +90,11 @@ func (s *AdminUserService) GetAdminUserByID(ctx context.Context, id uint) (*mode
 	return s.repo.GetByID(ctx, id)
 }
 
+// GetAdminUserByUsername gets an admin user by username
+func (s *AdminUserService) GetAdminUserByUsername(ctx context.Context, username string) (*models.AdminUser, error) {
+	return s.repo.GetByUsername(ctx, username)
+}
+
 // GetAllAdminUsers gets all admin users
 func (s *AdminUserService) GetAllAdminUsers(ctx context.Context) ([]models.AdminUser, error) {
 	return s.repo.GetAll(ctx)

@@ -7,6 +7,9 @@ import DeviceDetailPage from '../views/DeviceDetailPage.vue'
 import UsersPage from '../views/UsersPage.vue'
 import UserDetailPage from '../views/UserDetailPage.vue'
 import AdminUserPage from '../views/AdminUserPage.vue'
+import DeviceGroupPage from '../views/DeviceGroupPage.vue'
+import AuditLogPage from '../views/AuditLogPage.vue'
+import WebhooksPage from '../views/WebhooksPage.vue'
 import SettingsPage from '../views/SettingsPage.vue'
 
 const routes = [
@@ -19,6 +22,9 @@ const routes = [
   { path: '/users', name: 'Users', component: UsersPage, meta: { title: 'nav.users' } },
   { path: '/users/:id', name: 'UserDetail', component: UserDetailPage, meta: { title: 'nav.users' } },
   { path: '/admin-users', name: 'AdminUsers', component: AdminUserPage, meta: { title: 'nav.adminUsers' } },
+  { path: '/device-groups', name: 'DeviceGroups', component: DeviceGroupPage, meta: { title: 'nav.deviceGroups' } },
+  { path: '/audit-logs', name: 'AuditLogs', component: AuditLogPage, meta: { title: 'nav.auditLogs' } },
+  { path: '/webhooks', name: 'Webhooks', component: WebhooksPage, meta: { title: 'nav.webhooks' } },
   { path: '/settings', name: 'Settings', component: SettingsPage, meta: { title: 'nav.settings' } }
 ]
 

@@ -65,6 +65,16 @@ export async function deleteUser(id) {
   return res.json()
 }
 
+export async function batchUsers(action, ids, level) {
+  const res = await authFetch('/api/v1/admin/user-list/batch', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, ids, level })
+  })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
 export async function updateUserDeviceCount(id, deviceCount) {
   const res = await authFetch(`${BASE_URL}/${id}/device-count`, {
     method: 'PUT',

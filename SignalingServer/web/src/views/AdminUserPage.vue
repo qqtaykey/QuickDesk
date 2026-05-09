@@ -36,10 +36,23 @@
             {{ formatDate(row.created_at) }}
           </template>
         </el-table-column>
-        <el-table-column :label="t('common.operation')" width="150" fixed="right">
+        <el-table-column :label="t('adminUser.totp')" width="100">
+          <template #default="{ row }">
+            <el-tag :type="row.totp_enabled ? 'success' : 'info'" size="small">
+              {{ row.totp_enabled ? t('adminUser.totpEnabled') : t('adminUser.totpDisabled') }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column :label="t('common.operation')" width="200" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" size="small" text @click="showEditDialog(row)">
               {{ t('common.edit') }}
+            </el-button>
+            <el-button v-if="!row.totp_enabled" type="success" size="small" text @click="handleSetup2FA(row)">
+              {{ t('adminUser.totpSetup') }}
+            </el-button>
+            <el-button v-else type="warning" size="small" text @click="handleDisable2FA(row)">
+              {{ t('adminUser.totpDisable') }}
             </el-button>
             <el-button type="danger" size="small" text @click="handleDelete(row)" :disabled="row.role === 'super_admin'">
               {{ t('common.delete') }}
@@ -52,6 +65,31 @@
         <el-empty :description="t('adminUser.noAdmins')" />
       </div>
     </el-card>
+
+    <!-- 2FA Setup Dialog -->
+    <el-dialog v-model="totpDialogVisible" :title="t('adminUser.totpSetup')" width="450px" destroy-on-close>
+      <div v-if="totpQrDataUrl" style="text-align:center;margin-bottom:16px">
+        <p>{{ t('adminUser.totpScanQr') }}</p>
+        <img :src="totpQrDataUrl" alt="TOTP QR Code" style="width:200px;height:200px;margin:12px auto;display:block" />
+        <el-collapse>
+          <el-collapse-item :title="t('adminUser.totpManualEntry')">
+            <code style="word-break:break-all;font-size:12px;color:#606266">{{ totpSecret }}</code>
+          </el-collapse-item>
+        </el-collapse>
+      </div>
+      <div v-else-if="totpLoading" style="text-align:center;padding:40px">
+        <el-icon class="is-loading" :size="24"><Loading /></el-icon>
+      </div>
+      <el-form style="margin-top:16px">
+        <el-form-item :label="t('adminUser.totpEnterCode')">
+          <el-input v-model="totpCode" maxlength="6" placeholder="000000" @keyup.enter="confirmSetup2FA" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="totpDialogVisible = false">{{ t('common.cancel') }}</el-button>
+        <el-button type="primary" @click="confirmSetup2FA" :loading="totpLoading">{{ t('common.confirm') }}</el-button>
+      </template>
+    </el-dialog>
 
     <!-- 创建/编辑对话框 -->
     <el-dialog v-model="dialogVisible" :title="isEdit ? t('adminUser.editAdmin') : t('adminUser.addAdmin')" width="500px" destroy-on-close>
@@ -92,8 +130,9 @@
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
-import { getAdminUsers, createAdminUser, updateAdminUser, deleteAdminUser } from '../api/admin.js'
+import { Plus, Loading } from '@element-plus/icons-vue'
+import QRCode from 'qrcode'
+import { getAdminUsers, createAdminUser, updateAdminUser, deleteAdminUser, setup2FA, verify2FA, disable2FA } from '../api/admin.js'
 
 const { t } = useI18n()
 
@@ -228,6 +267,62 @@ async function handleDelete(row) {
     if (e !== 'cancel') {
       ElMessage.error(e.message)
     }
+  }
+}
+
+const totpDialogVisible = ref(false)
+const totpQrDataUrl = ref('')
+const totpSecret = ref('')
+const totpCode = ref('')
+const totpLoading = ref(false)
+
+async function handleSetup2FA(row) {
+  totpCode.value = ''
+  totpQrDataUrl.value = ''
+  totpSecret.value = ''
+  totpLoading.value = true
+  totpDialogVisible.value = true
+  try {
+    const data = await setup2FA()
+    const uri = data.qr_uri || data.uri || data.url || ''
+    totpSecret.value = data.secret || ''
+    if (uri) {
+      totpQrDataUrl.value = await QRCode.toDataURL(uri, { width: 200, margin: 2 })
+    }
+  } catch (e) {
+    ElMessage.error(e.message)
+    totpDialogVisible.value = false
+  } finally {
+    totpLoading.value = false
+  }
+}
+
+async function confirmSetup2FA() {
+  if (!totpCode.value) return
+  totpLoading.value = true
+  try {
+    await verify2FA(totpCode.value)
+    ElMessage.success(t('adminUser.totpSetupSuccess'))
+    totpDialogVisible.value = false
+    loadAdminUsers()
+  } catch (e) {
+    ElMessage.error(e.message)
+  } finally {
+    totpLoading.value = false
+  }
+}
+
+async function handleDisable2FA(row) {
+  try {
+    const { value } = await ElMessageBox.prompt(t('adminUser.totpDisableConfirm'), t('adminUser.totpDisable'), {
+      inputPattern: /^\d{6}$/,
+      inputErrorMessage: t('login.totpInvalid')
+    })
+    await disable2FA(value)
+    ElMessage.success(t('adminUser.totpDisableSuccess'))
+    loadAdminUsers()
+  } catch (e) {
+    if (e !== 'cancel' && e?.message) ElMessage.error(e.message)
   }
 }
 

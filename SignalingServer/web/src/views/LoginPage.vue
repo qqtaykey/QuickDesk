@@ -32,6 +32,16 @@
             @keyup.enter="handleLogin"
           />
         </el-form-item>
+        <el-form-item v-if="show2FA">
+          <el-input
+            v-model="form.totp_code"
+            :placeholder="t('login.totpPlaceholder')"
+            size="large"
+            :prefix-icon="Key"
+            maxlength="6"
+            @keyup.enter="handleLogin"
+          />
+        </el-form-item>
         <el-form-item>
           <el-button
             type="primary"
@@ -63,7 +73,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { User, Lock, Delete } from '@element-plus/icons-vue'
+import { User, Lock, Delete, Key } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { login } from '../api/auth.js'
 import { getSettings } from '../api/settings.js'
@@ -74,9 +84,12 @@ const formRef = ref(null)
 const loading = ref(true)
 const siteName = ref('')
 
+const show2FA = ref(false)
+
 const form = reactive({
   user: '',
-  password: ''
+  password: '',
+  totp_code: ''
 })
 
 const rules = computed(() => ({
@@ -108,13 +121,28 @@ async function handleLogin() {
   const valid = await formRef.value?.validate().catch(() => false)
   if (!valid) return
 
+  if (show2FA.value && !form.totp_code) {
+    ElMessage.warning(t('login.totpRequired'))
+    return
+  }
+
   loading.value = true
   try {
-    await login(form.user, form.password)
+    const result = await login(form.user, form.password, form.totp_code)
+    if (result && result.error === '2fa_required') {
+      show2FA.value = true
+      ElMessage.info(t('login.totpRequired'))
+      return
+    }
     ElMessage.success(t('login.loginSuccess'))
     router.push('/home')
   } catch (e) {
-    ElMessage.error(t('login.loginFailed'))
+    if (e.message === '2fa_required') {
+      show2FA.value = true
+      ElMessage.info(t('login.totpRequired'))
+    } else {
+      ElMessage.error(t('login.loginFailed'))
+    }
   } finally {
     loading.value = false
   }
