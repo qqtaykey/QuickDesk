@@ -12,7 +12,7 @@
       </el-button>
     </div>
 
-    <!-- 概览卡片 -->
+    <!-- Overview Cards -->
     <div class="overview-cards">
       <div class="overview-card purple">
         <div class="overview-icon">
@@ -56,23 +56,59 @@
       </div>
     </div>
 
-    <!-- 最近活动表格 -->
+    <!-- Today Summary Cards -->
+    <div class="today-cards">
+      <div class="today-card">
+        <div class="today-value">{{ todaySummary.todayNewDevices }}</div>
+        <div class="today-label">{{ t('dashboard.todayNewDevices') }}</div>
+      </div>
+      <div class="today-card">
+        <div class="today-value">{{ todaySummary.todayConnections }}</div>
+        <div class="today-label">{{ t('dashboard.todayConnections') }}</div>
+      </div>
+      <div class="today-card">
+        <div class="today-value">{{ todaySummary.todayActiveUsers }}</div>
+        <div class="today-label">{{ t('dashboard.todayActiveUsers') }}</div>
+      </div>
+    </div>
+
+    <!-- Activity Section -->
     <el-card class="activity-card" style="margin-top: 20px;">
       <template #header>
         <div class="card-header">
           <el-icon class="card-icon"><Timer /></el-icon>
           <span>{{ t('dashboard.recentActivity') }}</span>
-          <el-button
-            type="primary"
-            size="small"
-            @click="loadActivity"
-            :icon="Refresh"
-          >
-            {{ t('common.refresh') }}
-          </el-button>
+          <div class="activity-actions">
+            <el-button :icon="Download" size="small" @click="handleExportActivity">{{ t('common.export') }}</el-button>
+            <el-button type="primary" size="small" @click="loadActivity" :icon="Refresh">{{ t('common.refresh') }}</el-button>
+          </div>
         </div>
       </template>
-      <el-table :data="activityList" stripe style="width: 100%" :row-class-name="rowClassName">
+
+      <!-- Activity Filters -->
+      <div class="activity-filters">
+        <el-select v-model="activityFilters.dateRange" style="width: 130px" size="small" @change="handleActivityFilter">
+          <el-option :label="t('dashboard.today')" value="today" />
+          <el-option :label="t('dashboard.last7Days')" value="7days" />
+          <el-option :label="t('dashboard.last30Days')" value="30days" />
+          <el-option :label="t('dashboard.allTime')" value="all" />
+        </el-select>
+        <el-input
+          v-model="activityFilters.deviceId"
+          :placeholder="t('dashboard.filterDevice')"
+          clearable
+          size="small"
+          style="width: 160px"
+          @clear="handleActivityFilter"
+          @keyup.enter="handleActivityFilter"
+        />
+        <el-select v-model="activityFilters.status" :placeholder="t('dashboard.filterStatus')" clearable size="small" style="width: 120px" @change="handleActivityFilter">
+          <el-option :label="t('common.success')" value="success" />
+          <el-option :label="t('common.failed')" value="failed" />
+        </el-select>
+      </div>
+
+      <el-table :data="activityList" stripe style="width: 100%" size="small" :row-class-name="rowClassName">
         <el-table-column prop="time" :label="t('dashboard.time')" width="180" />
         <el-table-column prop="deviceId" :label="t('dashboard.deviceId')" width="120" />
         <el-table-column prop="action" :label="t('dashboard.activity')" width="150" />
@@ -85,19 +121,34 @@
           </template>
         </el-table-column>
       </el-table>
+
       <div v-if="activityList.length === 0 && !loading" class="empty-state">
         <el-empty :description="t('dashboard.noActivity')" />
+      </div>
+
+      <div class="pagination-bar">
+        <el-pagination
+          v-model:current-page="activityPagination.page"
+          v-model:page-size="activityPagination.size"
+          :page-sizes="[20, 50, 100]"
+          :total="activityPagination.total"
+          layout="total, sizes, prev, pager, next, jumper"
+          size="small"
+          @size-change="loadActivity"
+          @current-change="loadActivity"
+        />
       </div>
     </el-card>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
-import { Monitor, Connection, Timer, Refresh, DataLine } from '@element-plus/icons-vue'
+import { Monitor, Connection, Timer, Refresh, DataLine, Download } from '@element-plus/icons-vue'
 import { getStats, getSystemStatus, getConnectionStatus, getActivity } from '../api/stats.js'
+import { exportCSV } from '../utils/export.js'
 
 const { t } = useI18n()
 const loading = ref(false)
@@ -109,30 +160,17 @@ const overview = ref({
   apiRequests: 0
 })
 
+const todaySummary = ref({
+  todayNewDevices: 0,
+  todayConnections: 0,
+  todayActiveUsers: 0
+})
+
 const stats = ref({
   totalDevices: 0,
   onlineDevices: 0,
   offlineDevices: 0,
   onlineRate: 0
-})
-
-const systemStatus = ref({
-  status: 'online',
-  statusText: 'Running',
-  uptime: '00:00:00',
-  apiVersion: 'v1',
-  dbStatus: 'connected',
-  dbStatusText: 'Connected',
-  cpu: '0%',
-  memory: '0%',
-  disk: '0%',
-  network: 'Unknown',
-  systemVersion: 'Unknown',
-  ip: 'Unknown',
-  uploadSpeed: 0,
-  downloadSpeed: 0,
-  uploadTotal: 0,
-  downloadTotal: 0
 })
 
 const connectionStatus = ref({
@@ -144,21 +182,64 @@ const connectionStatus = ref({
 
 const activityList = ref([])
 
+const activityFilters = reactive({
+  dateRange: 'today',
+  deviceId: '',
+  status: ''
+})
+
+const activityPagination = reactive({
+  page: 1,
+  size: 20,
+  total: 0
+})
+
+function getDateRange(range) {
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  switch (range) {
+    case 'today':
+      return { dateFrom: today.toISOString(), dateTo: '' }
+    case '7days': {
+      const d = new Date(today)
+      d.setDate(d.getDate() - 7)
+      return { dateFrom: d.toISOString(), dateTo: '' }
+    }
+    case '30days': {
+      const d = new Date(today)
+      d.setDate(d.getDate() - 30)
+      return { dateFrom: d.toISOString(), dateTo: '' }
+    }
+    default:
+      return { dateFrom: '', dateTo: '' }
+  }
+}
+
 function rowClassName({ row }) {
   return row.status === 'success' ? 'success-row' : 'failed-row'
 }
 
 async function loadActivity() {
-  loading.value = true
+  const { dateFrom, dateTo } = getDateRange(activityFilters.dateRange)
   try {
-    const data = await getActivity()
-    activityList.value = data.activity || []
-    ElMessage.success(t('dashboard.activityUpdated'))
+    const data = await getActivity({
+      page: activityPagination.page,
+      size: activityPagination.size,
+      deviceId: activityFilters.deviceId,
+      status: activityFilters.status,
+      dateFrom,
+      dateTo
+    })
+    activityList.value = data.items || data.activity || []
+    activityPagination.total = data.total || 0
   } catch (e) {
     ElMessage.error(t('dashboard.activityFailed') + ': ' + e.message)
-  } finally {
-    loading.value = false
   }
+}
+
+function handleActivityFilter() {
+  activityPagination.page = 1
+  loadActivity()
 }
 
 async function loadStats() {
@@ -170,9 +251,17 @@ async function loadStats() {
       getConnectionStatus()
     ])
     stats.value = statsData
-    systemStatus.value = systemData
     connectionStatus.value = connectionData
-    updateOverview(systemData)
+
+    overview.value.totalDevices = statsData.totalDevices || 0
+    overview.value.totalConnections = connectionData.currentConnections || 0
+    overview.value.webSocketConnections = connectionData.webSocketConnections || 0
+    overview.value.apiRequests = connectionData.apiRequests || 0
+
+    todaySummary.value.todayNewDevices = statsData.todayNewDevices || 0
+    todaySummary.value.todayConnections = statsData.todayConnections || 0
+    todaySummary.value.todayActiveUsers = statsData.todayActiveUsers || 0
+
     ElMessage.success(t('dashboard.statsUpdated'))
   } catch (e) {
     ElMessage.error(t('dashboard.statsFailed') + ': ' + e.message)
@@ -181,24 +270,36 @@ async function loadStats() {
   }
 }
 
-function updateOverview(systemData) {
-  overview.value.totalDevices = stats.value.totalDevices || 0
-  overview.value.totalConnections = connectionStatus.value.currentConnections || 0
-  overview.value.webSocketConnections = connectionStatus.value.webSocketConnections || 0
-  overview.value.apiRequests = connectionStatus.value.apiRequests || 0
+function handleExportActivity() {
+  const columns = [
+    { key: 'time', label: 'Time' },
+    { key: 'deviceId', label: 'Device ID' },
+    { key: 'action', label: 'Activity' },
+    { key: 'details', label: 'Details' },
+    { key: 'status', label: 'Status' }
+  ]
+  exportCSV(columns, activityList.value, 'activity.csv')
 }
 
 let systemStatusTimer = null
 
 async function refreshSystemStatus() {
   try {
-    const [systemData, connectionData] = await Promise.all([
-      getSystemStatus(),
+    const [statsData, connectionData] = await Promise.all([
+      getStats(),
       getConnectionStatus()
     ])
-    systemStatus.value = systemData
+    stats.value = statsData
     connectionStatus.value = connectionData
-    updateOverview(systemData)
+
+    overview.value.totalDevices = statsData.totalDevices || 0
+    overview.value.totalConnections = connectionData.currentConnections || 0
+    overview.value.webSocketConnections = connectionData.webSocketConnections || 0
+    overview.value.apiRequests = connectionData.apiRequests || 0
+
+    todaySummary.value.todayNewDevices = statsData.todayNewDevices || 0
+    todaySummary.value.todayConnections = statsData.todayConnections || 0
+    todaySummary.value.todayActiveUsers = statsData.todayActiveUsers || 0
   } catch (e) {
     console.error('Failed to refresh system status:', e.message)
   }
@@ -321,6 +422,32 @@ onUnmounted(() => {
   opacity: 0.8;
 }
 
+.today-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.today-card {
+  background: #fff;
+  border: 1px solid #ebeef5;
+  border-radius: 8px;
+  padding: 16px 20px;
+  text-align: center;
+}
+
+.today-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #409eff;
+  margin-bottom: 4px;
+}
+
+.today-label {
+  font-size: 13px;
+  color: #909399;
+}
+
 .card-header {
   display: flex;
   align-items: center;
@@ -328,8 +455,24 @@ onUnmounted(() => {
   font-weight: 600;
 }
 
-.card-header .el-button {
+.activity-actions {
   margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+
+.activity-filters {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.pagination-bar {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
 }
 
 .empty-state {
@@ -345,6 +488,10 @@ onUnmounted(() => {
 
 @media (max-width: 768px) {
   .overview-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .today-cards {
     grid-template-columns: 1fr;
   }
 

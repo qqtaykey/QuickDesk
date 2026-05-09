@@ -189,10 +189,12 @@ func main() {
 			admin.GET("/connections", apiHandler.GetConnectionStatus)
 			admin.GET("/activity", apiHandler.GetActivity)
 			admin.GET("/devices", apiHandler.GetAdminDevices)
+			admin.GET("/devices/:device_id", apiHandler.GetDeviceDetail)
 
 			userHandler := handler.NewUserHandler(db)
 			admin.GET("/user-list", userHandler.GetUsers)
 			admin.GET("/user-list/:id", userHandler.GetUser)
+			admin.GET("/user-list/:id/details", userHandler.GetUserDetail)
 			admin.POST("/user-list", userHandler.CreateUser)
 			admin.PUT("/user-list/:id", userHandler.UpdateUser)
 			admin.DELETE("/user-list/:id", userHandler.DeleteUser)

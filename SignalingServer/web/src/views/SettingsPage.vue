@@ -287,10 +287,13 @@ onMounted(loadSettings)
   display: flex;
   flex-direction: column;
   gap: 20px;
+  width: 100%;
 }
 
 .settings-card {
   border-radius: 8px;
+  width: 100%;
+  overflow: hidden;
 }
 
 .card-header {

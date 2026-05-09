@@ -50,12 +50,40 @@ func validatePassword(p string) error {
 }
 
 // GetUsers handles GET /admin/user-list
+// Supports: ?page=1&size=20&sort=created_at&order=desc&search=&level=&status=&channelType=
 func (h *UserHandler) GetUsers(c *gin.Context) {
-	var users []models.User
-	if result := h.db.Find(&users); result.Error != nil {
-		apiError(c, http.StatusInternalServerError, CodeInternalError, result.Error.Error())
-		return
+	p := ParsePagination(c)
+
+	// Validate sort field
+	allowedSorts := map[string]bool{
+		"created_at": true, "updated_at": true, "username": true,
+		"level": true, "device_count": true, "id": true,
 	}
+	if !allowedSorts[p.Sort] {
+		p.Sort = "created_at"
+	}
+
+	query := h.db.Model(&models.User{})
+
+	if p.Search != "" {
+		like := "%" + p.Search + "%"
+		query = query.Where("username LIKE ? OR phone LIKE ? OR email LIKE ?", like, like, like)
+	}
+	if level := c.Query("level"); level != "" {
+		query = query.Where("level = ?", level)
+	}
+	if statusStr := c.Query("status"); statusStr == "true" || statusStr == "false" {
+		query = query.Where("status = ?", statusStr == "true")
+	}
+	if channelType := c.Query("channelType"); channelType != "" {
+		query = query.Where("channel_type = ?", channelType)
+	}
+
+	var total int64
+	query.Count(&total)
+
+	var users []models.User
+	query.Order(p.OrderClause()).Offset(p.Offset()).Limit(p.Size).Find(&users)
 
 	type UserWithDevices struct {
 		models.User
@@ -69,7 +97,43 @@ func (h *UserHandler) GetUsers(c *gin.Context) {
 		result = append(result, UserWithDevices{User: user, Devices: devices})
 	}
 
-	c.JSON(http.StatusOK, gin.H{"users": result})
+	c.JSON(http.StatusOK, NewPaginatedResponse(result, total, p))
+}
+
+// GetUserDetail handles GET /admin/user-list/:id/details
+func (h *UserHandler) GetUserDetail(c *gin.Context) {
+	id := c.Param("id")
+	var user models.User
+	if result := h.db.First(&user, id); result.Error != nil {
+		apiError(c, http.StatusNotFound, CodeUserNotFound, "用户不存在")
+		return
+	}
+
+	// Bound devices
+	var devices []models.UserDevice
+	h.db.Where("user_id = ? AND status = ?", user.ID, true).Find(&devices)
+
+	// Connection history
+	var histories []models.ConnectionHistory
+	h.db.Where("user_id = ?", user.ID).Order("created_at DESC").Limit(50).Find(&histories)
+
+	historyResult := make([]gin.H, 0, len(histories))
+	for _, hist := range histories {
+		historyResult = append(historyResult, gin.H{
+			"id":         hist.ID,
+			"device_id":  hist.DeviceID,
+			"status":     hist.Status,
+			"duration":   hist.Duration,
+			"connect_ip": hist.ConnectIP,
+			"created_at": hist.CreatedAt.Format("2006-01-02 15:04:05"),
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"user":              userJSON(&user),
+		"devices":           devices,
+		"connectionHistory": historyResult,
+	})
 }
 
 // GetUser handles GET /admin/user-list/:id

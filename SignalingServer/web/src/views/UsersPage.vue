@@ -1,33 +1,69 @@
 <template>
-  <div class="users-page">
+  <div class="users-page" v-loading="loading">
     <div class="page-header">
       <h2>{{ t('userMgmt.title') }}</h2>
-      <el-button type="primary" @click="handleAdd">
-        <el-icon><Plus /></el-icon>
-        {{ t('userMgmt.addUser') }}
-      </el-button>
+      <div class="header-actions">
+        <el-button :icon="Download" size="small" @click="handleExport">{{ t('common.export') }}</el-button>
+        <el-button type="primary" :icon="Plus" size="small" @click="handleAdd">{{ t('userMgmt.addUser') }}</el-button>
+      </div>
     </div>
 
-    <el-card class="users-card">
+    <!-- Filters -->
+    <el-card shadow="never" class="filter-card">
+      <div class="filter-bar">
+        <el-input
+          v-model="filters.search"
+          :placeholder="t('userMgmt.searchPlaceholder')"
+          clearable
+          style="width: 240px"
+          @clear="handleSearch"
+          @keyup.enter="handleSearch"
+        >
+          <template #prefix><el-icon><Search /></el-icon></template>
+        </el-input>
+        <el-select v-model="filters.level" :placeholder="t('userMgmt.filterLevel')" clearable style="width: 120px" @change="handleFilter">
+          <el-option label="V1" value="V1" />
+          <el-option label="V2" value="V2" />
+          <el-option label="V3" value="V3" />
+          <el-option label="V4" value="V4" />
+          <el-option label="V5" value="V5" />
+        </el-select>
+        <el-select v-model="filters.status" :placeholder="t('userMgmt.filterStatus')" clearable style="width: 120px" @change="handleFilter">
+          <el-option :label="t('common.enabled')" value="true" />
+          <el-option :label="t('common.disabled')" value="false" />
+        </el-select>
+        <el-select v-model="filters.channelType" :placeholder="t('userMgmt.filterChannel')" clearable style="width: 140px" @change="handleFilter">
+          <el-option :label="t('userMgmt.channelGlobal')" value="全球" />
+          <el-option :label="t('userMgmt.channelChina')" value="中国大陆" />
+        </el-select>
+        <el-button :icon="Search" @click="handleSearch">{{ t('common.search') }}</el-button>
+      </div>
+    </el-card>
+
+    <!-- Table -->
+    <el-card shadow="never" style="margin-top: 16px">
       <el-table
         :data="users"
-        v-loading="loading"
+        stripe
         style="width: 100%"
-        :header-cell-style="{ background: '#f5f7fa' }"
+        size="small"
+        @sort-change="handleSortChange"
+        @row-click="handleRowClick"
+        row-class-name="clickable-row"
       >
-        <el-table-column prop="id" label="ID" width="60" />
-        <el-table-column prop="username" :label="t('userMgmt.username')" min-width="120" />
+        <el-table-column prop="id" label="ID" width="60" sortable="custom" />
+        <el-table-column prop="username" :label="t('userMgmt.username')" min-width="120" sortable="custom" />
         <el-table-column prop="phone" :label="t('userMgmt.phone')" min-width="120" />
-        <el-table-column prop="email" :label="t('userMgmt.email')" min-width="180" />
-        <el-table-column prop="level" :label="t('userMgmt.level')" width="100">
+        <el-table-column prop="email" :label="t('userMgmt.email')" min-width="180" show-overflow-tooltip />
+        <el-table-column prop="level" :label="t('userMgmt.level')" width="90" sortable="custom">
           <template #default="{ row }">
-            <el-tag :type="getLevelType(row.level)">{{ row.level }}</el-tag>
+            <el-tag :type="getLevelType(row.level)" size="small">{{ row.level }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="deviceCount" :label="t('userMgmt.deviceCount')" width="100" />
-        <el-table-column prop="channelType" :label="t('userMgmt.channelType')" width="100">
+        <el-table-column prop="deviceCount" :label="t('userMgmt.deviceCount')" width="100" sortable="custom" />
+        <el-table-column prop="channelType" :label="t('userMgmt.channelType')" width="110">
           <template #default="{ row }">
-            <el-tag :type="row.channelType === '全球' ? 'success' : 'warning'">
+            <el-tag :type="row.channelType === '全球' ? 'success' : 'warning'" size="small">
               {{ row.channelType === '全球' ? t('userMgmt.channelGlobal') : t('userMgmt.channelChina') }}
             </el-tag>
           </template>
@@ -36,17 +72,24 @@
           <template #default="{ row }">
             <el-switch
               v-model="row.status"
+              size="small"
+              @click.stop
               @change="(val) => handleStatusChange(row, val)"
             />
           </template>
         </el-table-column>
-        <el-table-column :label="t('common.operation')" width="180" fixed="right">
+        <el-table-column :label="t('userMgmt.createdAt')" width="170" sortable="custom" prop="created_at">
           <template #default="{ row }">
-            <el-button link type="primary" @click="handleEdit(row)">
+            {{ formatDate(row.created_at) }}
+          </template>
+        </el-table-column>
+        <el-table-column :label="t('common.operation')" width="150" fixed="right">
+          <template #default="{ row }">
+            <el-button link type="primary" size="small" @click.stop="handleEdit(row)">
               <el-icon><Edit /></el-icon>
               {{ t('common.edit') }}
             </el-button>
-            <el-button link type="danger" @click="handleDelete(row)">
+            <el-button link type="danger" size="small" @click.stop="handleDelete(row)">
               <el-icon><Delete /></el-icon>
               {{ t('common.delete') }}
             </el-button>
@@ -54,10 +97,20 @@
         </el-table-column>
       </el-table>
 
-      <el-empty v-if="!loading && users.length === 0" :description="t('userMgmt.noUsers')" />
+      <div class="pagination-bar">
+        <el-pagination
+          v-model:current-page="pagination.page"
+          v-model:page-size="pagination.size"
+          :page-sizes="[20, 50, 100]"
+          :total="pagination.total"
+          layout="total, sizes, prev, pager, next, jumper"
+          @size-change="loadUsers"
+          @current-change="loadUsers"
+        />
+      </div>
     </el-card>
 
-    <!-- 新增/编辑对话框 -->
+    <!-- Add/Edit Dialog -->
     <el-dialog
       v-model="dialogVisible"
       :title="isEdit ? t('userMgmt.editUser') : t('userMgmt.addUser')"
@@ -120,18 +173,38 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Edit, Delete } from '@element-plus/icons-vue'
+import { Plus, Edit, Delete, Search, Download } from '@element-plus/icons-vue'
 import { getUsers, createUser, updateUser, deleteUser } from '../api/users.js'
+import { exportCSV } from '../utils/export.js'
 
 const { t } = useI18n()
-
+const router = useRouter()
 const loading = ref(false)
 const users = ref([])
 const dialogVisible = ref(false)
 const isEdit = ref(false)
 const submitting = ref(false)
 const formRef = ref(null)
+
+const filters = reactive({
+  search: '',
+  level: '',
+  status: '',
+  channelType: ''
+})
+
+const pagination = reactive({
+  page: 1,
+  size: 20,
+  total: 0
+})
+
+const sort = reactive({
+  field: 'created_at',
+  order: 'desc'
+})
 
 const form = reactive({
   id: null,
@@ -150,11 +223,31 @@ const rules = computed(() => ({
   password: [{ required: !isEdit.value, message: t('userMgmt.passRequired'), trigger: 'blur' }]
 }))
 
+function formatDate(dateStr) {
+  if (!dateStr) return '-'
+  return new Date(dateStr).toLocaleString('zh-CN')
+}
+
+function getLevelType(level) {
+  const types = { 'V1': '', 'V2': 'success', 'V3': 'warning', 'V4': 'danger', 'V5': 'info' }
+  return types[level] || ''
+}
+
 async function loadUsers() {
   loading.value = true
   try {
-    const data = await getUsers()
-    users.value = data.users || []
+    const data = await getUsers({
+      page: pagination.page,
+      size: pagination.size,
+      sort: sort.field,
+      order: sort.order,
+      search: filters.search,
+      level: filters.level,
+      status: filters.status,
+      channelType: filters.channelType
+    })
+    users.value = data.items || data.users || []
+    pagination.total = data.total || 0
   } catch (e) {
     ElMessage.error(t('userMgmt.loadFailed') + ': ' + e.message)
   } finally {
@@ -162,9 +255,24 @@ async function loadUsers() {
   }
 }
 
-function getLevelType(level) {
-  const types = { 'V1': '', 'V2': 'success', 'V3': 'warning', 'V4': 'danger', 'V5': 'info' }
-  return types[level] || ''
+function handleSearch() {
+  pagination.page = 1
+  loadUsers()
+}
+
+function handleFilter() {
+  pagination.page = 1
+  loadUsers()
+}
+
+function handleSortChange({ prop, order }) {
+  sort.field = prop || 'created_at'
+  sort.order = order === 'ascending' ? 'asc' : 'desc'
+  loadUsers()
+}
+
+function handleRowClick(row) {
+  router.push(`/users/${row.id}`)
 }
 
 function handleAdd() {
@@ -244,30 +352,72 @@ async function handleStatusChange(row, status) {
   }
 }
 
-onMounted(() => {
-  loadUsers()
-})
+function handleExport() {
+  const columns = [
+    { key: 'id', label: 'ID' },
+    { key: 'username', label: 'Username' },
+    { key: 'phone', label: 'Phone' },
+    { key: 'email', label: 'Email' },
+    { key: 'level', label: 'Level' },
+    { key: 'deviceCount', label: 'Device Count' },
+    { key: 'channelType', label: 'Channel' },
+    { key: 'status', label: 'Status' },
+    { key: 'created_at', label: 'Created At' }
+  ]
+  exportCSV(columns, users.value, 'users.csv')
+}
+
+onMounted(loadUsers)
 </script>
 
 <style scoped>
 .users-page {
+  width: 100%;
   padding: 20px;
+  box-sizing: border-box;
 }
 
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .page-header h2 {
   margin: 0;
   font-size: 24px;
+  font-weight: 600;
   color: #303133;
 }
 
-.users-card {
-  min-height: 400px;
+.header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.filter-card {
+  border-radius: 8px;
+}
+
+.filter-bar {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.pagination-bar {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+:deep(.clickable-row) {
+  cursor: pointer;
+}
+
+:deep(.clickable-row:hover td) {
+  color: var(--el-color-primary);
 }
 </style>

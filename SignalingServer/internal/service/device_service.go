@@ -190,6 +190,16 @@ func (s *DeviceService) GetAllDevices(ctx context.Context) ([]models.Device, err
 	return s.repo.GetAll(ctx)
 }
 
+// ListPaginated returns devices with pagination, search, filter, and sort
+func (s *DeviceService) ListPaginated(ctx context.Context, offset, limit int, sort, order, search, os string, onlineFilter *bool) ([]models.Device, int64, error) {
+	return s.repo.ListPaginated(ctx, offset, limit, sort, order, search, os, onlineFilter)
+}
+
+// CountDevicesSince counts devices created since the given time
+func (s *DeviceService) CountDevicesSince(ctx context.Context, since time.Time) (int64, error) {
+	return s.repo.CountSince(ctx, since)
+}
+
 // UpdateDeviceInfo updates OS, OSVersion, and AppVersion for a device
 func (s *DeviceService) UpdateDeviceInfo(ctx context.Context, deviceID, os, osVersion, appVersion string) {
 	if err := s.repo.UpdateDeviceInfo(ctx, deviceID, os, osVersion, appVersion); err != nil {

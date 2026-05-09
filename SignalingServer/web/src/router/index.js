@@ -3,7 +3,9 @@ import LoginPage from '../views/LoginPage.vue'
 import HomePage from '../views/HomePage.vue'
 import PresetPage from '../views/PresetPage.vue'
 import DeviceListPage from '../views/DeviceListPage.vue'
+import DeviceDetailPage from '../views/DeviceDetailPage.vue'
 import UsersPage from '../views/UsersPage.vue'
+import UserDetailPage from '../views/UserDetailPage.vue'
 import AdminUserPage from '../views/AdminUserPage.vue'
 import SettingsPage from '../views/SettingsPage.vue'
 
@@ -13,7 +15,9 @@ const routes = [
   { path: '/home', name: 'Home', component: HomePage, meta: { title: 'nav.dashboard' } },
   { path: '/preset', name: 'Preset', component: PresetPage, meta: { title: 'nav.preset' } },
   { path: '/devices', name: 'Devices', component: DeviceListPage, meta: { title: 'nav.devices' } },
+  { path: '/devices/:deviceId', name: 'DeviceDetail', component: DeviceDetailPage, meta: { title: 'nav.devices' } },
   { path: '/users', name: 'Users', component: UsersPage, meta: { title: 'nav.users' } },
+  { path: '/users/:id', name: 'UserDetail', component: UserDetailPage, meta: { title: 'nav.users' } },
   { path: '/admin-users', name: 'AdminUsers', component: AdminUserPage, meta: { title: 'nav.adminUsers' } },
   { path: '/settings', name: 'Settings', component: SettingsPage, meta: { title: 'nav.settings' } }
 ]

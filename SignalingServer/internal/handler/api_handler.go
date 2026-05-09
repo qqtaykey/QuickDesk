@@ -296,10 +296,28 @@ func (h *APIHandler) HealthCheck(c *gin.Context) {
 }
 
 // GetAdminDevices handles GET /admin/devices
+// Supports: ?page=1&size=20&sort=created_at&order=desc&search=&os=&online=
 func (h *APIHandler) GetAdminDevices(c *gin.Context) {
 	ctx := c.Request.Context()
+	p := ParsePagination(c)
 
-	devices, err := h.deviceService.GetAllDevices(ctx)
+	// Validate sort field
+	allowedSorts := map[string]bool{
+		"created_at": true, "last_seen": true, "device_id": true,
+		"os": true, "app_version": true, "online": true,
+	}
+	if !allowedSorts[p.Sort] {
+		p.Sort = "created_at"
+	}
+
+	osFilter := c.Query("os")
+	var onlineFilter *bool
+	if onlineStr := c.Query("online"); onlineStr == "true" || onlineStr == "false" {
+		val := onlineStr == "true"
+		onlineFilter = &val
+	}
+
+	devices, total, err := h.deviceService.ListPaginated(ctx, p.Offset(), p.Size, p.Sort, p.Order, p.Search, osFilter, onlineFilter)
 	if err != nil {
 		log.Printf("Failed to get devices: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get devices"})
@@ -323,7 +341,72 @@ func (h *APIHandler) GetAdminDevices(c *gin.Context) {
 		})
 	}
 
-	c.JSON(http.StatusOK, gin.H{"devices": result})
+	c.JSON(http.StatusOK, NewPaginatedResponse(result, total, p))
+}
+
+// GetDeviceDetail handles GET /admin/devices/:device_id
+func (h *APIHandler) GetDeviceDetail(c *gin.Context) {
+	deviceID := c.Param("device_id")
+
+	ctx := c.Request.Context()
+	device, err := h.deviceService.GetByDeviceID(ctx, deviceID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "device not found"})
+		return
+	}
+
+	online := h.wsHandler != nil && h.wsHandler.IsHostOnline(device.DeviceID)
+
+	// Get connection history for this device
+	var histories []models.ConnectionHistory
+	h.db.Where("device_id = ?", deviceID).Order("created_at DESC").Limit(50).Find(&histories)
+
+	historyResult := make([]gin.H, 0, len(histories))
+	for _, hist := range histories {
+		historyResult = append(historyResult, gin.H{
+			"id":         hist.ID,
+			"user_id":    hist.UserID,
+			"device_id":  hist.DeviceID,
+			"status":     hist.Status,
+			"duration":   hist.Duration,
+			"connect_ip": hist.ConnectIP,
+			"error_msg":  hist.ErrorMsg,
+			"created_at": hist.CreatedAt.Format("2006-01-02 15:04:05"),
+		})
+	}
+
+	// Get bound user
+	var boundUser *gin.H
+	if device.UserID != nil {
+		var user models.User
+		if err := h.db.First(&user, *device.UserID).Error; err == nil {
+			boundUser = &gin.H{
+				"id":       user.ID,
+				"username": user.Username,
+				"phone":    user.Phone,
+				"email":    user.Email,
+			}
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"device": gin.H{
+			"id":          device.ID,
+			"device_id":   device.DeviceID,
+			"device_uuid": device.DeviceUUID,
+			"os":          device.OS,
+			"os_version":  device.OSVersion,
+			"app_version": device.AppVersion,
+			"device_name": device.DeviceName,
+			"remark":      device.Remark,
+			"online":      online,
+			"last_seen":   device.LastSeen,
+			"created_at":  device.CreatedAt,
+			"updated_at":  device.UpdatedAt,
+		},
+		"boundUser":         boundUser,
+		"connectionHistory": historyResult,
+	})
 }
 
 // GetAdminStats handles GET /admin/stats
@@ -354,11 +437,24 @@ func (h *APIHandler) GetAdminStats(c *gin.Context) {
 		onlineRate = (onlineDevices * 100) / totalDevices
 	}
 
+	// Today's summary
+	today := time.Now().Truncate(24 * time.Hour)
+	todayNewDevices, _ := h.deviceService.CountDevicesSince(ctx, today)
+
+	var todayConnections int64
+	h.db.Model(&models.ConnectionHistory{}).Where("created_at >= ?", today).Count(&todayConnections)
+
+	var todayActiveUsers int64
+	h.db.Model(&models.ConnectionHistory{}).Where("created_at >= ?", today).Distinct("user_id").Count(&todayActiveUsers)
+
 	c.JSON(http.StatusOK, gin.H{
-		"totalDevices":   totalDevices,
-		"onlineDevices":  onlineDevices,
-		"offlineDevices": offlineDevices,
-		"onlineRate":     onlineRate,
+		"totalDevices":     totalDevices,
+		"onlineDevices":    onlineDevices,
+		"offlineDevices":   offlineDevices,
+		"onlineRate":       onlineRate,
+		"todayNewDevices":  todayNewDevices,
+		"todayConnections": todayConnections,
+		"todayActiveUsers": todayActiveUsers,
 	})
 }
 
@@ -456,9 +552,31 @@ func (h *APIHandler) GetConnectionStatus(c *gin.Context) {
 }
 
 // GetActivity handles GET /admin/activity
+// Supports: ?page=1&size=20&deviceId=&status=&dateFrom=&dateTo=
 func (h *APIHandler) GetActivity(c *gin.Context) {
+	p := ParsePagination(c)
+	p.Sort = "created_at"
+
+	query := h.db.Model(&models.ConnectionHistory{})
+
+	if deviceID := c.Query("deviceId"); deviceID != "" {
+		query = query.Where("device_id = ?", deviceID)
+	}
+	if status := c.Query("status"); status != "" {
+		query = query.Where("status = ?", status)
+	}
+	if dateFrom := c.Query("dateFrom"); dateFrom != "" {
+		query = query.Where("created_at >= ?", dateFrom)
+	}
+	if dateTo := c.Query("dateTo"); dateTo != "" {
+		query = query.Where("created_at <= ?", dateTo+" 23:59:59")
+	}
+
+	var total int64
+	query.Count(&total)
+
 	var histories []models.ConnectionHistory
-	h.db.Order("created_at DESC").Limit(50).Find(&histories)
+	query.Order("created_at DESC").Offset(p.Offset()).Limit(p.Size).Find(&histories)
 
 	activity := make([]gin.H, 0, len(histories))
 	for _, hist := range histories {
@@ -477,13 +595,15 @@ func (h *APIHandler) GetActivity(c *gin.Context) {
 		}
 
 		activity = append(activity, gin.H{
+			"id":       hist.ID,
 			"time":     hist.CreatedAt.Format("2006-01-02 15:04:05"),
 			"deviceId": hist.DeviceID,
+			"userId":   hist.UserID,
 			"action":   action,
 			"details":  details,
 			"status":   status,
 		})
 	}
 
-	c.JSON(http.StatusOK, gin.H{"activity": activity})
+	c.JSON(http.StatusOK, NewPaginatedResponse(activity, total, p))
 }

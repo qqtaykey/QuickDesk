@@ -91,3 +91,36 @@ func (r *DeviceRepository) GetAll(ctx context.Context) ([]models.Device, error) 
 	err := r.db.WithContext(ctx).Find(&devices).Error
 	return devices, err
 }
+
+// ListPaginated retrieves devices with pagination, search, filter, and sort
+func (r *DeviceRepository) ListPaginated(ctx context.Context, offset, limit int, sort, order, search, os string, onlineFilter *bool) ([]models.Device, int64, error) {
+	query := r.db.WithContext(ctx).Model(&models.Device{})
+
+	if search != "" {
+		like := "%" + search + "%"
+		query = query.Where("device_id LIKE ? OR device_name LIKE ?", like, like)
+	}
+	if os != "" {
+		query = query.Where("os = ?", os)
+	}
+	if onlineFilter != nil {
+		query = query.Where("online = ?", *onlineFilter)
+	}
+
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	var devices []models.Device
+	orderClause := sort + " " + order
+	err := query.Order(orderClause).Offset(offset).Limit(limit).Find(&devices).Error
+	return devices, total, err
+}
+
+// CountByDate counts devices created on or after the given date
+func (r *DeviceRepository) CountSince(ctx context.Context, since time.Time) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&models.Device{}).Where("created_at >= ?", since).Count(&count).Error
+	return count, err
+}
