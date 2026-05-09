@@ -57,6 +57,7 @@ signals:
     void myFavoritesChanged();
     void connectionLogsChanged();
     void syncMessage(const QJsonObject& msg);
+    void syncConnected();
 
 private slots:
     void onSyncTextMessageReceived(const QString& message);

@@ -162,20 +162,19 @@ MainController::MainController(QObject* parent)
     connect(m_presetManager.get(), &PresetManager::forceUpgradeRequired,
             this, &MainController::forceUpgradeRequired);
 
-    // Auth: on login success, auto-bind device + start sync + fetch lists
+    // Auth: on login success, start sync + fetch lists.
+    // Device binding (autoBindDevice) is done in syncConnected handler, so that:
+    //   1. We only bind after server confirms the token is valid (sync requires auth)
+    //   2. Server restart will re-trigger binding via sync reconnection
     connect(m_authManager.get(), &AuthManager::loginSuccess, this, [this]() {
-        // Auto-bind this host device (also marks logged_in=true on server)
-        QString deviceId = m_hostManager->deviceId();
-        if (!deviceId.isEmpty()) {
-            m_cloudDeviceManager->autoBindDevice(deviceId);
-        }
-        // Start sync WebSocket
+        // Start sync WebSocket (triggers autoBindDevice via syncConnected)
         m_cloudDeviceManager->startSync();
         // Fetch device list + favorites + connection logs
         m_cloudDeviceManager->fetchMyDevices();
         m_cloudDeviceManager->fetchFavorites();
         m_cloudDeviceManager->fetchConnectionLogs();
-        // Sync current access code
+        // Sync current access code if host is ready
+        QString deviceId = m_hostManager->deviceId();
         QString code = m_hostManager->accessCode();
         if (!deviceId.isEmpty() && !code.isEmpty()) {
             m_cloudDeviceManager->syncAccessCode(deviceId, code);
@@ -185,6 +184,19 @@ MainController::MainController(QObject* parent)
     // Auth: on logout, stop sync (server handles logged_in=false in its logout API)
     connect(m_authManager.get(), &AuthManager::loggedOut, this, [this]() {
         m_cloudDeviceManager->stopSync();
+    });
+
+    // Sync WebSocket connected (initial login or server-restart reconnect):
+    // bind device to mark logged_in=true. Idempotent.
+    connect(m_cloudDeviceManager.get(), &CloudDeviceManager::syncConnected, this, [this]() {
+        if (!m_authManager->isLoggedIn()) return;
+        QString deviceId = m_hostManager->deviceId();
+        if (deviceId.isEmpty()) {
+            LOG_INFO("Sync connected but deviceId not ready yet, will bind on hostReady");
+            return;
+        }
+        LOG_INFO("Sync connected, binding device: {}", deviceId.toStdString());
+        m_cloudDeviceManager->autoBindDevice(deviceId);
     });
 
     // Sync access code changes from cloud devices to recent connections
@@ -775,7 +787,8 @@ void MainController::onHostReady(const QString& deviceId, const QString& accessC
         emit deviceIdChanged();
         emit accessCodeChanged();
 
-        // Auto-bind if user is already logged in (loginSuccess may have fired before hostReady)
+        // If user already logged in and sync is connected, bind now
+        // (syncConnected handler returned early if deviceId wasn't ready)
         if (m_authManager->isLoggedIn() && !deviceId.isEmpty()) {
             m_cloudDeviceManager->autoBindDevice(deviceId);
             if (!accessCode.isEmpty()) {

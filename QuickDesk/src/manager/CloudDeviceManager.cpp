@@ -458,6 +458,8 @@ void CloudDeviceManager::startSync()
             this, &CloudDeviceManager::onSyncTextMessageReceived);
     connect(m_syncSocket, &QWebSocket::disconnected,
             this, &CloudDeviceManager::onSyncDisconnected);
+    connect(m_syncSocket, &QWebSocket::connected,
+            this, &CloudDeviceManager::syncConnected);
 
     QString wsUrl = m_serverManager->serverUrl();
     if (!wsUrl.endsWith("/")) wsUrl += "/";
