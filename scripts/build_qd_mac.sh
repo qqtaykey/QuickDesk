@@ -22,6 +22,7 @@ cd "$(dirname "$0")"
 
 build_mode=Release
 clean_output=false
+arch=arm64
 errno=1
 
 echo
@@ -37,13 +38,15 @@ while [ $# -gt 0 ]; do
         minsizerel)     build_mode=MinSizeRel ;;
         relwithdebinfo) build_mode=RelWithDebInfo ;;
         clean)          clean_output=true ;;
+        arm64|arm)      arch=arm64 ;;
+        x64|x86_64|intel) arch=x64 ;;
     esac
     shift
 done
 
 echo "[*] build mode: $build_mode"
 echo "[*] clean output: $clean_output"
-echo
+echo "[*] target arch: $arch"
 
 qt_cmake_path="$ENV_QT_PATH/macos"
 echo "Qt cmake path: $qt_cmake_path"
@@ -79,7 +82,13 @@ if [ ! -d "$temp_path" ]; then
 fi
 cd "$temp_path"
 
-cmake_params="-DCMAKE_PREFIX_PATH=$qt_cmake_path -DCMAKE_BUILD_TYPE=$build_mode -DCMAKE_OSX_ARCHITECTURES=arm64"
+if [ "$arch" = "x64" ]; then
+    cmake_osx_arch="x86_64"
+else
+    cmake_osx_arch="$arch"
+fi
+
+cmake_params="-DCMAKE_PREFIX_PATH=$qt_cmake_path -DCMAKE_BUILD_TYPE=$build_mode -DCMAKE_OSX_ARCHITECTURES=$cmake_osx_arch"
 
 if [ -n "$ENV_QUICKDESK_API_KEY" ]; then
     cmake_params="$cmake_params -DQUICKDESK_API_KEY=$ENV_QUICKDESK_API_KEY"

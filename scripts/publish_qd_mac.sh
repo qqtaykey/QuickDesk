@@ -21,6 +21,7 @@ old_cd=$(pwd)
 cd "$(dirname "$0")"
 
 build_mode=Release
+arch=arm64
 errno=1
 
 echo
@@ -33,18 +34,24 @@ while [ $# -gt 0 ]; do
     case "$(echo "$1" | tr '[:upper:]' '[:lower:]')" in
         debug)   build_mode=Debug ;;
         release) build_mode=Release ;;
+        arm64|arm)      arch=arm64 ;;
+        x64|x86_64|intel) arch=x64 ;;
     esac
     shift
 done
 
-echo "[*] arch: arm64"
+echo "[*] arch: $arch"
 echo "[*] build mode: $build_mode"
 echo
 
 qt_mac_path="$ENV_QT_PATH/macos"
 publish_path="$script_path/../publish/$build_mode"
-release_path="$script_path/../output/arm64/$build_mode"
-src_out_path="$script_path/../../src/out/$build_mode"
+release_path="$script_path/../output/$arch/$build_mode"
+if [ "$arch" = "x64" ]; then
+    src_out_path="$script_path/../../src/out/$build_mode-x64"
+else
+    src_out_path="$script_path/../../src/out/$build_mode"
+fi
 
 echo "[*] Qt macOS path: $qt_mac_path"
 echo "[*] publish path: $publish_path"
@@ -84,7 +91,7 @@ resources_dir="$publish_path/QuickDesk.app/Contents/Resources"
 mkdir -p "$resources_dir"
 
 echo "[*] copying host and client..."
-thirdparty_path="$script_path/../QuickDesk/3rdparty/quickdesk-remoting/arm64"
+thirdparty_path="$script_path/../QuickDesk/3rdparty/quickdesk-remoting/$arch"
 echo "[*] 3rdparty path: $thirdparty_path"
 mkdir -p "$frameworks_dir"
 
@@ -110,7 +117,7 @@ fi
 
 # Copy MCP bridge
 echo "[*] copying quickdesk-mcp..."
-mcp_output="$script_path/../output/arm64/$build_mode/quickdesk-mcp"
+mcp_output="$script_path/../output/$arch/$build_mode/quickdesk-mcp"
 if [ -f "$mcp_output" ]; then
     cp "$mcp_output" "$frameworks_dir/"
     echo "[*] copied quickdesk-mcp from output"
@@ -121,7 +128,7 @@ echo
 
 # Copy skill-host and built-in skills
 echo "[*] copying quickdesk-skill-host..."
-skill_host_output="$script_path/../output/arm64/$build_mode/quickdesk-skill-host"
+skill_host_output="$script_path/../output/$arch/$build_mode/quickdesk-skill-host"
 if [ -f "$skill_host_output" ]; then
     cp "$skill_host_output" "$frameworks_dir/"
     echo "[*] copied quickdesk-skill-host from output"
@@ -137,7 +144,7 @@ echo "[*] copying built-in skills..."
 # must be present") and triggers the "app is damaged" Gatekeeper error.
 # Place it under Contents/Resources/ instead, which is the documented
 # location for arbitrary application resources.
-skills_output="$script_path/../output/arm64/$build_mode/skills"
+skills_output="$script_path/../output/$arch/$build_mode/skills"
 if [ -d "$skills_output" ]; then
     mkdir -p "$resources_dir/skills"
     cp -R "$skills_output/"* "$resources_dir/skills/"
@@ -153,6 +160,16 @@ if [ $? -ne 0 ]; then
     echo "[!] macdeployqt failed"
     cd "$old_cd"
     exit 1
+fi
+
+# Fix dylib dependencies that reference build-machine-only paths
+rapidocr_dylib="$publish_path/QuickDesk.app/Contents/Frameworks/libRapidOcrOnnx.dylib"
+if [ -f "$rapidocr_dylib" ]; then
+    bad_dep=$(otool -L "$rapidocr_dylib" | grep "/usr/local/opt/llvm" | awk '{print $1}')
+    if [ -n "$bad_dep" ]; then
+        echo "[*] fixing libRapidOcrOnnx.dylib: removing build-machine dep ($bad_dep)"
+        install_name_tool -change "$bad_dep" "/usr/lib/libSystem.B.dylib" "$rapidocr_dylib"
+    fi
 fi
 
 echo "[*] cleaning unnecessary Qt dependencies..."

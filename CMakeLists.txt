@@ -132,6 +132,8 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
 
     if (CMAKE_OSX_ARCHITECTURES MATCHES "arm64")
         set(QD_CPU_ARCH arm64)
+    elseif(CMAKE_OSX_ARCHITECTURES MATCHES "x86_64")
+        set(QD_CPU_ARCH x64)
     endif()
 endif()
 

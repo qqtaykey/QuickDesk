@@ -16,6 +16,7 @@ old_cd=$(pwd)
 cd "$(dirname "$0")"
 
 build_mode=release
+arch=arm64
 
 echo
 echo
@@ -27,15 +28,18 @@ while [ $# -gt 0 ]; do
     case "$(echo "$1" | tr '[:upper:]' '[:lower:]')" in
         debug)   build_mode=debug ;;
         release) build_mode=release ;;
+        arm64|arm)      arch=arm64 ;;
+        x64|x86_64|intel) arch=x64 ;;
     esac
     shift
 done
 
 echo "[*] build mode: $build_mode"
+echo "[*] target arch: $arch"
 echo
 
 mcp_dir="$script_path/../quickdesk-mcp"
-output_path="$script_path/../output/arm64"
+output_path="$script_path/../output/$arch"
 
 echo "[*] mcp dir: $mcp_dir"
 echo "[*] output path: $output_path"
@@ -49,23 +53,31 @@ fi
 cd "$mcp_dir"
 echo "[*] building quickdesk-mcp..."
 
+# Determine Rust target for cross-compilation
+rust_target_flag=""
+rust_target_dir=""
+if [ "$arch" = "x64" ]; then
+    rust_target_flag="--target x86_64-apple-darwin"
+    rust_target_dir="x86_64-apple-darwin/"
+fi
+
 if [ "$build_mode" = "debug" ]; then
-    cargo build
+    cargo build $rust_target_flag
     if [ $? -ne 0 ]; then
         echo "[!] cargo build failed"
         cd "$old_cd"
         exit 1
     fi
-    cargo_out="$mcp_dir/target/debug"
+    cargo_out="$mcp_dir/target/${rust_target_dir}debug"
     dest_dir="$output_path/Debug"
 else
-    cargo build --release
+    cargo build --release $rust_target_flag
     if [ $? -ne 0 ]; then
         echo "[!] cargo build failed"
         cd "$old_cd"
         exit 1
     fi
-    cargo_out="$mcp_dir/target/release"
+    cargo_out="$mcp_dir/target/${rust_target_dir}release"
     dest_dir="$output_path/Release"
 fi
 

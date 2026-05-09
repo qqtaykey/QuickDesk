@@ -286,7 +286,7 @@ private:
     // Locate the directory that holds built-in skills (sys-info, file-ops, ...).
     // Layout differs by platform / build mode:
     //   - macOS bundle:   <App>.app/Contents/Resources/skills
-    //   - macOS dev tree: output/arm64/<mode>/skills (next to the binary)
+    //   - macOS dev tree: output/<arch>/<mode>/skills (next to the binary)
     //   - Windows/Linux:  <executable dir>/skills
     QString getBuiltinSkillsDir() const;
     void setupWebSocketApiEvents();

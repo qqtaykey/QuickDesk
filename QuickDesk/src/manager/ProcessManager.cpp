@@ -651,8 +651,14 @@ QString ProcessManager::findExecutable(const QString& name)
 #endif
 
 #ifdef QT_DEBUG
+#if defined(__x86_64__) && defined(Q_OS_MAC)
+    searchPaths << QDir(appDir).filePath(kRelPrefix + "Debug-x64");
+#endif
     searchPaths << QDir(appDir).filePath(kRelPrefix + "Debug");
 #else
+#if defined(__x86_64__) && defined(Q_OS_MAC)
+    searchPaths << QDir(appDir).filePath(kRelPrefix + "Release-x64");
+#endif
     searchPaths << QDir(appDir).filePath(kRelPrefix + "Release");
 #endif
 
@@ -666,7 +672,11 @@ QString ProcessManager::findExecutable(const QString& name)
 
 #ifdef Q_OS_MAC
     // 3rdparty directory (for development)
+#if defined(__x86_64__)
+    searchPaths << QDir(appDir).filePath("../../../QuickDesk/3rdparty/quickdesk-remoting/x64");
+#else
     searchPaths << QDir(appDir).filePath("../../../QuickDesk/3rdparty/quickdesk-remoting/arm64");
+#endif
     // Contents/Frameworks/ for .app bundles (publish layout)
     searchPaths << QDir(appDir).filePath("../Frameworks");
 #endif

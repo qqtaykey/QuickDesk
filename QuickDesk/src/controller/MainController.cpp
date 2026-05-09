@@ -1215,7 +1215,7 @@ QString MainController::getSkillHostBinaryPath() const {
 QString MainController::getBuiltinSkillsDir() const {
     auto appDir = QCoreApplication::applicationDirPath();
 #if defined(Q_OS_MAC)
-    // Dev tree first (output/arm64/<mode>/skills, next to the dev-built
+    // Dev tree first (output/<arch>/<mode>/skills, next to the dev-built
     // quickdesk-skill-host binary). Falls back to the packaged location
     // under Contents/Resources/skills for the .app bundle.
     QString devSkills = appDir + "/../../../skills";
