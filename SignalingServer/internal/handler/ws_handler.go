@@ -238,8 +238,15 @@ func (h *WSHandler) HandleWebSocket(c *gin.Context) {
 		h.NotifyDeviceOnlineStatus(deviceID, true)
 		defer func() {
 			h.deviceService.SetDeviceOnline(context.Background(), deviceID, false)
-			// Clear logged_in when device disconnects from signaling
-			h.db.Model(&models.Device{}).Where("device_id = ?", deviceID).Update("logged_in", false)
+			// NOTE: Do NOT clear logged_in here.
+			// logged_in represents the user-level binding state (set by
+			// AutoBindDevice, cleared by UnbindDevice / user logout /
+			// takeover by another account). A transient signaling
+			// WebSocket disconnect (e.g. network switch, Wi-Fi roam)
+			// must not be treated as a logout, otherwise the device
+			// stays "logged_in=false" after reconnect and is shown as
+			// offline in the user's device list even though the host is
+			// back online.
 			h.NotifyDeviceOnlineStatus(deviceID, false)
 		}()
 	}

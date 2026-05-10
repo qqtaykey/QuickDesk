@@ -96,6 +96,30 @@ func main() {
 
 	apiHandler.SetWSHandler(wsHandler)
 
+	// Cold-start recovery: any device still flagged logged_in=true from a
+	// previous server run is stale (no host WebSocket is connected yet).
+	// Clear it so the device list doesn't show phantom logged-in states.
+	// Hosts that are still online will re-establish their signaling
+	// WebSocket and the client will call AutoBindDevice again to restore
+	// logged_in=true for the correct (current) user.
+	if res := db.Model(&models.Device{}).
+		Where("logged_in = ?", true).
+		Update("logged_in", false); res.Error != nil {
+		log.Printf("Startup: failed to reset stale logged_in flags: %v", res.Error)
+	} else if res.RowsAffected > 0 {
+		log.Printf("Startup: reset %d stale logged_in flag(s)", res.RowsAffected)
+	}
+
+	// Also mark all devices offline on startup; real host connections will
+	// flip them back to online as they reconnect.
+	if res := db.Model(&models.Device{}).
+		Where("online = ?", true).
+		Update("online", false); res.Error != nil {
+		log.Printf("Startup: failed to reset stale online flags: %v", res.Error)
+	} else if res.RowsAffected > 0 {
+		log.Printf("Startup: reset %d stale online flag(s)", res.RowsAffected)
+	}
+
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.New()
 	router.Use(gin.Recovery())
@@ -159,8 +183,6 @@ func main() {
 			userAPI.GET("/devices/logs", userDeviceHandler.GetUserDeviceLogs)
 			userAPI.PUT("/devices/:device_id/access-code", userDeviceHandler.UpdateAccessCode)
 			userAPI.PUT("/devices/:device_id/remark", userDeviceHandler.UpdateDeviceRemark)
-			userAPI.POST("/devices/:device_id/login", userDeviceHandler.DeviceLogin)
-			userAPI.POST("/devices/:device_id/logout", userDeviceHandler.DeviceLogout)
 			userAPI.GET("/favorites", userDeviceHandler.GetFavorites)
 			userAPI.POST("/favorites", userDeviceHandler.AddFavorite)
 			userAPI.PUT("/favorites/:device_id", userDeviceHandler.UpdateFavorite)

@@ -41,6 +41,20 @@ func (h *UserDeviceHandler) UnbindDevice(c *gin.Context) {
 
 	binding.Status = false
 	h.db.Save(&binding)
+
+	// When a user explicitly unbinds a device they own, also clear the
+	// device-level logged_in flag so the device is not shown as an active
+	// login anywhere. Only clear if the device is still owned by this user
+	// (don't stomp on a concurrent takeover).
+	h.db.Model(&models.Device{}).
+		Where("device_id = ? AND user_id = ?", req.DeviceID, authedUserID).
+		Update("logged_in", false)
+
+	h.notifySync(authedUserID, gin.H{
+		"type":      "device_logged_out",
+		"device_id": req.DeviceID,
+	})
+
 	recomputeDeviceCount(h.db, authedUserID)
 
 	c.JSON(http.StatusOK, gin.H{"message": "设备解绑成功"})
@@ -200,16 +214,36 @@ func (h *UserDeviceHandler) AutoBindDevice(c *gin.Context) {
 		return
 	}
 
+	// Account takeover: if the device is currently bound to a different
+	// user (e.g. previous user crashed without logging out, or the device
+	// is being re-used by another account), transfer ownership and notify
+	// the previous owner that the device is no longer logged in for them.
+	// This is the canonical way to recover from "zombie logged_in=true"
+	// states left behind by abnormal exits.
+	var previousUserID uint
 	if device.UserID != nil && *device.UserID != 0 && *device.UserID != authedUserID {
-		c.JSON(http.StatusConflict, gin.H{"error": "设备已绑定其他用户"})
-		return
+		previousUserID = *device.UserID
+		// Deactivate the previous user's binding row so it stops
+		// appearing in their device list.
+		h.db.Model(&models.UserDevice{}).
+			Where("user_id = ? AND device_id = ?", previousUserID, req.DeviceID).
+			Update("status", false)
+		recomputeDeviceCount(h.db, previousUserID)
 	}
 
-	// Update device ownership
+	// Update device ownership and mark as logged in for the new user.
 	h.db.Model(&models.Device{}).Where("device_id = ?", req.DeviceID).Updates(map[string]interface{}{
 		"user_id":   authedUserID,
 		"logged_in": true,
 	})
+
+	// Notify the previous owner (if any) that the device left their account.
+	if previousUserID != 0 {
+		h.notifySync(previousUserID, gin.H{
+			"type":      "device_logged_out",
+			"device_id": req.DeviceID,
+		})
+	}
 
 	// Upsert UserDevice: reactivate if exists but inactive, create otherwise
 	var existing models.UserDevice
@@ -433,61 +467,4 @@ func (h *UserDeviceHandler) RemoveFavorite(c *gin.Context) {
 	})
 
 	c.JSON(http.StatusOK, gin.H{"message": "取消收藏成功"})
-}
-
-// DeviceLogin handles POST /api/v1/user/devices/:device_id/login
-// Called when a user logs in on a device, marks the device as actively logged in.
-func (h *UserDeviceHandler) DeviceLogin(c *gin.Context) {
-	deviceID := c.Param("device_id")
-	userIDVal, _ := c.Get("authed_user_id")
-	authedUserID := userIDVal.(uint)
-
-	var device models.Device
-	if result := h.db.Where("device_id = ?", deviceID).First(&device); result.Error != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "设备不存在"})
-		return
-	}
-
-	if device.UserID != nil && *device.UserID != 0 && *device.UserID != authedUserID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "无权操作此设备"})
-		return
-	}
-
-	result := h.db.Model(&models.Device{}).Where("device_id = ?", deviceID).Update("logged_in", true)
-	log.Printf("DeviceLogin: device_id=%s, rows_affected=%d, error=%v", deviceID, result.RowsAffected, result.Error)
-
-	h.notifySync(authedUserID, gin.H{
-		"type":      "device_logged_in",
-		"device_id": deviceID,
-	})
-
-	c.JSON(http.StatusOK, gin.H{"message": "设备登录状态已更新"})
-}
-
-// DeviceLogout handles POST /api/v1/user/devices/:device_id/logout
-// Called when a user logs out on a device, marks the device as not logged in.
-func (h *UserDeviceHandler) DeviceLogout(c *gin.Context) {
-	deviceID := c.Param("device_id")
-	userIDVal, _ := c.Get("authed_user_id")
-	authedUserID := userIDVal.(uint)
-
-	var device models.Device
-	if result := h.db.Where("device_id = ?", deviceID).First(&device); result.Error != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "设备不存在"})
-		return
-	}
-
-	if device.UserID != nil && *device.UserID != 0 && *device.UserID != authedUserID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "无权操作此设备"})
-		return
-	}
-
-	h.db.Model(&models.Device{}).Where("device_id = ?", deviceID).Update("logged_in", false)
-
-	h.notifySync(authedUserID, gin.H{
-		"type":      "device_logged_out",
-		"device_id": deviceID,
-	})
-
-	c.JSON(http.StatusOK, gin.H{"message": "设备登出状态已更新"})
 }

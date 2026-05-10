@@ -65,6 +65,7 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import LoginDialog from './components/LoginDialog.vue'
 import { userApi } from './api/userApi'
+import { userSync } from './api/userSync'
 import { authState, updateAuthState } from './store/auth'
 
 const { locale, t } = useI18n()
@@ -112,10 +113,14 @@ function onLoginSuccess() {
   showToast(t('user.loginSuccess'), 'success')
   // Fetch features for SMS toggle
   fetchFeatures()
+  // Start real-time device/favorite sync
+  userSync.start()
 }
 
 async function onLogout() {
   showUserMenu.value = false
+  // Stop sync first so we don't race the WebSocket against token clearing
+  userSync.stop()
   await userApi.logout()
   updateAuthState()
   router.push('/remote')
@@ -153,6 +158,8 @@ async function restoreSession() {
       id: r.data.id, username: r.data.username, phone: r.data.phone, email: r.data.email,
     }))
     updateAuthState()
+    // Resume real-time sync after a token-validated session restore
+    userSync.start()
   } else {
     userApi.clearSession()
     updateAuthState()

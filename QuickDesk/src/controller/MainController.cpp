@@ -97,6 +97,24 @@ MainController::MainController(QObject* parent)
             m_hostServerStatus = ServerStatus::Reconnecting;
         }
         emit hostServerStatusChanged();
+
+        // Re-bind device after signaling reconnect (e.g. after a network
+        // switch). The signaling server clears the device's online flag
+        // on every host WS disconnect; when we come back, we must make
+        // sure logged_in is still true so the device shows online in
+        // the user's device list. autoBindDevice is idempotent.
+        const bool wasConnected = m_lastSignalingConnected;
+        const bool nowConnected = (state == "connected");
+        m_lastSignalingConnected = nowConnected;
+        if (nowConnected && !wasConnected && m_authManager &&
+            m_authManager->isLoggedIn()) {
+            QString deviceId = m_hostManager->deviceId();
+            if (!deviceId.isEmpty() && m_cloudDeviceManager) {
+                LOG_INFO("Signaling reconnected, re-binding device: {}",
+                         deviceId.toStdString());
+                m_cloudDeviceManager->autoBindDevice(deviceId);
+            }
+        }
     });
     
     // Listen to Client signaling state to update client server status

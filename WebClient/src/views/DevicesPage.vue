@@ -89,9 +89,10 @@
 </template>
 
 <script setup>
-import { ref, inject, onMounted } from 'vue'
+import { ref, inject, onMounted, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { userApi } from '../api/userApi'
+import { userSync } from '../api/userSync'
 
 const { t } = useI18n()
 const showToast = inject('showToast')
@@ -153,7 +154,24 @@ function formatTime(ts) {
 
 onMounted(() => {
   if (authState.isLoggedIn) refresh()
+  // Refresh the device list whenever the server pushes a relevant change
+  // (device online/offline, logged in/out, access code / remark updates).
+  userSync.addEventListener('devices-changed', onDevicesChanged)
+  userSync.addEventListener('favorites-changed', onFavoritesChanged)
 })
+
+onBeforeUnmount(() => {
+  userSync.removeEventListener('devices-changed', onDevicesChanged)
+  userSync.removeEventListener('favorites-changed', onFavoritesChanged)
+})
+
+function onDevicesChanged() {
+  if (authState.isLoggedIn) loadDevices()
+}
+
+function onFavoritesChanged() {
+  if (authState.isLoggedIn) loadFavorites()
+}
 </script>
 
 <style scoped>

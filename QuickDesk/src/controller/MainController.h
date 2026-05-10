@@ -273,6 +273,11 @@ private:
     ServerStatus::Status m_hostServerStatus = ServerStatus::Disconnected;
     ServerStatus::Status m_clientServerStatus = ServerStatus::Disconnected;
     QString m_primaryDeviceId;  // Track primary device for client signaling status
+
+    // Tracks the last-observed host signaling state so we can detect
+    // the transition into "connected" (e.g. after a network switch)
+    // and re-bind the device to restore logged_in on the server.
+    bool m_lastSignalingConnected = false;
     
     // Access code auto-refresh timer
     QTimer m_accessCodeRefreshTimer;
