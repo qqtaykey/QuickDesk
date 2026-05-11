@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"log"
 	"net/http"
 	"quickdesk/signaling/internal/models"
 	"time"
